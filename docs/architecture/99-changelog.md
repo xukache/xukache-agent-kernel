@@ -10,3 +10,11 @@
 | 2026-07-09 | 落地 MVP `ToolRegistry` 和 `ToolExecutor` 最小代码基线：统一工具权限校验、必填输入校验、错误码归一和成功 / 失败 trace 写入，并记录超时、输出 schema、风险策略等后续补齐项。 |
 | 2026-07-09 | 统一后端环境管理为 `uv`，固定 Python 版本为 3.11，并通过 `.python-version` 声明。 |
 | 2026-07-09 | 创建 MVP Agent 后端项目标准文档体系，确立 CLI MVP、4 Agent、Prompt / Tool / Trace / Eval 治理分册。 |
+
+## 2026-07-09
+
+- 初始化 Python CLI MVP 工程结构。
+- 落地 `AgentContext`、`AgentMessage`、`ToolCallResult`、`TraceEvent` 等运行时协议。
+- 增加本地 JSONL trace、metrics、badcase 输出。
+- 增加 `AgentOrchestrator` 单轮同步链路和 CLI `ask` / `eval` 命令。
+- MVP 工具先使用本地 fixture RAG 和确定性待遇测算，后续可在不改变 ToolExecutor 契约的前提下替换为真实 RAG / 模型。

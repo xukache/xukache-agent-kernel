@@ -1,6 +1,6 @@
 # 后端开发规范
 
-本文定义安安虎工伤智能助手 Agno CLI MVP 的后端工程规则。当前项目尚未初始化代码结构，本规范用于后续实现阶段约束模块边界。
+本文定义安安虎工伤智能助手 Agno CLI MVP 的后端工程规则。当前项目已初始化 Python CLI MVP 代码结构，本规范用于约束后续 Agent、Tool、Prompt、Trace、Eval 等模块演进。
 
 ## 项目形态
 
@@ -16,6 +16,32 @@
 - `pyproject.toml` 初始化后，`requires-python` 必须约束为 `>=3.11,<3.12`。
 - 不把 `pip install`、`python -m pytest` 作为主路径命令写入文档或计划；统一使用 `uv sync`、`uv run pytest`、`uv run ananhu-agent ...`。
 - 需要新增依赖时，优先通过 `uv add` 或 `uv add --dev` 维护 `pyproject.toml` 和 lock 文件。
+
+## 本地命令
+
+安装开发依赖：
+
+```bash
+uv sync --extra dev
+```
+
+运行单轮 CLI：
+
+```bash
+uv run ananhu-agent ask "四川十级工伤，月工资6000，大概能赔多少钱？"
+```
+
+运行评测：
+
+```bash
+uv run ananhu-agent eval data/eval/eval_cases.jsonl
+```
+
+运行测试：
+
+```bash
+uv run pytest -v
+```
 
 ## 推荐模块边界
 
@@ -77,7 +103,7 @@ ananhu_agent/
 - PolicySafetyGuard 高风险表达拦截。
 - eval runner 指标输出。
 
-当前约定命令如下，Python 包初始化后必须保持这些命令可用：
+当前约定命令如下，后续修改必须保持这些命令可用：
 
 ```bash
 uv python pin 3.11
