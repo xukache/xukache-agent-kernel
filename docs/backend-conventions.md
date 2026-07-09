@@ -52,6 +52,7 @@ ananhu_agent/
   cli/                 # CLI 入口和命令解析
   orchestrator/        # AgentOrchestrator、路由和运行时控制
   agents/              # 4 个 MVP Agent
+  agno_adapters/       # Agno-compatible Agent / Tool 适配层
   context/             # AgentContext、ContextManager、槽位合并
   prompts/             # prompt 模板和 PromptManager
   tools/               # ToolRegistry、ToolExecutor、业务工具
@@ -68,6 +69,13 @@ ananhu_agent/
 - Agent 不直接拼接完整 prompt。
 - Agent 输出必须结构化，优先返回 `AgentMessage` 或等价 schema。
 - 新增 Agent 前必须满足拆分条件：高频 badcase、独立工具链、独立评测指标、独立 Prompt / 规则同时成立。
+
+## Agno 接入规则
+
+- 当前 MVP 运行时是 Agno-compatible harness，尚未接入真实 Agno Team / Workflow runtime。
+- `agno_adapters/` 只能包装现有 Agent / Tool 契约，不承担状态推进、工具治理或 prompt 拼接。
+- 真实 Agno 接入前必须保留 `AgentContext`、`AgentMessage`、`ToolExecutor` 和 trace 协议。
+- 不得为了接入框架提前引入并行 Agent 仲裁、后台任务、WebSocket 流或新的 Agent 拆分。
 
 ## Tool 规则
 

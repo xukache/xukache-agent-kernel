@@ -3699,7 +3699,7 @@ git commit -m "feat(models): add runtime model profile routing"
 - 修改：`docs/backend-conventions.md`
 - 创建：`tests/test_agno_adapters.py`
 
-- [ ] **步骤 1：编写失败测试**
+- [x] **步骤 1：编写失败测试**
 
 创建 `tests/test_agno_adapters.py`：
 
@@ -3719,7 +3719,7 @@ def test_agent_runtime_adapter_preserves_agent_message_contract():
     assert message.status == "success"
 ```
 
-- [ ] **步骤 2：运行测试验证失败**
+- [x] **步骤 2：运行测试验证失败**
 
 运行：
 
@@ -3729,7 +3729,7 @@ uv run pytest tests/test_agno_adapters.py -v
 
 预期：FAIL，报错包含 `No module named 'ananhu_agent.agno_adapters'`。
 
-- [ ] **步骤 3：实现轻量适配层**
+- [x] **步骤 3：实现轻量适配层**
 
 要求：
 
@@ -3738,7 +3738,7 @@ uv run pytest tests/test_agno_adapters.py -v
 - 不在本任务强制引入真实 Agno 运行时依赖，除非 `pyproject.toml` 已确认可稳定安装。
 - 在文档中明确：当前 MVP 运行时是 Agno-compatible harness；真实 Agno Team / Workflow 接入作为后续增强，不改变 Agent/Tool 协议。
 
-- [ ] **步骤 4：运行测试验证通过**
+- [x] **步骤 4：运行测试验证通过**
 
 运行：
 
@@ -3748,7 +3748,7 @@ uv run pytest tests/test_agno_adapters.py tests/test_orchestrator_vertical_slice
 
 预期：全部通过。
 
-- [ ] **步骤 5：提交**
+- [x] **步骤 5：提交**
 
 ```bash
 git add ananhu_agent/agno_adapters docs/architecture/02-agent-runtime.md docs/backend-conventions.md tests/test_agno_adapters.py

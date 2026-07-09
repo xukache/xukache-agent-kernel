@@ -23,6 +23,22 @@ AgentOrchestrator
   └── TraceRecorder
 ```
 
+## Agno 运行时边界
+
+当前 MVP 是 Agno-compatible harness，而不是完整 Agno Team / Workflow runtime：
+
+- 现有 `AgentOrchestrator` 仍是唯一状态推进方。
+- 4 个 MVP Agent 继续保持无状态，通过 `AgentContext` 输入并返回 `AgentMessage`。
+- `AgentRuntimeAdapter` 只包装现有 Agent 的 `run(ctx)` 协议，不让 Agent 直接写状态。
+- `ToolRuntimeAdapter` 只包装 Tool handler；权限、schema、超时、trace 仍由 `ToolExecutor` 统一治理。
+- 本阶段不新增真实 Agno 运行时依赖，不引入并行 Agent 仲裁或后台工作流。
+
+后续接入真实 Agno Team / Workflow 时，必须复用当前 Agent / Tool 协议边界：
+
+- Agent 不绕过 `AgentOrchestrator` 推进上下文。
+- Tool 不绕过 `ToolExecutor` 执行。
+- Prompt、模型、上下文和工具调用仍写入 trace。
+
 ## Agent 清单
 
 MVP 只实现 4 个 Agent：
@@ -92,4 +108,3 @@ MVP 外部表现为单轮同步咨询。
 - 用户中途插队问题。
 
 流式输出只作为后续体验增强，不作为 MVP 核心架构。
-
