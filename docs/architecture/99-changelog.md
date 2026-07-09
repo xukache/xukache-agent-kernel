@@ -6,6 +6,7 @@
 
 | 日期 | 变更内容 |
 |---|---|
+| 2026-07-09 | 新增本地政策 fixture、确定性政策检索、一次性伤残补助金测算和引用格式化工具，为后续 Agent 链路提供无外部依赖的 RAG / 测算闭环。 |
 | 2026-07-09 | 落地 MVP `ToolRegistry` 和 `ToolExecutor` 最小代码基线：统一工具权限校验、必填输入校验、错误码归一和成功 / 失败 trace 写入，并记录超时、输出 schema、风险策略等后续补齐项。 |
 | 2026-07-09 | 统一后端环境管理为 `uv`，固定 Python 版本为 3.11，并通过 `.python-version` 声明。 |
 | 2026-07-09 | 创建 MVP Agent 后端项目标准文档体系，确立 CLI MVP、4 Agent、Prompt / Tool / Trace / Eval 治理分册。 |

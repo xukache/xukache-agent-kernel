@@ -23,6 +23,14 @@ MVP 工具：
 - `SpeechRecognitionTool`
 - `WebSearchTool`
 
+当前已落地的本地 MVP 工具函数：
+
+| 函数 | 对应 Tool | 职责 |
+|---|---|---|
+| `search_policy` | `PolicyRAGTool` | 基于 `data/policies/policy_fixtures.jsonl` 做确定性关键词检索，并返回 `documents` 与 `citation`。 |
+| `calculate_payment` | `PaymentCalculationTool` | 按伤残等级月数和本人工资计算一次性伤残补助金，返回分项、公式、假设和免责声明。 |
+| `format_citations` | `CitationFormatterTool` | 将工具返回的 citation 按稳定顺序格式化为最终答案引用标签。 |
+
 ## ToolRegistry
 
 每个工具必须注册：
