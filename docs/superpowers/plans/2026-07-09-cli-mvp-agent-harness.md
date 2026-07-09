@@ -254,7 +254,7 @@ git commit -m "chore: initialize cli python package"
 - 创建：`ananhu_agent/schemas.py`
 - 创建：`tests/test_schemas.py`
 
-- [ ] **步骤 1：编写失败的 schema 测试**
+- [x] **步骤 1：编写失败的 schema 测试**
 
 创建 `tests/test_schemas.py`：
 
@@ -373,7 +373,7 @@ def test_task_state_and_run_report_capture_runtime_evidence():
     assert report.tool_count == 2
 ```
 
-- [ ] **步骤 2：运行测试验证失败**
+- [x] **步骤 2：运行测试验证失败**
 
 运行：
 
@@ -383,7 +383,7 @@ uv run pytest tests/test_schemas.py -v
 
 预期：FAIL，报错包含 `No module named 'ananhu_agent.schemas'`。
 
-- [ ] **步骤 3：实现最小 schema**
+- [x] **步骤 3：实现最小 schema**
 
 创建 `ananhu_agent/schemas.py`，至少包含：
 
@@ -596,7 +596,7 @@ class TraceEvent(BaseModel):
         )
 ```
 
-- [ ] **步骤 4：运行测试验证通过**
+- [x] **步骤 4：运行测试验证通过**
 
 运行：
 
@@ -606,7 +606,7 @@ uv run pytest tests/test_schemas.py -v
 
 预期：4 passed。
 
-- [ ] **步骤 5：提交**
+- [x] **步骤 5：提交**
 
 ```bash
 git add ananhu_agent/schemas.py tests/test_schemas.py
