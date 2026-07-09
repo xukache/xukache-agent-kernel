@@ -464,8 +464,10 @@ AgentOrchestrator
   ├── IntentReviseRule
   ├── SlotMergeRule
   ├── ContextManager
+  ├── PromptManager
   ├── AgentRegistry
   ├── MemoryManager
+  ├── ToolRegistry
   ├── ToolExecutor
   ├── ResultAggregator
   ├── AnswerValidator
@@ -497,7 +499,7 @@ Infrastructure
 
 | 面 | MVP 组件 | 作用 |
 |---|---|---|
-| 控制面 | `AgentOrchestrator`、`ContextManager`、`ToolExecutor`、`ModelRouter` | 决定一轮咨询怎么推进、怎么调用模型和工具 |
+| 控制面 | `AgentOrchestrator`、`PromptManager`、`ContextManager`、`ToolRegistry`、`ToolExecutor`、`ModelRouter` | 决定一轮咨询怎么推进、怎么组装 prompt、怎么调用模型和工具 |
 | 状态面 | `SessionState`、`MemoryManager`、`TaskStateStore` | 保存当前会话、槽位、路由、工具状态和轻量恢复信息 |
 | 证据面 | `TraceRecorder`、`ReportStore`、`EvalStore`、`BadcaseStore` | 保存可回放、可评测、可对比的运行证据 |
 | 治理面 | `AnswerValidator`、`PolicySafetyGuard`、fallback 规则 | 控制引用依据、地区一致性、政务安全和降级策略 |
@@ -883,7 +885,218 @@ recent_turns -> working_memory -> rag_evidence 摘要化 -> active_slots 摘要�
 }
 ```
 
+### 11.2 Prompt 管理设计
+
+MVP 不允许把提示词硬编码在 Agent 类里。提示词由 `PromptManager` 管模板和版本，由 `ContextManager` 管上下文分段和预算，由 `ModelRouter` 选择模型。
+
+```text
+Agent
+  ↓
+PromptRequest
+  ↓
+PromptManager 选择模板和版本
+  ↓
+ContextManager 注入上下文和裁剪 metadata
+  ↓
+ModelRouter 选择模型
+  ↓
+ModelClient 调用模型
+```
+
+#### 11.2.1 Prompt 分层
+
+| 组件 | 职责 |
+|---|---|
+| `PromptManager` | 管理 prompt 模板、版本、变量、输出 schema、变更说明 |
+| `ContextManager` | 注入当前问题、槽位、RAG 证据、最近对话、工作记忆，并处理预算裁剪 |
+| `ModelRouter` | 根据 Agent、任务复杂度、prompt 的 `model_profile` 选择模型 |
+| `TraceRecorder` | 记录本轮使用的 `prompt_id`、`prompt_version`、模型和 token / 字符统计 |
+
+#### 11.2.2 Prompt 目录约定
+
+后续实现时，prompt 建议按 Agent 和业务 task_type 管理：
+
+```text
+prompts/
+  intent_router/
+    v1.yaml
+  domain_consultation/
+    base.yaml
+    work_injury_recognition.yaml
+    labor_capacity.yaml
+    insurance_participation.yaml
+  policy_rag/
+    v1.yaml
+  payment_calculation/
+    v1.yaml
+  answer_validator/
+    v1.yaml
+  safety_guard/
+    v1.yaml
+```
+
+#### 11.2.3 Prompt 模板元信息
+
+每个 prompt 文件必须包含元信息，便于版本治理和 badcase 回放：
+
+```yaml
+id: domain_consultation.work_injury_recognition
+version: v1
+agent: DomainConsultationAgent
+task_type: work_injury_recognition
+model_profile: domain_reasoning
+output_schema: AgentMessage
+failure_policy:
+  missing_evidence: cannot_answer
+  missing_required_slot: ask_clarification
+  tool_failed: return_error_reason
+variables:
+  - current_query
+  - active_slots
+  - rag_evidence
+  - conversation_summary
+  - safety_rules
+input_sections:
+  - role_task
+  - rules
+  - input_schema
+  - context
+  - rag_evidence
+  - output_schema
+  - failure_policy
+change_note: MVP 初始版本
+template: |
+  你是工伤政策咨询助手...
+```
+
+#### 11.2.4 Prompt 固定分区
+
+MVP prompt 不是一段长文本，而是受工程治理的模型输入协议。每个业务 prompt 默认按以下分区组织：
+
+```text
+[Role / Task]
+[Rules]
+[Input Schema]
+[Context]
+[RAG Evidence / Tool Results]
+[Output Schema]
+[Failure Policy]
+```
+
+| 分区 | 作用 |
+|---|---|
+| `Role / Task` | 明确当前 Agent 的任务目标和可验收输出 |
+| `Rules` | 写明不能编造、不能越权、必须基于证据等硬约束 |
+| `Input Schema` | 说明输入字段含义、枚举范围和缺失值处理 |
+| `Context` | 注入 active slots、recent turns、working memory |
+| `RAG Evidence / Tool Results` | 注入法规证据和工具结果，并与用户输入明确分隔 |
+| `Output Schema` | 要求输出 `AgentMessage` 或指定 JSON schema |
+| `Failure Policy` | 定义证据不足、字段缺失、工具失败、请求越权时怎么返回 |
+
+Prompt 必须分离规则、数据、示例和输出格式，避免模型把用户原文、法规证据和系统规则混在一起。
+
+#### 11.2.5 Prompt 选择规则
+
+| 场景 | Prompt |
+|---|---|
+| 意图识别和槽位抽取 | `intent_router/v1.yaml` |
+| 工伤认定咨询 | `domain_consultation/work_injury_recognition.yaml` |
+| 劳动能力鉴定咨询 | `domain_consultation/labor_capacity.yaml` |
+| 参保认定咨询 | `domain_consultation/insurance_participation.yaml` |
+| 待遇测算解释 | `payment_calculation/v1.yaml` |
+| 引用依据整理 | `policy_rag/v1.yaml` |
+| 答案校验 | `answer_validator/v1.yaml` |
+| 安全守卫 | `safety_guard/v1.yaml` |
+
+Prompt 选择由 `AgentOrchestrator` 根据 `agent_name + task_type` 发起，`PromptManager` 负责解析和校验，不允许 Agent 内部拼接完整 prompt。
+
+#### 11.2.6 Prompt 模式取舍
+
+MVP 采用以下 prompt 模式：
+
+| 模式 | 适用 Agent / 模块 | MVP 使用方式 |
+|---|---|---|
+| 抽取型模板 | `IntentRouterAgent` | 抽取 intent、task_type、slots、missing_slots、confidence，缺失字段返回 null |
+| 证据问答模板 | `DomainConsultationAgent`、`PolicyRAGAgent` | 只能依据 `rag_evidence` 回答，证据不足返回 `cannot_answer` 或保守回答 |
+| 工具调用模板 | `PaymentCalculationAgent` | 禁止自行心算待遇金额，必须基于 `PaymentCalculationTool` 结果解释 |
+| 评审 / 打分模板 | `AnswerValidator`、eval judge | 按 rubric 输出结构化评分和失败原因 |
+| 安全守卫模板 | `PolicySafetyGuard` | 检查绝对化承诺、替代经办判断、无依据金额等风险 |
+
+MVP 不采用：
+
+| 模式 | 不采用原因 |
+|---|---|
+| 大量显式 Chain-of-thought | 增加成本和延迟，也不需要暴露内部推理；MVP 只要求输出依据、自检结果和结构化字段 |
+| 每个 Agent 都做复杂 Critique-Revise | 会显著增加模型调用次数；只在最终校验和安全守卫中做轻量检查 |
+| 大量 few-shot | 容易挤占 RAG 证据和当前问题空间；只放少量高价值边界示例 |
+| 把业务规则全部写进 prompt | 地区过滤、待遇计算、schema 校验、安全禁词等硬规则必须在代码或工具层 |
+
+#### 11.2.7 Prompt 版本与回滚
+
+Prompt 是可测试、可回滚的工程资产。每次 prompt 变更必须记录：
+
+| 字段 | 说明 |
+|---|---|
+| `prompt_id` | 稳定标识，例如 `domain_consultation.work_injury_recognition` |
+| `version` | 版本号，例如 `v1`、`v2` |
+| `change_note` | 变更原因，例如修复某类 badcase |
+| `affected_task_type` | 影响的业务类型 |
+| `expected_metric_change` | 期望改善的指标 |
+| `rollback_to` | 可回滚版本 |
+
+Prompt 迭代流程：
+
+```text
+发现 badcase
+  ↓
+定位 prompt / context / tool / rule 哪一层问题
+  ↓
+修改 prompt 并升级版本
+  ↓
+运行固定 eval_cases
+  ↓
+指标通过则启用新版本
+  ↓
+指标下降则回滚
+```
+
+#### 11.2.8 Prompt Trace
+
+每次模型调用必须记录 prompt 元信息：
+
+```json
+{
+  "event_type": "model_called",
+  "agent_name": "DomainConsultationAgent",
+  "model": "deepseek-r1",
+  "prompt_id": "domain_consultation.work_injury_recognition",
+  "prompt_version": "v1",
+  "model_profile": "domain_reasoning",
+  "input_sections": [
+    "role_task",
+    "rules",
+    "active_slots",
+    "rag_evidence",
+    "output_schema"
+  ],
+  "trimmed_sections": ["recent_turns"],
+  "output_schema_valid": true,
+  "input_tokens": 3200,
+  "output_tokens": 900
+}
+```
+
+这样 badcase 复盘时可以追问：
+
+- 哪个 Agent 回答错了。
+- 使用了哪个 prompt 版本。
+- 注入了哪些槽位和 RAG 证据。
+- 当时选择了哪个模型。
+- 修改 prompt 后评测指标是否变好。
+
 ## 12. 工具设计
+
+工具治理目标是让模型不能直接触碰业务工具。Agent 只能产生结构化 `ToolCallRequest`，由 `ToolExecutor` 完成注册校验、参数校验、风险控制、执行、错误归一和 trace 记录。
 
 ### 12.1 Tool 清单
 
@@ -898,9 +1111,59 @@ recent_turns -> working_memory -> rag_evidence 摘要化 -> active_slots 摘要�
 
 `HazardImageTool`、`SpeechRecognitionTool`、`WebSearchTool` 不进入 MVP Tool 清单。它们属于 P1 / P2 输入通道或外部增强能力，避免第一版 CLI 变成多模态平台。
 
-### 12.2 Tool 调用规范
+### 12.2 Tool 注册元信息
+
+每个工具都必须在 `ToolRegistry` 中注册元信息：
+
+```yaml
+name: PolicyRAGTool
+description: 检索工伤法规、地方政策、办事指南
+risk_level: read_only
+timeout_ms: 3000
+allowed_callers:
+  - PolicyRAGAgent
+  - DomainConsultationAgent
+input_schema:
+  query: string
+  province: string
+  city: string
+  top_k: integer
+output_schema:
+  documents: array
+  citations: array
+```
+
+风险等级：
+
+| risk_level | 说明 | MVP 处理 |
+|---|---|---|
+| `read_only` | 只读检索，例如 RAG、地区过滤 | 允许调用，必须记录 trace |
+| `calculation` | 纯计算，例如待遇测算 | 允许调用，必须记录输入假设 |
+| `write_local` | 写入本地 trace、badcase、report | 只允许系统组件调用 |
+| `external_side_effect` | 会影响外部系统 | MVP 不允许 |
+
+### 12.3 Tool 调用规范
 
 所有工具必须通过 `ToolExecutor` 调用，Agent 不允许直接调用底层 RAG、测算或存储函数。
+
+```text
+Agent
+  ↓
+ToolCallRequest
+  ↓
+ToolExecutor
+  ├── 工具是否注册
+  ├── Agent 是否允许调用
+  ├── 参数 schema 校验
+  ├── 风险等级检查
+  ├── 超时控制
+  ├── 重复调用拦截
+  ├── 执行工具
+  ├── 错误码归一
+  └── 写入 trace
+  ↓
+ToolCallResult
+```
 
 每次工具调用必须记录：
 
@@ -929,12 +1192,22 @@ recent_turns -> working_memory -> rag_evidence 摘要化 -> active_slots 摘要�
 
 ```json
 {
+  "tool_call_id": "tool_001",
   "tool_name": "PolicyRAGTool",
+  "called_by": "PolicyRAGAgent",
   "tool_status": "success",
   "tool_error_code": null,
   "latency_ms": 320,
-  "input": {},
-  "output": {},
+  "input": {
+    "query": "上下班途中交通事故 工伤认定",
+    "province": "四川省",
+    "city": "成都市",
+    "top_k": 5
+  },
+  "output": {
+    "documents": [],
+    "citations": []
+  },
   "fallback_used": false
 }
 ```
@@ -1148,6 +1421,7 @@ MVP 采用三类运行证据：
 | active_slots | json | 当前有效槽位 |
 | missing_slots | json | 缺失槽位 |
 | route_agents | json | 本轮计划调用的 Agent |
+| prompt_refs | json | 本轮计划使用的 prompt id/version |
 | tool_steps | int | 已执行工具次数 |
 | model_attempts | int | 模型调用或重试次数 |
 | fallback_used | bool | 是否触发降级 |
@@ -1182,6 +1456,9 @@ MVP 采用三类运行证据：
 | active_slots | json | 合并后的业务槽位 |
 | missing_slots | json | 缺失槽位 |
 | route_agents | json | 被调用 Agent |
+| prompt_refs | json | 实际使用的 prompt id/version |
+| input_sections | json | 本次 prompt 注入的上下文分区 |
+| output_schema_valid | bool | 模型输出是否符合 schema |
 | tool_calls | json | 工具调用记录 |
 | draft_answer | text | 安全检查前的答案草稿 |
 | verification_result | json | 引用、地区、冲突等校验结果 |
@@ -1204,7 +1481,9 @@ MVP 采用三类运行证据：
 | route_agents | json | 实际调用 Agent |
 | tool_count | int | 工具调用次数 |
 | model_attempts | int | 模型调用或重试次数 |
+| prompt_refs | json | 本轮使用的 prompt id/version 列表 |
 | prompt_metadata | json | ContextManager 输出的上下文分段和裁剪信息 |
+| output_schema_valid_rate | float | 本轮模型输出 schema 合法率 |
 | token_usage | json | token 或字符统计 |
 | latency_ms | int | 总耗时 |
 | fallback_used | bool | 是否触发降级 |
@@ -1328,8 +1607,41 @@ badcase 不只来自用户差评。MVP 阶段设计 4 个来源：
 | Tool Success Rate | 工具调用成功率 |
 | Answer Pass Rate | LLM-as-Judge 或人工判定通过率 |
 | Latency P50 / P95 | 响应耗时 |
+| Format Valid Rate | Agent 输出是否符合 schema |
+| Cannot Answer Correctness | 证据不足时是否正确拒答或保守回答 |
+| Unsafe Expression Rate | 是否出现绝对化承诺、替代经办判断等高风险表达 |
+| Prompt Token Cost | 不同 prompt 版本的 token / 字符成本 |
 
-### 17.2 最小评测集
+### 17.2 Prompt 评测指标
+
+Prompt 不是靠感觉修改，必须进入 eval-driven iteration。MVP 对 prompt 至少评估：
+
+| 指标 | 说明 |
+|---|---|
+| `format_valid_rate` | JSON / AgentMessage schema 合法率 |
+| `missing_slot_accuracy` | 缺失槽位识别是否正确 |
+| `citation_grounded_rate` | 回答是否基于 RAG evidence |
+| `cannot_answer_correctness` | 证据不足时是否正确拒答或保守回答 |
+| `tool_call_correctness` | 是否在该调用工具时调用工具，不虚构工具结果 |
+| `unsafe_expression_rate` | 是否出现绝对化、越权、无依据金额等表达 |
+| `prompt_token_cost` | 当前 prompt 版本的平均 token / 字符成本 |
+| `prompt_latency` | 当前 prompt 版本的平均模型耗时 |
+
+Prompt 回归评测流程：
+
+```text
+修改 prompt
+  ↓
+运行 eval_cases
+  ↓
+对比 prompt_version 前后指标
+  ↓
+通过：启用新版本并记录 change_note
+  ↓
+不通过：回滚到上一版本
+```
+
+### 17.3 最小评测集
 
 第一版至少准备 30 条：
 
@@ -1364,6 +1676,7 @@ badcase 不只来自用户差评。MVP 阶段设计 4 个来源：
 - 多模型会增加配置复杂度，需要统一 ModelRouter。
 - 评测集如果不补，项目仍然难以证明效果。
 - 如果过早引入复杂异步调度、并行 Agent 或后台任务，会增加 trace 乱序、状态合并和 badcase 复现难度。
+- 如果把业务规则、工具边界和安全治理都塞进 prompt，会导致 prompt 变长、职责混乱、badcase 难定位。
 
 ### 19.2 取舍
 
@@ -1374,6 +1687,7 @@ badcase 不只来自用户差评。MVP 阶段设计 4 个来源：
 - 第一版重点证明 Agent 闭环，而不是复刻线上所有能力。
 - 第一版允许 async I/O，但不做复杂异步任务平台；流式输出只作为后续体验增强，不作为 MVP 核心目标。
 - 第一版参考 Pico 的 Harness 思路，但不接入代码仓库工具、delegate、MCP / Skill 和完整 checkpoint / resume。
+- 第一版把 prompt 作为工程资产治理：模板版本化、上下文分区、输出 schema、失败策略和评测回归必须具备；地区过滤、待遇计算、安全硬规则仍放在代码或工具层。
 
 ## 20. 参考资料
 
