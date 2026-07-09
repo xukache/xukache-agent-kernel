@@ -2,7 +2,7 @@
 
 > **面向 AI 代理的工作者：** 必需子技能：使用 superpowers:subagent-driven-development（推荐）或 superpowers:executing-plans 逐任务实现此计划。步骤使用复选框（`- [ ]`）语法来跟踪进度。
 
-**目标：** 按当前架构文档实现一个无 HTTP、无前端的工伤智能助手 CLI MVP，跑通“用户输入 -> 意图识别 -> Agent 路由 -> RAG / 测算工具 -> 聚合校验 -> CLI 输出 -> Trace / Badcase / Eval”的最小闭环。
+**目标：** 按当前架构文档实现一个无 HTTP、无前端的工伤智能助手 CLI MVP，跑通“用户输入 -&gt; 意图识别 -&gt; Agent 路由 -&gt; RAG / 测算工具 -&gt; 聚合校验 -&gt; CLI 输出 -&gt; Trace / Badcase / Eval”的最小闭环。
 
 **架构：** 以 `AgentOrchestrator` 作为唯一状态推进方，4 个 MVP Agent 均保持无状态，只通过 `AgentContext` 读取输入并返回结构化 `AgentMessage`。所有 Prompt 经 `PromptManager` 和 `ContextManager` 构造，所有工具经 `ToolRegistry` 和 `ToolExecutor` 执行，所有关键事件写入 `TraceRecorder`、`TaskStateStore` 和 `ReportStore`。
 
@@ -79,14 +79,16 @@
 
 ## 2. 阶段与依赖图
 
-| 阶段 | 目标 | 依赖 | 可验收结果 |
-|---|---|---|---|
-| P1 | 建立 Python 工程与测试入口 | 无 | `pytest` 能运行，CLI 包入口存在 |
-| P2 | 定义协议与本地证据存储 | P1 | schema 单测通过，trace/report 可写入 JSONL |
-| P3 | 实现上下文、Prompt、模型路由 | P2 | prompt 可渲染，context 可裁剪且不裁剪当前问题 |
-| P4 | 实现 ToolRegistry、ToolExecutor 和 MVP 工具 | P2、P3 | RAG、测算、引用工具均经 executor 调用并写 trace |
-| P5 | 实现 4 个 Agent 与 Orchestrator 垂直链路 | P2、P3、P4 | CLI 可回答工伤认定、劳动能力鉴定、待遇测算 |
-| P6 | 实现 eval、badcase 和文档同步 | P5 | `/eval` 产出 metrics，失败样例写 badcase |
+
+| 阶段  | 目标                                    | 依赖       | 可验收结果                              |
+| --- | ------------------------------------- | -------- | ---------------------------------- |
+| P1  | 建立 Python 工程与测试入口                     | 无        | `pytest` 能运行，CLI 包入口存在             |
+| P2  | 定义协议与本地证据存储                           | P1       | schema 单测通过，trace/report 可写入 JSONL |
+| P3  | 实现上下文、Prompt、模型路由                     | P2       | prompt 可渲染，context 可裁剪且不裁剪当前问题     |
+| P4  | 实现 ToolRegistry、ToolExecutor 和 MVP 工具 | P2、P3    | RAG、测算、引用工具均经 executor 调用并写 trace  |
+| P5  | 实现 4 个 Agent 与 Orchestrator 垂直链路      | P2、P3、P4 | CLI 可回答工伤认定、劳动能力鉴定、待遇测算            |
+| P6  | 实现 eval、badcase 和文档同步                 | P5       | `/eval` 产出 metrics，失败样例写 badcase   |
+
 
 依赖规则：
 
@@ -106,6 +108,7 @@
 **前置依赖：** 无。
 
 **文件：**
+
 - 复用：`.python-version`
 - 创建：`.gitignore`
 - 创建：`pyproject.toml`
@@ -194,6 +197,7 @@ __version__ = "0.1.0"
 创建 `ananhu_agent/cli/__init__.py`：
 
 ```python
+
 ```
 
 创建 `ananhu_agent/cli/main.py`：
@@ -251,6 +255,7 @@ git commit -m "chore: initialize cli python package"
 **前置依赖：** 任务 1。
 
 **文件：**
+
 - 创建：`ananhu_agent/schemas.py`
 - 创建：`tests/test_schemas.py`
 
@@ -627,6 +632,7 @@ git commit -m "feat: define runtime schemas"
 **前置依赖：** 任务 2。
 
 **文件：**
+
 - 创建：`ananhu_agent/storage/__init__.py`
 - 创建：`ananhu_agent/storage/jsonl_store.py`
 - 创建：`ananhu_agent/storage/runtime_stores.py`
@@ -711,6 +717,7 @@ uv run pytest tests/test_storage.py -v
 创建 `ananhu_agent/storage/__init__.py`：
 
 ```python
+
 ```
 
 创建 `ananhu_agent/storage/jsonl_store.py`：
@@ -818,6 +825,7 @@ git commit -m "feat: add jsonl trace storage"
 **前置依赖：** 任务 2。
 
 **文件：**
+
 - 创建：`ananhu_agent/context/__init__.py`
 - 创建：`ananhu_agent/context/slot_rules.py`
 - 创建：`ananhu_agent/orchestrator/__init__.py`
@@ -955,6 +963,7 @@ git commit -m "feat: add intent revision and slot merge rules"
 **前置依赖：** 任务 2、任务 3。
 
 **文件：**
+
 - 创建：`ananhu_agent/prompts/__init__.py`
 - 创建：`ananhu_agent/prompts/prompt_manager.py`
 - 创建：`ananhu_agent/prompts/templates/intent_router.v1.yaml`
@@ -1044,6 +1053,7 @@ class ContextManager:
 创建 `ananhu_agent/prompts/__init__.py`：
 
 ```python
+
 ```
 
 创建 `ananhu_agent/prompts/prompt_manager.py`：
@@ -1177,6 +1187,7 @@ git commit -m "feat: add prompt and context managers"
 **前置依赖：** 任务 2、任务 3。
 
 **文件：**
+
 - 创建：`ananhu_agent/tools/__init__.py`
 - 创建：`ananhu_agent/tools/registry.py`
 - 创建：`ananhu_agent/tools/executor.py`
@@ -1265,6 +1276,7 @@ uv run pytest tests/test_tool_executor.py -v
 创建 `ananhu_agent/tools/__init__.py`：
 
 ```python
+
 ```
 
 创建 `ananhu_agent/tools/registry.py`：
@@ -1420,6 +1432,7 @@ git commit -m "feat: add governed tool executor"
 **前置依赖：** 任务 6。
 
 **文件：**
+
 - 创建：`data/policies/policy_fixtures.jsonl`
 - 创建：`ananhu_agent/tools/policy_rag.py`
 - 创建：`ananhu_agent/tools/payment_calculation.py`
@@ -1614,6 +1627,7 @@ git commit -m "feat: add local policy and payment tools"
 **前置依赖：** 任务 2、任务 4。
 
 **文件：**
+
 - 创建：`ananhu_agent/models/__init__.py`
 - 创建：`ananhu_agent/models/fake_model.py`
 - 创建：`ananhu_agent/models/model_router.py`
@@ -1791,6 +1805,7 @@ git commit -m "feat: add deterministic intent router agent"
 **前置依赖：** 任务 6、任务 7、任务 8。
 
 **文件：**
+
 - 创建：`ananhu_agent/agents/policy_rag.py`
 - 创建：`ananhu_agent/agents/domain_consultation.py`
 - 创建：`ananhu_agent/agents/payment_calculation.py`
@@ -1945,7 +1960,7 @@ uv run pytest tests/test_business_agents.py -v
 
 预期：3 passed。
 
-- [ ] **步骤 5：提交**
+- [x] **步骤 5：提交**
 
 ```bash
 git add ananhu_agent/agents/policy_rag.py ananhu_agent/agents/domain_consultation.py ananhu_agent/agents/payment_calculation.py tests/test_business_agents.py
@@ -1967,6 +1982,7 @@ git commit -m "feat: add mvp business agents"
 **前置依赖：** 任务 2、任务 7。
 
 **文件：**
+
 - 创建：`ananhu_agent/orchestrator/aggregator.py`
 - 创建：`ananhu_agent/orchestrator/validators.py`
 - 创建：`ananhu_agent/orchestrator/safety.py`
@@ -2104,7 +2120,7 @@ uv run pytest tests/test_answer_governance.py -v
 
 预期：3 passed。
 
-- [ ] **步骤 5：提交**
+- [x] **步骤 5：提交**
 
 ```bash
 git add ananhu_agent/orchestrator/aggregator.py ananhu_agent/orchestrator/validators.py ananhu_agent/orchestrator/safety.py tests/test_answer_governance.py
@@ -2126,6 +2142,7 @@ git commit -m "feat: add answer aggregation and safety checks"
 **前置依赖：** 任务 4、任务 6、任务 7、任务 8、任务 9、任务 10。
 
 **文件：**
+
 - 创建：`ananhu_agent/orchestrator/orchestrator.py`
 - 创建：`tests/test_orchestrator_vertical_slice.py`
 
@@ -2451,7 +2468,7 @@ uv run pytest tests/test_orchestrator_vertical_slice.py -v
 
 预期：1 passed。
 
-- [ ] **步骤 5：提交**
+- [x] **步骤 5：提交**
 
 ```bash
 git add ananhu_agent/orchestrator/orchestrator.py tests/test_orchestrator_vertical_slice.py
@@ -2474,10 +2491,11 @@ git commit -m "feat: add orchestrator vertical slice"
 **前置依赖：** 任务 11。
 
 **文件：**
+
 - 修改：`ananhu_agent/cli/main.py`
 - 创建：`tests/test_cli_ask.py`
 
-- [ ] **步骤 1：编写失败测试**
+- [x] **步骤 1：编写失败测试**
 
 创建 `tests/test_cli_ask.py`：
 
@@ -2499,7 +2517,7 @@ def test_cli_ask_outputs_final_answer(tmp_path, monkeypatch):
     assert "Trace:" in result.output
 ```
 
-- [ ] **步骤 2：运行测试验证失败**
+- [x] **步骤 2：运行测试验证失败**
 
 运行：
 
@@ -2509,7 +2527,7 @@ uv run pytest tests/test_cli_ask.py -v
 
 预期：FAIL，报错包含 `No such command 'ask'`。
 
-- [ ] **步骤 3：实现 ask 命令**
+- [x] **步骤 3：实现 ask 命令**
 
 修改 `ananhu_agent/cli/main.py`：
 
@@ -2541,7 +2559,7 @@ def ask(query: str) -> None:
     typer.echo(f"Trace: {runtime_dir / 'traces.jsonl'}")
 ```
 
-- [ ] **步骤 4：运行测试验证通过**
+- [x] **步骤 4：运行测试验证通过**
 
 运行：
 
@@ -2551,7 +2569,7 @@ uv run pytest tests/test_cli_ask.py -v
 
 预期：1 passed。
 
-- [ ] **步骤 5：提交**
+- [x] **步骤 5：提交**
 
 ```bash
 git add ananhu_agent/cli/main.py tests/test_cli_ask.py
@@ -2572,6 +2590,7 @@ git commit -m "feat: add cli ask command"
 **前置依赖：** 任务 11、任务 12。
 
 **文件：**
+
 - 创建：`data/eval/eval_cases.jsonl`
 - 创建：`ananhu_agent/evaluation/__init__.py`
 - 创建：`ananhu_agent/evaluation/metrics.py`
@@ -2634,6 +2653,7 @@ uv run pytest tests/test_eval_runner.py -v
 创建 `ananhu_agent/evaluation/__init__.py`：
 
 ```python
+
 ```
 
 创建 `ananhu_agent/evaluation/metrics.py`：
@@ -2769,6 +2789,7 @@ git commit -m "feat: add eval runner and badcase output"
 **前置依赖：** 任务 1 至任务 13。
 
 **文件：**
+
 - 修改：`docs/backend-conventions.md`
 - 修改：`docs/architecture/99-changelog.md`
 
@@ -2819,6 +2840,7 @@ uv run ananhu-agent eval data/eval/eval_cases.jsonl
 ```bash
 uv run pytest -v
 ```
+
 ```
 
 - [ ] **步骤 3：更新 changelog**
@@ -2864,6 +2886,881 @@ git commit -m "docs: document cli mvp commands"
 - 本地安装、测试、ask、eval 命令明确。
 - 架构 changelog 记录实现事实变更。
 
+### 任务 15：实现交互式 CLI chat 入口
+
+**目标：** 补齐 `TECH_ARCHITECTURE_MVP.md` 第 14 章要求的交互式 CLI 主入口，让用户可以连续输入问题、查看帮助、退出会话。
+
+**涉及模块：** `cli`、`orchestrator`。
+
+**前置依赖：** 任务 12。
+
+**文件：**
+
+- 修改：`ananhu_agent/cli/main.py`
+- 创建：`tests/test_cli_chat.py`
+
+- [ ] **步骤 1：编写失败测试**
+
+创建 `tests/test_cli_chat.py`：
+
+```python
+from typer.testing import CliRunner
+
+from ananhu_agent.cli.main import app
+
+
+def test_cli_chat_runs_until_exit(tmp_path, monkeypatch):
+    monkeypatch.setenv("ANANHU_RUNTIME_DIR", str(tmp_path))
+    result = CliRunner().invoke(
+        app,
+        ["chat"],
+        input="四川十级工伤，月工资6000，大概能赔多少钱？\n/exit\n",
+    )
+
+    assert result.exit_code == 0
+    assert "安安虎工伤智能助手 Agno MVP" in result.output
+    assert "一次性伤残补助金" in result.output
+    assert "Trace:" in result.output
+
+
+def test_cli_chat_help_command(tmp_path, monkeypatch):
+    monkeypatch.setenv("ANANHU_RUNTIME_DIR", str(tmp_path))
+    result = CliRunner().invoke(app, ["chat"], input="/help\n/exit\n")
+
+    assert result.exit_code == 0
+    assert "/new" in result.output
+    assert "/context" in result.output
+    assert "/trace" in result.output
+    assert "/feedback bad" in result.output
+```
+
+- [ ] **步骤 2：运行测试验证失败**
+
+运行：
+
+```bash
+uv run pytest tests/test_cli_chat.py -v
+```
+
+预期：FAIL，报错包含 `No such command 'chat'`。
+
+- [ ] **步骤 3：实现 chat 命令**
+
+在 `ananhu_agent/cli/main.py` 中新增 `chat` 命令。要求：
+
+- 启动后打印标题和帮助提示。
+- 使用同一个 `session_id`，每轮 `turn_id` 自增。
+- 普通输入调用 `orchestrator.ask(...)`。
+- `/help` 打印命令说明。
+- `/new` 重置 session 和 turn。
+- `/exit`、`exit`、`quit` 退出。
+- `/context`、`/trace`、`/badcase`、`/feedback` 先给出明确提示，具体写入能力在任务 16、17 补齐。
+
+- [ ] **步骤 4：运行测试验证通过**
+
+运行：
+
+```bash
+uv run pytest tests/test_cli_chat.py tests/test_cli_ask.py -v
+```
+
+预期：3 passed。
+
+- [ ] **步骤 5：提交**
+
+```bash
+git add ananhu_agent/cli/main.py tests/test_cli_chat.py
+git commit -m "feat(cli): add interactive chat command"
+```
+
+**验收标准：**
+
+- `uv run ananhu-agent chat` 可进入交互式咨询。
+- 连续输入问题时会复用当前 session 并递增 turn。
+- `/help`、`/new`、`/exit` 行为可测试。
+- 不引入 HTTP API、WebSocket 或前端。
+
+### 任务 16：实现轻量 SessionState 与多轮上下文持久化
+
+**目标：** 补齐 `TECH_ARCHITECTURE_MVP.md` 第 11 章的会话记忆轻实现，让交互式 CLI 可以保存 active slots、历史摘要和最近回答。
+
+**涉及模块：** `storage`、`orchestrator`、`cli`。
+
+**前置依赖：** 任务 11、任务 15。
+
+**文件：**
+
+- 修改：`ananhu_agent/schemas.py`
+- 修改：`ananhu_agent/storage/runtime_stores.py`
+- 修改：`ananhu_agent/orchestrator/orchestrator.py`
+- 修改：`ananhu_agent/cli/main.py`
+- 创建：`tests/test_session_state.py`
+
+- [ ] **步骤 1：编写失败测试**
+
+创建 `tests/test_session_state.py`：
+
+```python
+from ananhu_agent.orchestrator.orchestrator import create_default_orchestrator
+from ananhu_agent.storage.runtime_stores import SessionStateStore
+
+
+def test_session_state_persists_active_slots_between_turns(tmp_path):
+    orchestrator = create_default_orchestrator(tmp_path)
+
+    first = orchestrator.ask("sess_1", 1, "四川十级工伤，月工资6000，大概能赔多少钱？")
+    second = orchestrator.ask("sess_1", 2, "那九级呢？")
+
+    assert first.conversation.active_slots["province"] == "四川省"
+    assert second.conversation.active_slots["province"] == "四川省"
+    assert second.request.province == "四川省"
+    rows = SessionStateStore(tmp_path / "session_states.jsonl").read_all()
+    assert rows[-1]["session_id"] == "sess_1"
+    assert rows[-1]["active_slots"]["province"] == "四川省"
+```
+
+- [ ] **步骤 2：运行测试验证失败**
+
+运行：
+
+```bash
+uv run pytest tests/test_session_state.py -v
+```
+
+预期：FAIL，报错包含 `cannot import name 'SessionStateStore'`。
+
+- [ ] **步骤 3：实现 SessionState 与存储**
+
+要求：
+
+- 在 `schemas.py` 新增 `SessionState`，字段包含 `session_id`、`turn_id`、`history_summary`、`last_user_intent`、`last_answer_summary`、`active_slots`、`updated_at`。
+- 在 `runtime_stores.py` 新增 `SessionStateStore`，提供 `append()`、`read_all()`、`get_latest(session_id)`。
+- `AgentOrchestrator` 初始化时接收 `session_state_store`。
+- `ask()` 开始时读取同 session 最近状态并注入 `ctx.conversation`。
+- `ask()` 结束时写入新的 session state。
+- 高风险槽位跨主题继承暂不复杂化，只继承现有 `merge_slots()` 允许的 active slots，并在 trace 中保留 `region_inherited` metadata。
+
+- [ ] **步骤 4：运行测试验证通过**
+
+运行：
+
+```bash
+uv run pytest tests/test_session_state.py tests/test_orchestrator_vertical_slice.py -v
+```
+
+预期：2 passed。
+
+- [ ] **步骤 5：提交**
+
+```bash
+git add ananhu_agent/schemas.py ananhu_agent/storage/runtime_stores.py ananhu_agent/orchestrator/orchestrator.py ananhu_agent/cli/main.py tests/test_session_state.py
+git commit -m "feat(memory): persist cli session state"
+```
+
+**验收标准：**
+
+- 同一 `session_id` 的第二轮可以继承第一轮地区槽位。
+- session 状态写入 `.ananhu-runtime/session_states.jsonl`。
+- Agent 仍不直接写 session，只有 Orchestrator 推进状态。
+
+### 任务 17：实现 CLI trace、badcase 和 feedback 命令
+
+**目标：** 补齐 `TECH_ARCHITECTURE_MVP.md` 第 14.4 和第 16.1 的用户主动 badcase / feedback 收集能力。
+
+**涉及模块：** `cli`、`storage`。
+
+**前置依赖：** 任务 15、任务 16。
+
+**文件：**
+
+- 修改：`ananhu_agent/schemas.py`
+- 修改：`ananhu_agent/storage/runtime_stores.py`
+- 修改：`ananhu_agent/cli/main.py`
+- 创建：`tests/test_cli_feedback_badcase.py`
+
+- [ ] **步骤 1：编写失败测试**
+
+创建 `tests/test_cli_feedback_badcase.py`：
+
+```python
+from typer.testing import CliRunner
+
+from ananhu_agent.cli.main import app
+
+
+def test_cli_chat_feedback_bad_writes_badcase(tmp_path, monkeypatch):
+    monkeypatch.setenv("ANANHU_RUNTIME_DIR", str(tmp_path))
+    result = CliRunner().invoke(
+        app,
+        ["chat"],
+        input=(
+            "四川十级工伤，月工资6000，大概能赔多少钱？\n"
+            "/feedback bad\n"
+            "4\n"
+            "应该核对地方政策\n"
+            "地区政策不匹配\n"
+            "n\n"
+            "/exit\n"
+        ),
+    )
+
+    assert result.exit_code == 0
+    badcases = (tmp_path / "badcases.jsonl").read_text(encoding="utf-8")
+    assert "region_policy_mismatch" in badcases
+    assert "应该核对地方政策" in badcases
+
+
+def test_cli_chat_trace_prints_latest_request_id(tmp_path, monkeypatch):
+    monkeypatch.setenv("ANANHU_RUNTIME_DIR", str(tmp_path))
+    result = CliRunner().invoke(
+        app,
+        ["chat"],
+        input="四川十级工伤，月工资6000，大概能赔多少钱？\n/trace\n/exit\n",
+    )
+
+    assert result.exit_code == 0
+    assert "request_id:" in result.output
+```
+
+- [ ] **步骤 2：运行测试验证失败**
+
+运行：
+
+```bash
+uv run pytest tests/test_cli_feedback_badcase.py -v
+```
+
+预期：FAIL，当前 `/feedback bad` 不会写入 `badcases.jsonl`。
+
+- [ ] **步骤 3：实现 badcase schema 和存储**
+
+要求：
+
+- 在 `schemas.py` 新增 `BadcaseRecord`。
+- 在 `runtime_stores.py` 新增 `BadcaseStore`。
+- badcase 字段至少包含 `id`、`request_id`、`session_id`、`turn_id`、`query`、`predicted_intent`、`issue_type`、`agent_route`、`tool_calls`、`actual_answer`、`expected_answer`、`correction_note`、`added_to_eval`、`fixed`、`created_at`。
+- CLI 维护最近一次 `AgentContext`，供 `/trace`、`/badcase`、`/feedback bad` 使用。
+- `/feedback good` 只打印确认，不写 badcase。
+
+- [ ] **步骤 4：运行测试验证通过**
+
+运行：
+
+```bash
+uv run pytest tests/test_cli_feedback_badcase.py tests/test_cli_chat.py -v
+```
+
+预期：4 passed。
+
+- [ ] **步骤 5：提交**
+
+```bash
+git add ananhu_agent/schemas.py ananhu_agent/storage/runtime_stores.py ananhu_agent/cli/main.py tests/test_cli_feedback_badcase.py
+git commit -m "feat(cli): collect feedback badcases"
+```
+
+**验收标准：**
+
+- `/badcase` 和 `/feedback bad` 会写入结构化 badcase。
+- `/trace` 能显示最近一次 request_id 和 trace 文件路径。
+- badcase 关联最近一次回答，不允许没有最近回答时写空 badcase。
+
+### 任务 18：实现运行时自动 badcase 候选记录
+
+**目标：** 补齐 `TECH_ARCHITECTURE_MVP.md` 第 16.2 的系统自动 badcase 判定规则。
+
+**涉及模块：** `orchestrator`、`storage`、`evaluation`。
+
+**前置依赖：** 任务 13、任务 17。
+
+**文件：**
+
+- 修改：`ananhu_agent/orchestrator/orchestrator.py`
+- 修改：`ananhu_agent/storage/runtime_stores.py`
+- 创建：`ananhu_agent/orchestrator/badcase_rules.py`
+- 创建：`tests/test_auto_badcase_rules.py`
+
+- [ ] **步骤 1：编写失败测试**
+
+创建 `tests/test_auto_badcase_rules.py`：
+
+```python
+from ananhu_agent.orchestrator.badcase_rules import detect_badcase_issues
+from ananhu_agent.schemas import AgentContext, IntentResult, SafetyResult, VerificationResult
+
+
+def test_detects_missing_citation_and_low_confidence():
+    ctx = AgentContext.new_for_query("sess_1", 1, "这个能不能算？")
+    ctx.intent_result = IntentResult(intent="other", confidence=0.4, missing_slots=["province"])
+    ctx.verification_result = VerificationResult(passed=False, issues=["missing_citation"])
+    ctx.safety_result = SafetyResult(passed=True)
+
+    issues = detect_badcase_issues(ctx)
+
+    assert "low_intent_confidence" in issues
+    assert "missing_citation" in issues
+```
+
+- [ ] **步骤 2：运行测试验证失败**
+
+运行：
+
+```bash
+uv run pytest tests/test_auto_badcase_rules.py -v
+```
+
+预期：FAIL，报错包含 `No module named 'ananhu_agent.orchestrator.badcase_rules'`。
+
+- [ ] **步骤 3：实现自动 badcase 规则**
+
+创建 `ananhu_agent/orchestrator/badcase_rules.py`，至少识别：
+
+- `low_intent_confidence`
+- `rag_no_result`
+- `missing_citation`
+- `tool_failed`
+- `unsafe_answer`
+- `empty_answer`
+
+在 `AgentOrchestrator.ask()` 结束时调用规则；如存在 issues，写入 `badcases.jsonl`，并在 `RunReport.badcase_candidate` 标记为 `True`。
+
+- [ ] **步骤 4：运行测试验证通过**
+
+运行：
+
+```bash
+uv run pytest tests/test_auto_badcase_rules.py tests/test_orchestrator_vertical_slice.py -v
+```
+
+预期：2 passed。
+
+- [ ] **步骤 5：提交**
+
+```bash
+git add ananhu_agent/orchestrator/badcase_rules.py ananhu_agent/orchestrator/orchestrator.py ananhu_agent/storage/runtime_stores.py tests/test_auto_badcase_rules.py
+git commit -m "feat(observability): record automatic badcase candidates"
+```
+
+**验收标准：**
+
+- 低置信度、工具失败、缺引用、安全拦截可自动进入 badcase。
+- `run_reports.jsonl` 的 `badcase_candidate` 与自动规则一致。
+- 用户反馈 badcase 和系统自动 badcase 使用同一个 JSONL 存储协议。
+
+### 任务 19：补齐 ToolExecutor 治理能力
+
+**目标：** 补齐 `TECH_ARCHITECTURE_MVP.md` 第 12.3 要求的 `tool_called` trace、超时控制、输出 schema 校验、重复调用拦截和 fallback_reason。
+
+**涉及模块：** `tools`、`schemas`。
+
+**前置依赖：** 任务 6、任务 11。
+
+**文件：**
+
+- 修改：`ananhu_agent/schemas.py`
+- 修改：`ananhu_agent/tools/registry.py`
+- 修改：`ananhu_agent/tools/executor.py`
+- 修改：`tests/test_tool_executor.py`
+
+- [ ] **步骤 1：编写失败测试**
+
+在 `tests/test_tool_executor.py` 新增：
+
+```python
+def test_tool_executor_records_tool_called_before_success(tmp_path):
+    registry = ToolRegistry()
+    registry.register(
+        ToolDefinition(
+            name="PolicyRAGTool",
+            description="检索政策",
+            risk_level="read_only",
+            timeout_ms=3000,
+            allowed_callers=["PolicyRAGAgent"],
+            required_input_keys=["query"],
+            output_required_keys=["documents"],
+            handler=lambda payload: {"documents": []},
+        )
+    )
+    executor = ToolExecutor(registry, TraceRecorder(tmp_path / "trace.jsonl"))
+
+    executor.execute(
+        "req_1",
+        "sess_1",
+        ToolCallRequest(
+            tool_call_id="tool_1",
+            tool_name="PolicyRAGTool",
+            called_by="PolicyRAGAgent",
+            input={"query": "工伤认定"},
+        ),
+    )
+
+    event_types = [event["event_type"] for event in executor.trace_recorder.read_all()]
+    assert event_types == ["tool_called", "tool_finished"]
+```
+
+- [ ] **步骤 2：运行测试验证失败**
+
+运行：
+
+```bash
+uv run pytest tests/test_tool_executor.py -v
+```
+
+预期：FAIL，当前只记录 `tool_finished` / `tool_failed`。
+
+- [ ] **步骤 3：实现治理增强**
+
+要求：
+
+- `ToolDefinition` 增加 `output_required_keys: list[str] = field(default_factory=list)`。
+- `ToolCallResult` 增加 `fallback_reason: str | None = None`。
+- `ToolExecutor.execute()` 先记录 `tool_called`。
+- 输出缺少 `output_required_keys` 时返回 `tool_output_schema_invalid`。
+- 同一 `request_id + tool_name + called_by + input` 重复调用时返回 `duplicate_tool_call` 或记录 warning trace，MVP 选择返回结构化失败。
+- 超时控制可先使用 `ThreadPoolExecutor` 包装同步 handler；超时返回 `tool_timeout`。
+
+- [ ] **步骤 4：运行测试验证通过**
+
+运行：
+
+```bash
+uv run pytest tests/test_tool_executor.py tests/test_orchestrator_vertical_slice.py -v
+```
+
+预期：全部通过。
+
+- [ ] **步骤 5：提交**
+
+```bash
+git add ananhu_agent/schemas.py ananhu_agent/tools/registry.py ananhu_agent/tools/executor.py tests/test_tool_executor.py
+git commit -m "feat(tools): harden tool executor governance"
+```
+
+**验收标准：**
+
+- 工具调用 trace 包含 `tool_called` 和结束事件。
+- 超时、重复调用、输出 schema 错误都返回结构化错误码。
+- 工具异常不泄露给最终用户。
+
+### 任务 20：增强答案校验和政务安全守卫
+
+**目标：** 补齐 `TECH_ARCHITECTURE_MVP.md` 第 13.3 的地区一致性、医疗/等级边界、金额测算边界和缺引用保守策略。
+
+**涉及模块：** `orchestrator`。
+
+**前置依赖：** 任务 10、任务 18。
+
+**文件：**
+
+- 修改：`ananhu_agent/orchestrator/validators.py`
+- 修改：`ananhu_agent/orchestrator/safety.py`
+- 修改：`ananhu_agent/orchestrator/aggregator.py`
+- 创建：`tests/test_answer_governance_extended.py`
+
+- [ ] **步骤 1：编写失败测试**
+
+创建 `tests/test_answer_governance_extended.py`：
+
+```python
+from ananhu_agent.orchestrator.safety import PolicySafetyGuard
+from ananhu_agent.orchestrator.validators import AnswerValidator
+
+
+def test_validator_rejects_region_mismatch():
+    result = AnswerValidator().validate(
+        "依据四川省政策处理。",
+        citations=[{"title": "四川省工伤保险条例实施办法", "article": "待遇章节", "province": "四川省"}],
+        expected_region={"province": "辽宁省"},
+    )
+
+    assert result.passed is False
+    assert "region_mismatch" in result.issues
+
+
+def test_safety_guard_rejects_medical_grade_commitment():
+    result = PolicySafetyGuard().check("你的伤情肯定可以评为十级伤残。")
+
+    assert result.passed is False
+    assert "medical_grade_commitment" in result.warnings
+```
+
+- [ ] **步骤 2：运行测试验证失败**
+
+运行：
+
+```bash
+uv run pytest tests/test_answer_governance_extended.py -v
+```
+
+预期：FAIL，当前 `AnswerValidator.validate()` 不支持 `expected_region`。
+
+- [ ] **步骤 3：实现校验增强**
+
+要求：
+
+- `AnswerValidator.validate(answer, citations, expected_region=None)` 支持地区一致性。
+- 引用缺失时返回 `missing_citation`，并让聚合器输出保守回答。
+- `PolicySafetyGuard` 增加医疗/伤残等级承诺、替代经办判断、缺字段精确金额等规则。
+- 安全结果 warnings 使用稳定 issue code，不只返回命中的原始短语。
+
+- [ ] **步骤 4：运行测试验证通过**
+
+运行：
+
+```bash
+uv run pytest tests/test_answer_governance.py tests/test_answer_governance_extended.py -v
+```
+
+预期：全部通过。
+
+- [ ] **步骤 5：提交**
+
+```bash
+git add ananhu_agent/orchestrator/validators.py ananhu_agent/orchestrator/safety.py ananhu_agent/orchestrator/aggregator.py tests/test_answer_governance_extended.py
+git commit -m "feat(governance): strengthen policy answer validation"
+```
+
+**验收标准：**
+
+- 地区不一致能被校验器识别。
+- 伤残等级、医疗判断、经办结论保证类表达能被安全守卫拦截。
+- 缺引用时不会输出强结论。
+
+### 任务 21：扩展 eval 分层指标
+
+**目标：** 补齐 `TECH_ARCHITECTURE_MVP.md` 第 17.1 的 intent、slot、RAG、citation、tool、safety、latency 等分层指标。
+
+**涉及模块：** `evaluation`、`orchestrator`。
+
+**前置依赖：** 任务 13、任务 18、任务 20。
+
+**文件：**
+
+- 修改：`ananhu_agent/evaluation/metrics.py`
+- 修改：`ananhu_agent/evaluation/runner.py`
+- 修改：`tests/test_eval_runner.py`
+
+- [ ] **步骤 1：编写失败测试**
+
+在 `tests/test_eval_runner.py` 新增：
+
+```python
+def test_eval_runner_outputs_layered_metrics(tmp_path):
+    cases = tmp_path / "eval_cases.jsonl"
+    cases.write_text(
+        '{"id":"case_1","query":"四川十级工伤，月工资6000，大概能赔多少钱？","expected_intent":"payment_calculation","expected_slots":{"province":"四川省","disability_grade":"十级"},"expect_contains":["一次性伤残补助金"],"expected_citations":["四川省工伤保险条例实施办法"]}\n',
+        encoding="utf-8",
+    )
+    runner = EvalRunner(create_default_orchestrator(tmp_path), tmp_path)
+
+    metrics = runner.run(cases)
+
+    assert metrics["intent_accuracy"] == 1.0
+    assert metrics["slot_accuracy"] == 1.0
+    assert metrics["citation_accuracy"] == 1.0
+    assert metrics["tool_success_rate"] == 1.0
+    assert "latency_ms_avg" in metrics
+```
+
+- [ ] **步骤 2：运行测试验证失败**
+
+运行：
+
+```bash
+uv run pytest tests/test_eval_runner.py -v
+```
+
+预期：FAIL，当前 metrics 只有 `total`、`passed`、`failed`。
+
+- [ ] **步骤 3：实现分层指标**
+
+要求：
+
+- `score_case()` 保留 `expect_contains` 判断。
+- 新增 `score_intent()`、`score_slots()`、`score_citations()`、`score_tool_success()`、`score_safety()`。
+- `EvalRunner.run()` 输出 `intent_accuracy`、`slot_accuracy`、`citation_accuracy`、`tool_success_rate`、`unsafe_expression_rate`、`latency_ms_avg`。
+- 缺少某类 expected 字段的 case 不参与该指标分母。
+
+- [ ] **步骤 4：运行测试验证通过**
+
+运行：
+
+```bash
+uv run pytest tests/test_eval_runner.py tests/test_cli_eval.py -v
+```
+
+预期：全部通过。
+
+- [ ] **步骤 5：提交**
+
+```bash
+git add ananhu_agent/evaluation/metrics.py ananhu_agent/evaluation/runner.py tests/test_eval_runner.py
+git commit -m "feat(eval): add layered mvp metrics"
+```
+
+**验收标准：**
+
+- eval 输出总通过率和分层指标。
+- 指标能定位失败层级，而不只是 `expect_contains` 总分。
+- metrics JSON 保持中文内容可读。
+
+### 任务 22：补齐 30 条 MVP eval cases
+
+**目标：** 补齐 `TECH_ARCHITECTURE_MVP.md` 第 17.3 要求的最小评测集规模。
+
+**涉及模块：** `data/eval`、`evaluation`。
+
+**前置依赖：** 任务 21。
+
+**文件：**
+
+- 修改：`data/eval/eval_cases.jsonl`
+- 创建：`tests/test_eval_dataset.py`
+
+- [ ] **步骤 1：编写失败测试**
+
+创建 `tests/test_eval_dataset.py`：
+
+```python
+import json
+from collections import Counter
+from pathlib import Path
+
+
+def test_eval_dataset_has_required_mvp_coverage():
+    rows = [
+        json.loads(line)
+        for line in Path("data/eval/eval_cases.jsonl").read_text(encoding="utf-8").splitlines()
+        if line.strip()
+    ]
+    counts = Counter(row["category"] for row in rows)
+
+    assert len(rows) >= 30
+    assert counts["work_injury_recognition"] >= 10
+    assert counts["labor_capacity"] >= 8
+    assert counts["payment_calculation"] >= 8
+    assert counts["composite"] >= 4
+    assert all("expected_intent" in row for row in rows)
+    assert all("expect_contains" in row for row in rows)
+```
+
+- [ ] **步骤 2：运行测试验证失败**
+
+运行：
+
+```bash
+uv run pytest tests/test_eval_dataset.py -v
+```
+
+预期：FAIL，当前评测集不足 30 条。
+
+- [ ] **步骤 3：扩充 eval_cases**
+
+将 `data/eval/eval_cases.jsonl` 扩充到至少：
+
+- 工伤认定 10 条。
+- 劳动能力鉴定 8 条。
+- 待遇测算 8 条。
+- 复合问题 4 条。
+
+每条 case 至少包含：
+
+- `id`
+- `category`
+- `query`
+- `expected_intent`
+- `expect_contains`
+- 可选 `expected_slots`
+- 可选 `expected_citations`
+- `difficulty`
+
+- [ ] **步骤 4：运行测试验证通过**
+
+运行：
+
+```bash
+uv run pytest tests/test_eval_dataset.py tests/test_eval_runner.py -v
+uv run ananhu-agent eval data/eval/eval_cases.jsonl
+```
+
+预期：测试通过，CLI eval 产出 metrics。
+
+- [ ] **步骤 5：提交**
+
+```bash
+git add data/eval/eval_cases.jsonl tests/test_eval_dataset.py
+git commit -m "test(eval): expand mvp eval dataset"
+```
+
+**验收标准：**
+
+- eval cases 不少于 30 条。
+- 覆盖工伤认定、劳动能力鉴定、待遇测算、复合问题。
+- 每条 case 可用于分层 metrics。
+
+### 任务 23：实现模型配置和 ModelRouter profile 选择
+
+**目标：** 补齐 `TECH_ARCHITECTURE_MVP.md` 第 10 章的多模型配置入口；MVP 仍可默认使用 FakeModel，但 profile、provider、model 配置必须可追踪。
+
+**涉及模块：** `models`、`config`、`orchestrator`。
+
+**前置依赖：** 任务 8、任务 11。
+
+**文件：**
+
+- 创建：`ananhu_agent/config/__init__.py`
+- 创建：`ananhu_agent/config/settings.py`
+- 修改：`ananhu_agent/models/model_router.py`
+- 修改：`ananhu_agent/orchestrator/orchestrator.py`
+- 创建：`tests/test_model_router_config.py`
+
+- [ ] **步骤 1：编写失败测试**
+
+创建 `tests/test_model_router_config.py`：
+
+```python
+from ananhu_agent.config.settings import RuntimeSettings
+from ananhu_agent.models.model_router import ModelRouter
+
+
+def test_model_router_returns_configured_profile():
+    settings = RuntimeSettings(
+        models={
+            "intent_fast": {
+                "provider": "fake",
+                "model": "deterministic-intent",
+                "temperature": 0,
+            }
+        }
+    )
+
+    profile = ModelRouter(settings).get_profile("intent_fast")
+
+    assert profile["provider"] == "fake"
+    assert profile["model"] == "deterministic-intent"
+```
+
+- [ ] **步骤 2：运行测试验证失败**
+
+运行：
+
+```bash
+uv run pytest tests/test_model_router_config.py -v
+```
+
+预期：FAIL，当前没有 `ananhu_agent.config.settings`。
+
+- [ ] **步骤 3：实现配置和路由**
+
+要求：
+
+- `RuntimeSettings` 使用 `pydantic-settings`，支持 `runtime_dir`、`prompt_template_dir`、`models`。
+- 默认 `intent_fast` 使用 fake provider。
+- `ModelRouter.get_profile(profile_name)` 返回配置字典。
+- `create_default_orchestrator()` 使用 settings 构造 `PromptManager` 和 model profile trace。
+
+- [ ] **步骤 4：运行测试验证通过**
+
+运行：
+
+```bash
+uv run pytest tests/test_model_router_config.py tests/test_intent_router_agent.py -v
+```
+
+预期：全部通过。
+
+- [ ] **步骤 5：提交**
+
+```bash
+git add ananhu_agent/config ananhu_agent/models/model_router.py ananhu_agent/orchestrator/orchestrator.py tests/test_model_router_config.py
+git commit -m "feat(models): add runtime model profile routing"
+```
+
+**验收标准：**
+
+- 模型 profile 不再散落硬编码。
+- trace 中能看到 `model_profile`。
+- MVP 不要求接真实 LLM key，但为后续 OpenAI-compatible / DashScope / DeepSeek 接入保留配置边界。
+
+### 任务 24：接入 Agno 适配层并明确 MVP 框架边界
+
+**目标：** 对齐“基于 Agno 自研多 Agent 编排”的技术路线：MVP 保留当前可测试 harness，同时提供 Agno Agent / Tool 适配层和文档边界，避免后续误以为已经完成真实 Agno 接入。
+
+**涉及模块：** `agents`、`tools`、`docs`。
+
+**前置依赖：** 任务 11、任务 19、任务 23。
+
+**文件：**
+
+- 创建：`ananhu_agent/agno_adapters/__init__.py`
+- 创建：`ananhu_agent/agno_adapters/agent_adapter.py`
+- 创建：`ananhu_agent/agno_adapters/tool_adapter.py`
+- 修改：`docs/architecture/02-agent-runtime.md`
+- 修改：`docs/backend-conventions.md`
+- 创建：`tests/test_agno_adapters.py`
+
+- [ ] **步骤 1：编写失败测试**
+
+创建 `tests/test_agno_adapters.py`：
+
+```python
+from ananhu_agent.agno_adapters.agent_adapter import AgentRuntimeAdapter
+from ananhu_agent.agents.domain_consultation import DomainConsultationAgent
+from ananhu_agent.schemas import AgentContext
+
+
+def test_agent_runtime_adapter_preserves_agent_message_contract():
+    adapter = AgentRuntimeAdapter(DomainConsultationAgent())
+    ctx = AgentContext.new_for_query("sess_1", 1, "劳动能力鉴定需要准备哪些材料？")
+
+    message = adapter.run(ctx)
+
+    assert message.agent_name == "DomainConsultationAgent"
+    assert message.status == "success"
+```
+
+- [ ] **步骤 2：运行测试验证失败**
+
+运行：
+
+```bash
+uv run pytest tests/test_agno_adapters.py -v
+```
+
+预期：FAIL，报错包含 `No module named 'ananhu_agent.agno_adapters'`。
+
+- [ ] **步骤 3：实现轻量适配层**
+
+要求：
+
+- `AgentRuntimeAdapter` 包装现有无状态 Agent，暴露 `run(ctx)`，保持 `AgentMessage` 契约。
+- `ToolRuntimeAdapter` 包装现有 Tool handler，保持 `ToolExecutor` 契约。
+- 不在本任务强制引入真实 Agno 运行时依赖，除非 `pyproject.toml` 已确认可稳定安装。
+- 在文档中明确：当前 MVP 运行时是 Agno-compatible harness；真实 Agno Team / Workflow 接入作为后续增强，不改变 Agent/Tool 协议。
+
+- [ ] **步骤 4：运行测试验证通过**
+
+运行：
+
+```bash
+uv run pytest tests/test_agno_adapters.py tests/test_orchestrator_vertical_slice.py -v
+```
+
+预期：全部通过。
+
+- [ ] **步骤 5：提交**
+
+```bash
+git add ananhu_agent/agno_adapters docs/architecture/02-agent-runtime.md docs/backend-conventions.md tests/test_agno_adapters.py
+git commit -m "feat(agno): add runtime adapter boundary"
+```
+
+**验收标准：**
+
+- 现有 Agent/Tool 契约可被 Agno 适配层包装。
+- 文档明确当前 MVP 与真实 Agno runtime 的边界。
+- 不破坏当前 CLI / eval / trace 闭环。
+
 ## 4. 对抗性审查清单
 
 执行本计划前，必须使用子 agent 或 reviewer 按以下问题审查：
@@ -2874,27 +3771,37 @@ git commit -m "docs: document cli mvp commands"
 4. 是否存在 Agent 硬编码完整 Prompt。
 5. 是否存在只建目录、不可验证的任务。
 6. 是否存在任务粒度过大，无法在一次小提交中完成。
-7. 是否遗漏 P0：工伤认定、劳动能力鉴定、待遇测算、trace、badcase、eval。
+7. 是否遗漏 P0：交互式 CLI、工伤认定、劳动能力鉴定、待遇测算、trace、feedback、badcase、eval、会话记忆。
 8. 是否误加非目标：HTTP API、WebSocket、前端、语音、图片、MCP。
+9. 是否把 Agno-compatible harness 误写成已完成真实 Agno Team / Workflow 接入。
+10. 是否遗漏工具治理：`tool_called`、超时、输出 schema、重复调用和 fallback reason。
 
 审查通过条件：
 
 - 每个任务都有明确目标、涉及模块、步骤流程、验收标准。
 - 每个任务的验证命令能在该任务完成后独立运行。
 - 依赖图无循环，无“前面依赖后面”的情况。
-- P0 垂直闭环可通过 `uv run ananhu-agent ask` 和 `uv run ananhu-agent eval` 观察。
+- P0 垂直闭环可通过 `uv run ananhu-agent chat`、`uv run ananhu-agent ask` 和 `uv run ananhu-agent eval` 观察。
 
 ## 5. 总体验收
 
 最终交付必须满足：
 
 - `uv run pytest -v` 全部通过。
+- `uv run ananhu-agent chat` 可进入交互式咨询，支持 `/help`、`/new`、`/trace`、`/feedback bad`、`/badcase`、`/exit`。
 - `uv run ananhu-agent ask "四川十级工伤，月工资6000，大概能赔多少钱？"` 输出待遇测算、依据和风险提示。
 - `uv run ananhu-agent ask "上班路上发生交通事故，交警认定我不是主要责任，能不能认定工伤？"` 输出法规依据和保守结论。
 - `uv run ananhu-agent ask "劳动能力鉴定需要准备哪些材料？"` 输出材料建议和依据。
-- `.ananhu-runtime/traces.jsonl` 包含 `request_received`、`intent_revised`、`tool_finished`、`response_ready`。
+- 多轮 chat 在同一 session 内可持久化和继承地区等低风险槽位。
+- `.ananhu-runtime/traces.jsonl` 包含 `request_received`、`intent_revised`、`tool_called`、`tool_finished`、`answer_validated`、`safety_checked`、`response_ready`。
+- `.ananhu-runtime/session_states.jsonl` 记录当前会话状态。
+- `/feedback bad` 或 `/badcase` 能写入 `.ananhu-runtime/badcases.jsonl`。
 - `uv run ananhu-agent eval data/eval/eval_cases.jsonl` 产出 `.ananhu-runtime/metrics.json`。
-- eval 失败时 `.ananhu-runtime/badcases.jsonl` 有结构化记录。
+- eval cases 不少于 30 条，覆盖工伤认定、劳动能力鉴定、待遇测算和复合问题。
+- eval metrics 包含总通过率以及 intent、slot、citation、tool、safety、latency 等分层指标。
+- eval 失败和运行时自动判定失败时 `.ananhu-runtime/badcases.jsonl` 有结构化记录。
+- 模型 profile 通过配置和 `ModelRouter` 选择，trace 能记录 `model_profile`。
+- Agno 适配边界有代码和文档说明，不把当前 harness 误标为完整 Agno Team / Workflow 实现。
 - 没有新增 HTTP API、WebSocket、前端、语音、图片、MCP 能力。
 
 ## 6. 执行方式
