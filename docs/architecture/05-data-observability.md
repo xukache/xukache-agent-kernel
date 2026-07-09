@@ -62,6 +62,14 @@
 - `response_ready`
 - `request_failed`
 
+`model_called` 的 payload 至少记录：
+
+- `model_profile`
+- `model_config.provider`
+- `model_config.model`
+- `model_config.temperature`
+- `prompt_ref`
+
 ## run_reports
 
 运行摘要字段：

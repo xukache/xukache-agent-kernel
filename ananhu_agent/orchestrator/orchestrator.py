@@ -6,9 +6,10 @@ from ananhu_agent.agents.domain_consultation import DomainConsultationAgent
 from ananhu_agent.agents.intent_router import IntentRouterAgent
 from ananhu_agent.agents.payment_calculation import PaymentCalculationAgent
 from ananhu_agent.agents.policy_rag import PolicyRAGAgent
+from ananhu_agent.config.settings import RuntimeSettings
 from ananhu_agent.context.context_manager import ContextManager
 from ananhu_agent.context.slot_rules import merge_slots
-from ananhu_agent.models.fake_model import FakeModelClient
+from ananhu_agent.models.model_router import ModelRouter
 from ananhu_agent.orchestrator.aggregator import build_final_answer
 from ananhu_agent.orchestrator.badcase_rules import detect_badcase_issues
 from ananhu_agent.orchestrator.rules import revise_intent
@@ -56,6 +57,7 @@ class AgentOrchestrator:
         report_store: ReportStore,
         session_state_store: SessionStateStore,
         badcase_store: BadcaseStore,
+        model_router: ModelRouter,
     ) -> None:
         self.intent_agent = intent_agent
         self.domain_agent = domain_agent
@@ -67,6 +69,7 @@ class AgentOrchestrator:
         self.report_store = report_store
         self.session_state_store = session_state_store
         self.badcase_store = badcase_store
+        self.model_router = model_router
 
     def ask(self, session_id: str, turn_id: int, user_query: str) -> AgentContext:
         """执行一轮从用户问题到最终答案的同步咨询链路。"""
@@ -127,7 +130,11 @@ class AgentOrchestrator:
             ctx,
             "model_called",
             "model",
-            {"model_profile": "intent_fast", "prompt_ref": intent_message.data["prompt_ref"]},
+            {
+                "model_profile": "intent_fast",
+                "model_config": self.model_router.get_profile("intent_fast"),
+                "prompt_ref": intent_message.data["prompt_ref"],
+            },
         )
         self._record(ctx, "intent_recognized", "routing", intent_message.data)
         return intent_message
@@ -292,9 +299,14 @@ class AgentOrchestrator:
         ]
 
 
-def create_default_orchestrator(base_path: Path) -> AgentOrchestrator:
+def create_default_orchestrator(
+    base_path: Path,
+    settings: RuntimeSettings | None = None,
+) -> AgentOrchestrator:
     """创建 MVP 默认运行时装配，供 CLI、测试和后续 eval 复用。"""
 
+    settings = settings or RuntimeSettings(runtime_dir=base_path)
+    model_router = ModelRouter(settings)
     trace_recorder = TraceRecorder(base_path / "traces.jsonl")
     task_state_store = TaskStateStore(base_path / "task_states.jsonl")
     report_store = ReportStore(base_path / "run_reports.jsonl")
@@ -327,9 +339,9 @@ def create_default_orchestrator(base_path: Path) -> AgentOrchestrator:
     )
     return AgentOrchestrator(
         intent_agent=IntentRouterAgent(
-            FakeModelClient(),
+            model_router.client_for("intent_fast"),
             ContextManager(),
-            PromptManager(Path("ananhu_agent/prompts/templates")),
+            PromptManager(settings.prompt_template_dir),
         ),
         domain_agent=DomainConsultationAgent(),
         payment_agent=PaymentCalculationAgent(),
@@ -340,4 +352,5 @@ def create_default_orchestrator(base_path: Path) -> AgentOrchestrator:
         report_store=report_store,
         session_state_store=session_state_store,
         badcase_store=badcase_store,
+        model_router=model_router,
     )

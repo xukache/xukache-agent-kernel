@@ -26,5 +26,9 @@ def test_orchestrator_answers_payment_question_with_trace(tmp_path):
     assert "answer_validated" in event_types
     assert "safety_checked" in event_types
     assert "response_ready" in event_types
+    model_events = [event for event in events if event["event_type"] == "model_called"]
+    assert model_events[0]["payload"]["model_profile"] == "intent_fast"
+    assert model_events[0]["payload"]["model_config"]["provider"] == "fake"
+    assert model_events[0]["payload"]["model_config"]["model"] == "deterministic-intent"
     assert orchestrator.task_state_store.read_all()[0]["current_phase"] == "response_ready"
     assert orchestrator.report_store.read_all()[0]["final_intent"] == "payment_calculation"

@@ -3614,7 +3614,7 @@ git commit -m "test(eval): expand mvp eval dataset"
 - 修改：`ananhu_agent/orchestrator/orchestrator.py`
 - 创建：`tests/test_model_router_config.py`
 
-- [ ] **步骤 1：编写失败测试**
+- [x] **步骤 1：编写失败测试**
 
 创建 `tests/test_model_router_config.py`：
 
@@ -3640,7 +3640,7 @@ def test_model_router_returns_configured_profile():
     assert profile["model"] == "deterministic-intent"
 ```
 
-- [ ] **步骤 2：运行测试验证失败**
+- [x] **步骤 2：运行测试验证失败**
 
 运行：
 
@@ -3650,7 +3650,7 @@ uv run pytest tests/test_model_router_config.py -v
 
 预期：FAIL，当前没有 `ananhu_agent.config.settings`。
 
-- [ ] **步骤 3：实现配置和路由**
+- [x] **步骤 3：实现配置和路由**
 
 要求：
 
@@ -3659,7 +3659,7 @@ uv run pytest tests/test_model_router_config.py -v
 - `ModelRouter.get_profile(profile_name)` 返回配置字典。
 - `create_default_orchestrator()` 使用 settings 构造 `PromptManager` 和 model profile trace。
 
-- [ ] **步骤 4：运行测试验证通过**
+- [x] **步骤 4：运行测试验证通过**
 
 运行：
 
@@ -3669,7 +3669,7 @@ uv run pytest tests/test_model_router_config.py tests/test_intent_router_agent.p
 
 预期：全部通过。
 
-- [ ] **步骤 5：提交**
+- [x] **步骤 5：提交**
 
 ```bash
 git add ananhu_agent/config ananhu_agent/models/model_router.py ananhu_agent/orchestrator/orchestrator.py tests/test_model_router_config.py

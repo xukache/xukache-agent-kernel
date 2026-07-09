@@ -112,6 +112,15 @@ Agent 只能产生 `ToolCallRequest`，所有工具必须经过 `ToolExecutor`�
 
 ## ModelRouter
 
+当前 MVP 代码基线已落地 `RuntimeSettings` 和 `ModelRouter`：
+
+- `RuntimeSettings.runtime_dir` 统一描述本地运行证据目录。
+- `RuntimeSettings.prompt_template_dir` 统一描述 Prompt 模板目录。
+- `RuntimeSettings.models` 保存模型 profile 到 provider/model/temperature 的映射。
+- 默认 `intent_fast` 使用 `fake` provider 和 `deterministic-intent` model，保证本地 eval 可回放。
+- `ModelRouter.get_profile(profile_name)` 返回可写入 trace 的配置字典。
+- `ModelRouter.client_for(profile_name)` 目前只支持 `fake` provider；真实 LLM provider 接入前不得绕过该路由器。
+
 模型配置按能力分层：
 
 | model_profile | 用途 |
