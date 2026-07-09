@@ -3517,7 +3517,7 @@ git commit -m "feat(eval): add layered mvp metrics"
 - 修改：`data/eval/eval_cases.jsonl`
 - 创建：`tests/test_eval_dataset.py`
 
-- [ ] **步骤 1：编写失败测试**
+- [x] **步骤 1：编写失败测试**
 
 创建 `tests/test_eval_dataset.py`：
 
@@ -3544,7 +3544,7 @@ def test_eval_dataset_has_required_mvp_coverage():
     assert all("expect_contains" in row for row in rows)
 ```
 
-- [ ] **步骤 2：运行测试验证失败**
+- [x] **步骤 2：运行测试验证失败**
 
 运行：
 
@@ -3554,7 +3554,7 @@ uv run pytest tests/test_eval_dataset.py -v
 
 预期：FAIL，当前评测集不足 30 条。
 
-- [ ] **步骤 3：扩充 eval_cases**
+- [x] **步骤 3：扩充 eval_cases**
 
 将 `data/eval/eval_cases.jsonl` 扩充到至少：
 
@@ -3574,7 +3574,7 @@ uv run pytest tests/test_eval_dataset.py -v
 - 可选 `expected_citations`
 - `difficulty`
 
-- [ ] **步骤 4：运行测试验证通过**
+- [x] **步骤 4：运行测试验证通过**
 
 运行：
 
@@ -3585,7 +3585,7 @@ uv run ananhu-agent eval data/eval/eval_cases.jsonl
 
 预期：测试通过，CLI eval 产出 metrics。
 
-- [ ] **步骤 5：提交**
+- [x] **步骤 5：提交**
 
 ```bash
 git add data/eval/eval_cases.jsonl tests/test_eval_dataset.py
