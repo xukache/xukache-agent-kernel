@@ -824,7 +824,7 @@ git commit -m "feat: add jsonl trace storage"
 - 创建：`ananhu_agent/orchestrator/rules.py`
 - 创建：`tests/test_intent_rules.py`
 
-- [ ] **步骤 1：编写失败测试**
+- [x] **步骤 1：编写失败测试**
 
 创建 `tests/test_intent_rules.py`：
 
@@ -862,7 +862,7 @@ def test_current_region_overrides_history_region():
     assert metadata["region_overridden"] is True
 ```
 
-- [ ] **步骤 2：运行测试验证失败**
+- [x] **步骤 2：运行测试验证失败**
 
 运行：
 
@@ -872,7 +872,7 @@ uv run pytest tests/test_intent_rules.py -v
 
 预期：FAIL，报错包含 `No module named 'ananhu_agent.context'`。
 
-- [ ] **步骤 3：实现规则**
+- [x] **步骤 3：实现规则**
 
 创建 `ananhu_agent/context/__init__.py` 和 `ananhu_agent/orchestrator/__init__.py` 为空文件。
 
@@ -923,7 +923,7 @@ def revise_intent(user_query: str, result: IntentResult) -> IntentResult:
     return data
 ```
 
-- [ ] **步骤 4：运行测试验证通过**
+- [x] **步骤 4：运行测试验证通过**
 
 运行：
 
@@ -933,7 +933,7 @@ uv run pytest tests/test_intent_rules.py -v
 
 预期：3 passed。
 
-- [ ] **步骤 5：提交**
+- [x] **步骤 5：提交**
 
 ```bash
 git add ananhu_agent/context ananhu_agent/orchestrator tests/test_intent_rules.py
