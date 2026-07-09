@@ -1972,7 +1972,7 @@ git commit -m "feat: add mvp business agents"
 - 创建：`ananhu_agent/orchestrator/safety.py`
 - 创建：`tests/test_answer_governance.py`
 
-- [ ] **步骤 1：编写失败测试**
+- [x] **步骤 1：编写失败测试**
 
 创建 `tests/test_answer_governance.py`：
 
@@ -2025,7 +2025,7 @@ def test_safety_guard_rejects_absolute_commitment():
     assert result.passed is False
 ```
 
-- [ ] **步骤 2：运行测试验证失败**
+- [x] **步骤 2：运行测试验证失败**
 
 运行：
 
@@ -2035,7 +2035,7 @@ uv run pytest tests/test_answer_governance.py -v
 
 预期：FAIL，报错包含 `No module named 'ananhu_agent.orchestrator.aggregator'`。
 
-- [ ] **步骤 3：实现聚合、校验、安全守卫**
+- [x] **步骤 3：实现聚合、校验、安全守卫**
 
 创建 `ananhu_agent/orchestrator/aggregator.py`：
 
@@ -2094,7 +2094,7 @@ class PolicySafetyGuard:
         return SafetyResult(passed=not warnings, warnings=warnings)
 ```
 
-- [ ] **步骤 4：运行测试验证通过**
+- [x] **步骤 4：运行测试验证通过**
 
 运行：
 
