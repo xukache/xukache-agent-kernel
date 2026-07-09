@@ -3180,7 +3180,7 @@ git commit -m "feat(cli): collect feedback badcases"
 - 创建：`ananhu_agent/orchestrator/badcase_rules.py`
 - 创建：`tests/test_auto_badcase_rules.py`
 
-- [ ] **步骤 1：编写失败测试**
+- [x] **步骤 1：编写失败测试**
 
 创建 `tests/test_auto_badcase_rules.py`：
 
@@ -3201,7 +3201,7 @@ def test_detects_missing_citation_and_low_confidence():
     assert "missing_citation" in issues
 ```
 
-- [ ] **步骤 2：运行测试验证失败**
+- [x] **步骤 2：运行测试验证失败**
 
 运行：
 
@@ -3211,7 +3211,7 @@ uv run pytest tests/test_auto_badcase_rules.py -v
 
 预期：FAIL，报错包含 `No module named 'ananhu_agent.orchestrator.badcase_rules'`。
 
-- [ ] **步骤 3：实现自动 badcase 规则**
+- [x] **步骤 3：实现自动 badcase 规则**
 
 创建 `ananhu_agent/orchestrator/badcase_rules.py`，至少识别：
 
@@ -3224,7 +3224,7 @@ uv run pytest tests/test_auto_badcase_rules.py -v
 
 在 `AgentOrchestrator.ask()` 结束时调用规则；如存在 issues，写入 `badcases.jsonl`，并在 `RunReport.badcase_candidate` 标记为 `True`。
 
-- [ ] **步骤 4：运行测试验证通过**
+- [x] **步骤 4：运行测试验证通过**
 
 运行：
 
@@ -3234,7 +3234,7 @@ uv run pytest tests/test_auto_badcase_rules.py tests/test_orchestrator_vertical_
 
 预期：2 passed。
 
-- [ ] **步骤 5：提交**
+- [x] **步骤 5：提交**
 
 ```bash
 git add ananhu_agent/orchestrator/badcase_rules.py ananhu_agent/orchestrator/orchestrator.py ananhu_agent/storage/runtime_stores.py tests/test_auto_badcase_rules.py

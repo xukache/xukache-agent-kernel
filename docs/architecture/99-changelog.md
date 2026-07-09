@@ -11,6 +11,7 @@
 | 2026-07-09 | 统一后端环境管理为 `uv`，固定 Python 版本为 3.11，并通过 `.python-version` 声明。 |
 | 2026-07-09 | 创建 MVP Agent 后端项目标准文档体系，确立 CLI MVP、4 Agent、Prompt / Tool / Trace / Eval 治理分册。 |
 | 2026-07-09 | 落地 CLI `/trace`、`/badcase` 和 `/feedback bad` 的本地证据收集能力，并补齐 `BadcaseRecord` JSONL 字段。 |
+| 2026-07-09 | 落地运行时自动 badcase 候选规则，覆盖低置信意图、RAG 无结果、缺引用、工具失败、不安全回答和空回答。 |
 
 ## 2026-07-09
 

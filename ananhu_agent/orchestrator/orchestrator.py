@@ -10,6 +10,7 @@ from ananhu_agent.context.context_manager import ContextManager
 from ananhu_agent.context.slot_rules import merge_slots
 from ananhu_agent.models.fake_model import FakeModelClient
 from ananhu_agent.orchestrator.aggregator import build_final_answer
+from ananhu_agent.orchestrator.badcase_rules import detect_badcase_issues
 from ananhu_agent.orchestrator.rules import revise_intent
 from ananhu_agent.orchestrator.safety import PolicySafetyGuard
 from ananhu_agent.orchestrator.validators import AnswerValidator
@@ -18,6 +19,7 @@ from ananhu_agent.schemas import (
     AgentContext,
     AgentMessage,
     AgentPlan,
+    BadcaseRecord,
     IntentResult,
     RunReport,
     SessionState,
@@ -27,6 +29,7 @@ from ananhu_agent.schemas import (
     now_cn,
 )
 from ananhu_agent.storage.runtime_stores import (
+    BadcaseStore,
     ReportStore,
     SessionStateStore,
     TaskStateStore,
@@ -52,6 +55,7 @@ class AgentOrchestrator:
         task_state_store: TaskStateStore,
         report_store: ReportStore,
         session_state_store: SessionStateStore,
+        badcase_store: BadcaseStore,
     ) -> None:
         self.intent_agent = intent_agent
         self.domain_agent = domain_agent
@@ -62,6 +66,7 @@ class AgentOrchestrator:
         self.task_state_store = task_state_store
         self.report_store = report_store
         self.session_state_store = session_state_store
+        self.badcase_store = badcase_store
 
     def ask(self, session_id: str, turn_id: int, user_query: str) -> AgentContext:
         """执行一轮从用户问题到最终答案的同步咨询链路。"""
@@ -89,7 +94,9 @@ class AgentOrchestrator:
         self._record(ctx, "response_ready", "orchestrator", {"final_answer": ctx.final_answer})
 
         self._append_session_state(ctx)
-        self._append_runtime_evidence(ctx, intent_message)
+        badcase_issues = detect_badcase_issues(ctx)
+        self._append_automatic_badcases(ctx, badcase_issues)
+        self._append_runtime_evidence(ctx, intent_message, badcase_issues)
         return ctx
 
     def _restore_session_state(self, ctx: AgentContext) -> None:
@@ -174,7 +181,12 @@ class AgentOrchestrator:
                 )
             )
 
-    def _append_runtime_evidence(self, ctx: AgentContext, intent_message: AgentMessage) -> None:
+    def _append_runtime_evidence(
+        self,
+        ctx: AgentContext,
+        intent_message: AgentMessage,
+        badcase_issues: list[str],
+    ) -> None:
         fallback_used = any(result.fallback_used for result in ctx.tool_results)
         prompt_ref = intent_message.data["prompt_ref"]
         self.task_state_store.append(
@@ -213,9 +225,31 @@ class AgentOrchestrator:
                 latency_ms=0,
                 fallback_used=fallback_used,
                 safety_result=ctx.safety_result.model_dump(),
-                badcase_candidate=not ctx.verification_result.passed or not ctx.safety_result.passed,
+                badcase_candidate=bool(badcase_issues),
             )
         )
+
+    def _append_automatic_badcases(self, ctx: AgentContext, issues: list[str]) -> None:
+        for issue in issues:
+            self.badcase_store.append(
+                BadcaseRecord(
+                    id=f"badcase_{ctx.request.request_id}_{issue}",
+                    request_id=ctx.request.request_id,
+                    session_id=ctx.request.session_id,
+                    turn_id=ctx.request.turn_id,
+                    query=ctx.request.user_query,
+                    predicted_intent=ctx.intent_result.intent if ctx.intent_result else None,
+                    issue_type=issue,
+                    agent_route=ctx.agent_plan.route_agents if ctx.agent_plan else [],
+                    tool_calls=[result.tool_name for result in ctx.tool_results],
+                    actual_answer=ctx.final_answer or "",
+                    expected_answer="",
+                    correction_note="system_auto_candidate",
+                    added_to_eval=False,
+                    fixed=False,
+                    created_at=now_cn(),
+                )
+            )
 
     def _append_session_state(self, ctx: AgentContext) -> None:
         # 会话摘要先采用轻量截断，后续接入模型摘要时仍保持相同 SessionState 协议。
@@ -265,6 +299,7 @@ def create_default_orchestrator(base_path: Path) -> AgentOrchestrator:
     task_state_store = TaskStateStore(base_path / "task_states.jsonl")
     report_store = ReportStore(base_path / "run_reports.jsonl")
     session_state_store = SessionStateStore(base_path / "session_states.jsonl")
+    badcase_store = BadcaseStore(base_path / "badcases.jsonl")
     registry = ToolRegistry()
     registry.register(
         ToolDefinition(
@@ -302,4 +337,5 @@ def create_default_orchestrator(base_path: Path) -> AgentOrchestrator:
         task_state_store=task_state_store,
         report_store=report_store,
         session_state_store=session_state_store,
+        badcase_store=badcase_store,
     )
