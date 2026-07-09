@@ -1426,7 +1426,7 @@ git commit -m "feat: add governed tool executor"
 - 创建：`ananhu_agent/tools/formatters.py`
 - 创建：`tests/test_mvp_tools.py`
 
-- [ ] **步骤 1：编写失败测试**
+- [x] **步骤 1：编写失败测试**
 
 创建 `tests/test_mvp_tools.py`：
 
@@ -1480,7 +1480,7 @@ def test_citation_formatter_outputs_ordered_citations():
     assert citations["citations"][0]["label"] == "[1] 工伤保险条例 第十四条"
 ```
 
-- [ ] **步骤 2：运行测试验证失败**
+- [x] **步骤 2：运行测试验证失败**
 
 运行：
 
@@ -1490,7 +1490,7 @@ uv run pytest tests/test_mvp_tools.py -v
 
 预期：FAIL，报错包含 `No module named 'ananhu_agent.tools.policy_rag'`。
 
-- [ ] **步骤 3：实现 fixture 与工具函数**
+- [x] **步骤 3：实现 fixture 与工具函数**
 
 创建 `data/policies/policy_fixtures.jsonl`：
 
@@ -1582,7 +1582,7 @@ def format_citations(payload: dict[str, Any]) -> dict[str, Any]:
     return {"citations": citations}
 ```
 
-- [ ] **步骤 4：运行测试验证通过**
+- [x] **步骤 4：运行测试验证通过**
 
 运行：
 
@@ -1592,7 +1592,7 @@ uv run pytest tests/test_mvp_tools.py -v
 
 预期：3 passed。
 
-- [ ] **步骤 5：提交**
+- [x] **步骤 5：提交**
 
 ```bash
 git add data/policies ananhu_agent/tools/policy_rag.py ananhu_agent/tools/payment_calculation.py ananhu_agent/tools/formatters.py tests/test_mvp_tools.py
