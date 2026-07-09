@@ -1182,7 +1182,7 @@ git commit -m "feat: add prompt and context managers"
 - 创建：`ananhu_agent/tools/executor.py`
 - 创建：`tests/test_tool_executor.py`
 
-- [ ] **步骤 1：编写失败测试**
+- [x] **步骤 1：编写失败测试**
 
 创建 `tests/test_tool_executor.py`：
 
@@ -1250,7 +1250,7 @@ def test_tool_executor_normalizes_handler_exception(tmp_path):
     assert result.tool_error_code == "tool_handler_error"
 ```
 
-- [ ] **步骤 2：运行测试验证失败**
+- [x] **步骤 2：运行测试验证失败**
 
 运行：
 
@@ -1260,7 +1260,7 @@ uv run pytest tests/test_tool_executor.py -v
 
 预期：FAIL，报错包含 `No module named 'ananhu_agent.tools'`。
 
-- [ ] **步骤 3：实现 registry 和 executor**
+- [x] **步骤 3：实现 registry 和 executor**
 
 创建 `ananhu_agent/tools/__init__.py`：
 
@@ -1387,7 +1387,7 @@ class ToolExecutor:
         return result
 ```
 
-- [ ] **步骤 4：运行测试验证通过**
+- [x] **步骤 4：运行测试验证通过**
 
 运行：
 
@@ -1397,7 +1397,7 @@ uv run pytest tests/test_tool_executor.py -v
 
 预期：2 passed。
 
-- [ ] **步骤 5：提交**
+- [x] **步骤 5：提交**
 
 ```bash
 git add ananhu_agent/tools tests/test_tool_executor.py
