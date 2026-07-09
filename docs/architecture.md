@@ -8,6 +8,7 @@
 
 - 当前阶段：无前端交互式 CLI MVP。
 - 当前实现：仅有架构文档，尚未创建 Python 包结构。
+- 环境管理：使用 `uv`，Python 版本固定为 3.11。
 - API 状态：当前不暴露 HTTP API，详见 `docs/api-contracts.md`。
 - 架构事实源优先级：
   1. 当前代码决定实际表现。
@@ -51,4 +52,3 @@
 - 修改系统模块边界、Agent 清单、上下文协议、Prompt 管理、Tool 管理、数据模型、评测指标时，必须同步更新对应分册。
 - 架构级变更必须更新 `docs/architecture/99-changelog.md`。
 - Agent 变更监控统一写入 `docs/architecture/10-evolution-rules.md`，不创建 `docs/agent-monitoring.md`。
-

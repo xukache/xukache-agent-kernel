@@ -6,7 +6,7 @@
 
 **架构：** 以 `AgentOrchestrator` 作为唯一状态推进方，4 个 MVP Agent 均保持无状态，只通过 `AgentContext` 读取输入并返回结构化 `AgentMessage`。所有 Prompt 经 `PromptManager` 和 `ContextManager` 构造，所有工具经 `ToolRegistry` 和 `ToolExecutor` 执行，所有关键事件写入 `TraceRecorder`、`TaskStateStore` 和 `ReportStore`。
 
-**技术栈：** Python 3.11+、Pydantic、Typer、pytest、PyYAML、Agno（Agent 接入阶段）、本地 JSONL 存储、本地 fixture RAG 数据。
+**技术栈：** Python 3.11、uv、Pydantic、Typer、pytest、PyYAML、Agno（Agent 接入阶段）、本地 JSONL 存储、本地 fixture RAG 数据。
 
 ---
 
@@ -38,6 +38,7 @@
 
 创建以下代码与数据文件：
 
+- `.python-version`：固定 Python 版本为 3.11。
 - `pyproject.toml`：Python 包、依赖、pytest 配置、console script。
 - `ananhu_agent/__init__.py`：包版本。
 - `ananhu_agent/schemas.py`：所有跨模块协议 schema。
@@ -105,6 +106,7 @@
 **前置依赖：** 无。
 
 **文件：**
+- 创建：`.python-version`
 - 创建：`pyproject.toml`
 - 创建：`ananhu_agent/__init__.py`
 - 创建：`ananhu_agent/cli/__init__.py`
@@ -137,12 +139,18 @@ def test_cli_version_command():
 运行：
 
 ```bash
-python -m pytest tests/test_package_bootstrap.py -v
+uv run --with pytest --with typer pytest tests/test_package_bootstrap.py -v
 ```
 
 预期：FAIL，报错包含 `ModuleNotFoundError: No module named 'ananhu_agent'`。
 
 - [ ] **步骤 3：创建最小包和 CLI**
+
+创建 `.python-version`：
+
+```text
+3.11
+```
 
 创建 `pyproject.toml`：
 
@@ -151,7 +159,7 @@ python -m pytest tests/test_package_bootstrap.py -v
 name = "ananhu-agent-agno"
 version = "0.1.0"
 description = "Ananhu work injury consultation CLI multi-agent MVP"
-requires-python = ">=3.11"
+requires-python = ">=3.11,<3.12"
 dependencies = [
   "pydantic>=2.7",
   "pydantic-settings>=2.2",
@@ -204,7 +212,8 @@ def version() -> None:
 运行：
 
 ```bash
-python -m pytest tests/test_package_bootstrap.py -v
+uv sync --extra dev
+uv run pytest tests/test_package_bootstrap.py -v
 ```
 
 预期：2 passed。
@@ -212,13 +221,13 @@ python -m pytest tests/test_package_bootstrap.py -v
 - [ ] **步骤 5：提交**
 
 ```bash
-git add pyproject.toml ananhu_agent tests/test_package_bootstrap.py
+git add .python-version pyproject.toml ananhu_agent tests/test_package_bootstrap.py
 git commit -m "chore: initialize cli python package"
 ```
 
 **验收标准：**
 
-- `python -m pytest tests/test_package_bootstrap.py -v` 通过。
+- `uv run pytest tests/test_package_bootstrap.py -v` 通过。
 - `CliRunner().invoke(app, ["version"])` 能验证 Typer 命令；不要用 `python -m ananhu_agent.cli.main version` 作为验收，除非同时补 `if __name__ == "__main__": app()`。
 
 ### 任务 2：定义运行时协议 schema
@@ -357,7 +366,7 @@ def test_task_state_and_run_report_capture_runtime_evidence():
 运行：
 
 ```bash
-python -m pytest tests/test_schemas.py -v
+uv run pytest tests/test_schemas.py -v
 ```
 
 预期：FAIL，报错包含 `No module named 'ananhu_agent.schemas'`。
@@ -580,7 +589,7 @@ class TraceEvent(BaseModel):
 运行：
 
 ```bash
-python -m pytest tests/test_schemas.py -v
+uv run pytest tests/test_schemas.py -v
 ```
 
 预期：4 passed。
@@ -680,7 +689,7 @@ def test_task_state_and_report_store_append_runtime_evidence(tmp_path):
 运行：
 
 ```bash
-python -m pytest tests/test_storage.py -v
+uv run pytest tests/test_storage.py -v
 ```
 
 预期：FAIL，报错包含 `No module named 'ananhu_agent.storage'`。
@@ -771,7 +780,7 @@ class ReportStore:
 运行：
 
 ```bash
-python -m pytest tests/test_storage.py -v
+uv run pytest tests/test_storage.py -v
 ```
 
 预期：2 passed。
@@ -846,7 +855,7 @@ def test_current_region_overrides_history_region():
 运行：
 
 ```bash
-python -m pytest tests/test_intent_rules.py -v
+uv run pytest tests/test_intent_rules.py -v
 ```
 
 预期：FAIL，报错包含 `No module named 'ananhu_agent.context'`。
@@ -907,7 +916,7 @@ def revise_intent(user_query: str, result: IntentResult) -> IntentResult:
 运行：
 
 ```bash
-python -m pytest tests/test_intent_rules.py -v
+uv run pytest tests/test_intent_rules.py -v
 ```
 
 预期：3 passed。
@@ -984,7 +993,7 @@ def test_prompt_manager_loads_metadata_and_renders_sections():
 运行：
 
 ```bash
-python -m pytest tests/test_prompt_context.py -v
+uv run pytest tests/test_prompt_context.py -v
 ```
 
 预期：FAIL，报错包含 `No module named 'ananhu_agent.prompts'`。
@@ -1129,7 +1138,7 @@ template: |
 运行：
 
 ```bash
-python -m pytest tests/test_prompt_context.py -v
+uv run pytest tests/test_prompt_context.py -v
 ```
 
 预期：2 passed。
@@ -1234,7 +1243,7 @@ def test_tool_executor_normalizes_handler_exception(tmp_path):
 运行：
 
 ```bash
-python -m pytest tests/test_tool_executor.py -v
+uv run pytest tests/test_tool_executor.py -v
 ```
 
 预期：FAIL，报错包含 `No module named 'ananhu_agent.tools'`。
@@ -1371,7 +1380,7 @@ class ToolExecutor:
 运行：
 
 ```bash
-python -m pytest tests/test_tool_executor.py -v
+uv run pytest tests/test_tool_executor.py -v
 ```
 
 预期：2 passed。
@@ -1464,7 +1473,7 @@ def test_citation_formatter_outputs_ordered_citations():
 运行：
 
 ```bash
-python -m pytest tests/test_mvp_tools.py -v
+uv run pytest tests/test_mvp_tools.py -v
 ```
 
 预期：FAIL，报错包含 `No module named 'ananhu_agent.tools.policy_rag'`。
@@ -1566,7 +1575,7 @@ def format_citations(payload: dict[str, Any]) -> dict[str, Any]:
 运行：
 
 ```bash
-python -m pytest tests/test_mvp_tools.py -v
+uv run pytest tests/test_mvp_tools.py -v
 ```
 
 预期：3 passed。
@@ -1640,7 +1649,7 @@ def test_intent_router_extracts_payment_intent_and_slots_through_prompt_context(
 运行：
 
 ```bash
-python -m pytest tests/test_intent_router_agent.py -v
+uv run pytest tests/test_intent_router_agent.py -v
 ```
 
 预期：FAIL，报错包含 `No module named 'ananhu_agent.agents'`。
@@ -1743,7 +1752,7 @@ class IntentRouterAgent:
 运行：
 
 ```bash
-python -m pytest tests/test_intent_router_agent.py -v
+uv run pytest tests/test_intent_router_agent.py -v
 ```
 
 预期：1 passed。
@@ -1824,7 +1833,7 @@ def test_policy_rag_agent_requests_policy_rag_tool():
 运行：
 
 ```bash
-python -m pytest tests/test_business_agents.py -v
+uv run pytest tests/test_business_agents.py -v
 ```
 
 预期：FAIL，报错包含 `No module named 'ananhu_agent.agents.domain_consultation'`。
@@ -1919,7 +1928,7 @@ class PolicyRAGAgent:
 运行：
 
 ```bash
-python -m pytest tests/test_business_agents.py -v
+uv run pytest tests/test_business_agents.py -v
 ```
 
 预期：3 passed。
@@ -2009,7 +2018,7 @@ def test_safety_guard_rejects_absolute_commitment():
 运行：
 
 ```bash
-python -m pytest tests/test_answer_governance.py -v
+uv run pytest tests/test_answer_governance.py -v
 ```
 
 预期：FAIL，报错包含 `No module named 'ananhu_agent.orchestrator.aggregator'`。
@@ -2078,7 +2087,7 @@ class PolicySafetyGuard:
 运行：
 
 ```bash
-python -m pytest tests/test_answer_governance.py -v
+uv run pytest tests/test_answer_governance.py -v
 ```
 
 预期：3 passed。
@@ -2150,7 +2159,7 @@ def test_orchestrator_answers_payment_question_with_trace(tmp_path):
 运行：
 
 ```bash
-python -m pytest tests/test_orchestrator_vertical_slice.py -v
+uv run pytest tests/test_orchestrator_vertical_slice.py -v
 ```
 
 预期：FAIL，报错包含 `No module named 'ananhu_agent.orchestrator.orchestrator'`。
@@ -2425,7 +2434,7 @@ def create_default_orchestrator(base_path: Path) -> AgentOrchestrator:
 运行：
 
 ```bash
-python -m pytest tests/test_orchestrator_vertical_slice.py -v
+uv run pytest tests/test_orchestrator_vertical_slice.py -v
 ```
 
 预期：1 passed。
@@ -2483,7 +2492,7 @@ def test_cli_ask_outputs_final_answer(tmp_path, monkeypatch):
 运行：
 
 ```bash
-python -m pytest tests/test_cli_ask.py -v
+uv run pytest tests/test_cli_ask.py -v
 ```
 
 预期：FAIL，报错包含 `No such command 'ask'`。
@@ -2525,7 +2534,7 @@ def ask(query: str) -> None:
 运行：
 
 ```bash
-python -m pytest tests/test_cli_ask.py -v
+uv run pytest tests/test_cli_ask.py -v
 ```
 
 预期：1 passed。
@@ -2539,7 +2548,7 @@ git commit -m "feat: add cli ask command"
 
 **验收标准：**
 
-- `ananhu-agent ask "四川十级工伤，月工资6000，大概能赔多少钱？"` 输出测算结果。
+- `uv run ananhu-agent ask "四川十级工伤，月工资6000，大概能赔多少钱？"` 输出测算结果。
 - 输出包含 trace 文件路径。
 
 ### 任务 13：实现 eval runner、metrics 和 badcase 记录
@@ -2595,7 +2604,7 @@ def test_eval_runner_outputs_metrics_and_badcases(tmp_path):
 运行：
 
 ```bash
-python -m pytest tests/test_eval_runner.py -v
+uv run pytest tests/test_eval_runner.py -v
 ```
 
 预期：FAIL，报错包含 `No module named 'ananhu_agent.evaluation'`。
@@ -2672,7 +2681,7 @@ class EvalRunner:
 运行：
 
 ```bash
-python -m pytest tests/test_eval_runner.py -v
+uv run pytest tests/test_eval_runner.py -v
 ```
 
 预期：1 passed。
@@ -2720,7 +2729,7 @@ def test_cli_eval_outputs_metrics_path(tmp_path, monkeypatch):
 运行：
 
 ```bash
-python -m pytest tests/test_eval_runner.py tests/test_cli_ask.py tests/test_cli_eval.py -v
+uv run pytest tests/test_eval_runner.py tests/test_cli_ask.py tests/test_cli_eval.py -v
 ```
 
 预期：3 passed。
@@ -2778,25 +2787,25 @@ sed -n '1,220p' docs/architecture/99-changelog.md
 安装开发依赖：
 
 ```bash
-python -m pip install -e ".[dev]"
+uv sync --extra dev
 ```
 
 运行单轮 CLI：
 
 ```bash
-ananhu-agent ask "四川十级工伤，月工资6000，大概能赔多少钱？"
+uv run ananhu-agent ask "四川十级工伤，月工资6000，大概能赔多少钱？"
 ```
 
 运行评测：
 
 ```bash
-ananhu-agent eval data/eval/eval_cases.jsonl
+uv run ananhu-agent eval data/eval/eval_cases.jsonl
 ```
 
 运行测试：
 
 ```bash
-python -m pytest -v
+uv run pytest -v
 ```
 ```
 
@@ -2819,9 +2828,9 @@ python -m pytest -v
 运行：
 
 ```bash
-python -m pytest -v
-ananhu-agent ask "四川十级工伤，月工资6000，大概能赔多少钱？"
-ananhu-agent eval data/eval/eval_cases.jsonl
+uv run pytest -v
+uv run ananhu-agent ask "四川十级工伤，月工资6000，大概能赔多少钱？"
+uv run ananhu-agent eval data/eval/eval_cases.jsonl
 ```
 
 预期：
@@ -2861,18 +2870,18 @@ git commit -m "docs: document cli mvp commands"
 - 每个任务都有明确目标、涉及模块、步骤流程、验收标准。
 - 每个任务的验证命令能在该任务完成后独立运行。
 - 依赖图无循环，无“前面依赖后面”的情况。
-- P0 垂直闭环可通过 `ananhu-agent ask` 和 `ananhu-agent eval` 观察。
+- P0 垂直闭环可通过 `uv run ananhu-agent ask` 和 `uv run ananhu-agent eval` 观察。
 
 ## 5. 总体验收
 
 最终交付必须满足：
 
-- `python -m pytest -v` 全部通过。
-- `ananhu-agent ask "四川十级工伤，月工资6000，大概能赔多少钱？"` 输出待遇测算、依据和风险提示。
-- `ananhu-agent ask "上班路上发生交通事故，交警认定我不是主要责任，能不能认定工伤？"` 输出法规依据和保守结论。
-- `ananhu-agent ask "劳动能力鉴定需要准备哪些材料？"` 输出材料建议和依据。
+- `uv run pytest -v` 全部通过。
+- `uv run ananhu-agent ask "四川十级工伤，月工资6000，大概能赔多少钱？"` 输出待遇测算、依据和风险提示。
+- `uv run ananhu-agent ask "上班路上发生交通事故，交警认定我不是主要责任，能不能认定工伤？"` 输出法规依据和保守结论。
+- `uv run ananhu-agent ask "劳动能力鉴定需要准备哪些材料？"` 输出材料建议和依据。
 - `.ananhu-runtime/traces.jsonl` 包含 `request_received`、`intent_revised`、`tool_finished`、`response_ready`。
-- `ananhu-agent eval data/eval/eval_cases.jsonl` 产出 `.ananhu-runtime/metrics.json`。
+- `uv run ananhu-agent eval data/eval/eval_cases.jsonl` 产出 `.ananhu-runtime/metrics.json`。
 - eval 失败时 `.ananhu-runtime/badcases.jsonl` 有结构化记录。
 - 没有新增 HTTP API、WebSocket、前端、语音、图片、MCP 能力。
 

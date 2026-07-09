@@ -9,6 +9,14 @@
 - 基于 Agno 实现 Agent、Tool、Memory、Storage 和模型适配。
 - 当前不做 Web API 和前端。
 
+## 环境管理
+
+- 统一使用 `uv` 管理 Python 版本、虚拟环境、依赖安装和本地命令运行。
+- Python 版本固定为 3.11，仓库根目录使用 `.python-version` 声明。
+- `pyproject.toml` 初始化后，`requires-python` 必须约束为 `>=3.11,<3.12`。
+- 不把 `pip install`、`python -m pytest` 作为主路径命令写入文档或计划；统一使用 `uv sync`、`uv run pytest`、`uv run ananhu-agent ...`。
+- 需要新增依赖时，优先通过 `uv add` 或 `uv add --dev` 维护 `pyproject.toml` 和 lock 文件。
+
 ## 推荐模块边界
 
 后续实现时建议按以下边界组织：
@@ -69,5 +77,12 @@ ananhu_agent/
 - PolicySafetyGuard 高风险表达拦截。
 - eval runner 指标输出。
 
-具体命令待 Python 项目初始化后补充。
+当前约定命令如下，Python 包初始化后必须保持这些命令可用：
 
+```bash
+uv python pin 3.11
+uv sync --extra dev
+uv run pytest -v
+uv run ananhu-agent ask "四川十级工伤，月工资6000，大概能赔多少钱？"
+uv run ananhu-agent eval data/eval/eval_cases.jsonl
+```
