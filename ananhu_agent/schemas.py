@@ -190,6 +190,26 @@ class RunReport(BaseModel):
     badcase_candidate: bool
 
 
+class BadcaseRecord(BaseModel):
+    """用户主动反馈或系统规则沉淀的 badcase 记录。"""
+
+    id: str
+    request_id: str
+    session_id: str
+    turn_id: int
+    query: str
+    predicted_intent: str | None = None
+    issue_type: str
+    agent_route: list[str] = Field(default_factory=list)
+    tool_calls: list[str] = Field(default_factory=list)
+    actual_answer: str
+    expected_answer: str = ""
+    correction_note: str = ""
+    added_to_eval: bool = False
+    fixed: bool = False
+    created_at: str
+
+
 class AgentContext(BaseModel):
     """传入无状态 Agent 的完整单轮上下文。
 

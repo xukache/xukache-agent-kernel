@@ -3078,7 +3078,7 @@ git commit -m "feat(memory): persist cli session state"
 - 修改：`ananhu_agent/cli/main.py`
 - 创建：`tests/test_cli_feedback_badcase.py`
 
-- [ ] **步骤 1：编写失败测试**
+- [x] **步骤 1：编写失败测试**
 
 创建 `tests/test_cli_feedback_badcase.py`：
 
@@ -3122,7 +3122,7 @@ def test_cli_chat_trace_prints_latest_request_id(tmp_path, monkeypatch):
     assert "request_id:" in result.output
 ```
 
-- [ ] **步骤 2：运行测试验证失败**
+- [x] **步骤 2：运行测试验证失败**
 
 运行：
 
@@ -3132,7 +3132,7 @@ uv run pytest tests/test_cli_feedback_badcase.py -v
 
 预期：FAIL，当前 `/feedback bad` 不会写入 `badcases.jsonl`。
 
-- [ ] **步骤 3：实现 badcase schema 和存储**
+- [x] **步骤 3：实现 badcase schema 和存储**
 
 要求：
 
@@ -3142,7 +3142,7 @@ uv run pytest tests/test_cli_feedback_badcase.py -v
 - CLI 维护最近一次 `AgentContext`，供 `/trace`、`/badcase`、`/feedback bad` 使用。
 - `/feedback good` 只打印确认，不写 badcase。
 
-- [ ] **步骤 4：运行测试验证通过**
+- [x] **步骤 4：运行测试验证通过**
 
 运行：
 
@@ -3152,7 +3152,7 @@ uv run pytest tests/test_cli_feedback_badcase.py tests/test_cli_chat.py -v
 
 预期：4 passed。
 
-- [ ] **步骤 5：提交**
+- [x] **步骤 5：提交**
 
 ```bash
 git add ananhu_agent/schemas.py ananhu_agent/storage/runtime_stores.py ananhu_agent/cli/main.py tests/test_cli_feedback_badcase.py

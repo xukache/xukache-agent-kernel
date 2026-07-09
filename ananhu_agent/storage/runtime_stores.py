@@ -1,7 +1,7 @@
 from pathlib import Path
 from typing import Any
 
-from ananhu_agent.schemas import RunReport, SessionState, TaskState, TraceEvent
+from ananhu_agent.schemas import BadcaseRecord, RunReport, SessionState, TaskState, TraceEvent
 from ananhu_agent.storage.jsonl_store import JsonlStore
 
 
@@ -75,3 +75,16 @@ class SessionStateStore:
             if row["session_id"] == session_id:
                 return SessionState(**row)
         return None
+
+
+class BadcaseStore:
+    """用户反馈和系统自动分流的 badcase 存储。"""
+
+    def __init__(self, path: Path) -> None:
+        self.store = JsonlStore(path)
+
+    def append(self, record: BadcaseRecord) -> None:
+        self.store.append(record)
+
+    def read_all(self) -> list[dict[str, Any]]:
+        return self.store.read_all()

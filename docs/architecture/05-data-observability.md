@@ -84,6 +84,24 @@
 
 ## badcases
 
+结构化字段：
+
+- `id`
+- `request_id`
+- `session_id`
+- `turn_id`
+- `query`
+- `predicted_intent`
+- `issue_type`
+- `agent_route`
+- `tool_calls`
+- `actual_answer`
+- `expected_answer`
+- `correction_note`
+- `added_to_eval`
+- `fixed`
+- `created_at`
+
 badcase 来源：
 
 - 用户主动标记。
@@ -123,4 +141,3 @@ Prompt 指标：
 - `unsafe_expression_rate`
 - `prompt_token_cost`
 - `prompt_latency`
-
