@@ -632,7 +632,7 @@ git commit -m "feat: define runtime schemas"
 - 创建：`ananhu_agent/storage/runtime_stores.py`
 - 创建：`tests/test_storage.py`
 
-- [ ] **步骤 1：编写失败测试**
+- [x] **步骤 1：编写失败测试**
 
 创建 `tests/test_storage.py`：
 
@@ -696,7 +696,7 @@ def test_task_state_and_report_store_append_runtime_evidence(tmp_path):
     assert report_store.read_all()[0]["final_intent"] == "labor_capacity"
 ```
 
-- [ ] **步骤 2：运行测试验证失败**
+- [x] **步骤 2：运行测试验证失败**
 
 运行：
 
@@ -706,7 +706,7 @@ uv run pytest tests/test_storage.py -v
 
 预期：FAIL，报错包含 `No module named 'ananhu_agent.storage'`。
 
-- [ ] **步骤 3：实现 JSONLStore 和 TraceRecorder**
+- [x] **步骤 3：实现 JSONLStore 和 TraceRecorder**
 
 创建 `ananhu_agent/storage/__init__.py`：
 
@@ -787,7 +787,7 @@ class ReportStore:
         return self.store.read_all()
 ```
 
-- [ ] **步骤 4：运行测试验证通过**
+- [x] **步骤 4：运行测试验证通过**
 
 运行：
 
@@ -797,7 +797,7 @@ uv run pytest tests/test_storage.py -v
 
 预期：2 passed。
 
-- [ ] **步骤 5：提交**
+- [x] **步骤 5：提交**
 
 ```bash
 git add ananhu_agent/storage tests/test_storage.py
