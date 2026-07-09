@@ -1,0 +1,26 @@
+[project]
+name = "ananhu-agent-agno"
+version = "0.1.0"
+description = "Ananhu work injury consultation CLI multi-agent MVP"
+requires-python = ">=3.11,<3.12"
+dependencies = [
+  "pydantic>=2.7",
+  "pydantic-settings>=2.2",
+  "typer>=0.12",
+  "PyYAML>=6.0",
+]
+
+[project.optional-dependencies]
+dev = [
+  "pytest>=8.0",
+]
+
+[project.scripts]
+ananhu-agent = "ananhu_agent.cli.main:app"
+
+[tool.pytest.ini_options]
+testpaths = ["tests"]
+pythonpath = ["."]
+
+[tool.uv]
+package = true

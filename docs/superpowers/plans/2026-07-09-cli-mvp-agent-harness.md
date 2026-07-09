@@ -106,14 +106,16 @@
 **前置依赖：** 无。
 
 **文件：**
-- 创建：`.python-version`
+- 复用：`.python-version`
+- 创建：`.gitignore`
 - 创建：`pyproject.toml`
+- 创建：`uv.lock`
 - 创建：`ananhu_agent/__init__.py`
 - 创建：`ananhu_agent/cli/__init__.py`
 - 创建：`ananhu_agent/cli/main.py`
 - 创建：`tests/test_package_bootstrap.py`
 
-- [ ] **步骤 1：编写失败的包启动测试**
+- [x] **步骤 1：编写失败的包启动测试**
 
 创建 `tests/test_package_bootstrap.py`：
 
@@ -134,7 +136,7 @@ def test_cli_version_command():
     assert "ananhu-agent 0.1.0" in result.output
 ```
 
-- [ ] **步骤 2：运行测试验证失败**
+- [x] **步骤 2：运行测试验证失败**
 
 运行：
 
@@ -144,7 +146,7 @@ uv run --with pytest --with typer pytest tests/test_package_bootstrap.py -v
 
 预期：FAIL，报错包含 `ModuleNotFoundError: No module named 'ananhu_agent'`。
 
-- [ ] **步骤 3：创建最小包和 CLI**
+- [x] **步骤 3：创建最小包和 CLI**
 
 创建 `.python-version`：
 
@@ -178,6 +180,9 @@ ananhu-agent = "ananhu_agent.cli.main:app"
 [tool.pytest.ini_options]
 testpaths = ["tests"]
 pythonpath = ["."]
+
+[tool.uv]
+package = true
 ```
 
 创建 `ananhu_agent/__init__.py`：
@@ -201,13 +206,18 @@ from ananhu_agent import __version__
 app = typer.Typer(help="安安虎工伤智能助手 CLI MVP")
 
 
+@app.callback()
+def main() -> None:
+    """安安虎工伤智能助手 CLI MVP."""
+
+
 @app.command()
 def version() -> None:
     """Print package version."""
     typer.echo(f"ananhu-agent {__version__}")
 ```
 
-- [ ] **步骤 4：运行测试验证通过**
+- [x] **步骤 4：运行测试验证通过**
 
 运行：
 
@@ -218,16 +228,18 @@ uv run pytest tests/test_package_bootstrap.py -v
 
 预期：2 passed。
 
-- [ ] **步骤 5：提交**
+- [x] **步骤 5：提交**
 
 ```bash
-git add .python-version pyproject.toml ananhu_agent tests/test_package_bootstrap.py
+git add .gitignore pyproject.toml uv.lock ananhu_agent tests/test_package_bootstrap.py docs/superpowers/plans/2026-07-09-cli-mvp-agent-harness.md
 git commit -m "chore: initialize cli python package"
 ```
 
 **验收标准：**
 
 - `uv run pytest tests/test_package_bootstrap.py -v` 通过。
+- `uv run pytest -v` 通过，当前为 2 passed。
+- `uv run ananhu-agent version` 输出 `ananhu-agent 0.1.0`。
 - `CliRunner().invoke(app, ["version"])` 能验证 Typer 命令；不要用 `python -m ananhu_agent.cli.main version` 作为验收，除非同时补 `if __name__ == "__main__": app()`。
 
 ### 任务 2：定义运行时协议 schema
