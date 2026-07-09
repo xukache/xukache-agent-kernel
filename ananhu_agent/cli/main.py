@@ -1,5 +1,6 @@
 import os
 from pathlib import Path
+from typing import Annotated
 
 import typer
 
@@ -28,3 +29,18 @@ def ask(query: str) -> None:
     ctx = orchestrator.ask(session_id="cli", turn_id=1, user_query=query)
     typer.echo(ctx.final_answer)
     typer.echo(f"Trace: {runtime_dir / 'traces.jsonl'}")
+
+
+@app.command("eval")
+def eval_command(
+    cases: Annotated[Path, typer.Argument()] = Path("data/eval/eval_cases.jsonl"),
+) -> None:
+    """Run local eval cases."""
+    runtime_dir = Path(os.getenv("ANANHU_RUNTIME_DIR", ".ananhu-runtime"))
+    orchestrator = create_default_orchestrator(runtime_dir)
+
+    from ananhu_agent.evaluation.runner import EvalRunner
+
+    metrics = EvalRunner(orchestrator, runtime_dir).run(cases)
+    typer.echo(metrics)
+    typer.echo(f"Metrics: {runtime_dir / 'metrics.json'}")

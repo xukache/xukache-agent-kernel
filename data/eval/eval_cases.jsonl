@@ -1,0 +1,3 @@
+{"id":"eval_payment_001","query":"四川十级工伤，月工资6000，大概能赔多少钱？","expect_contains":["一次性伤残补助金","42000","以经办机构和正式材料为准"]}
+{"id":"eval_recognition_001","query":"上班路上发生交通事故，交警认定我不是主要责任，能不能认定工伤？","expect_contains":["工伤保险条例","以经办机构和正式材料为准"]}
+{"id":"eval_labor_001","query":"劳动能力鉴定需要准备哪些材料？","expect_contains":["劳动能力鉴定"]}

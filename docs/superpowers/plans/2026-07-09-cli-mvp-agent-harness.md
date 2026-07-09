@@ -2599,7 +2599,7 @@ git commit -m "feat: add cli ask command"
 - 创建：`tests/test_eval_runner.py`
 - 创建：`tests/test_cli_eval.py`
 
-- [ ] **步骤 1：编写失败测试**
+- [x] **步骤 1：编写失败测试**
 
 创建 `tests/test_eval_runner.py`：
 
@@ -2630,7 +2630,7 @@ def test_eval_runner_outputs_metrics_and_badcases(tmp_path):
     assert "eval_failed" in badcases
 ```
 
-- [ ] **步骤 2：运行测试验证失败**
+- [x] **步骤 2：运行测试验证失败**
 
 运行：
 
@@ -2640,7 +2640,7 @@ uv run pytest tests/test_eval_runner.py -v
 
 预期：FAIL，报错包含 `No module named 'ananhu_agent.evaluation'`。
 
-- [ ] **步骤 3：实现 eval runner 与 metrics**
+- [x] **步骤 3：实现 eval runner 与 metrics**
 
 创建 `data/eval/eval_cases.jsonl`：
 
@@ -2708,7 +2708,7 @@ class EvalRunner:
         return metrics
 ```
 
-- [ ] **步骤 4：运行测试验证通过**
+- [x] **步骤 4：运行测试验证通过**
 
 运行：
 
@@ -2718,7 +2718,7 @@ uv run pytest tests/test_eval_runner.py -v
 
 预期：1 passed。
 
-- [ ] **步骤 5：给 CLI 增加 eval 命令并测试**
+- [x] **步骤 5：给 CLI 增加 eval 命令并测试**
 
 修改 `ananhu_agent/cli/main.py`，新增：
 
@@ -2766,7 +2766,7 @@ uv run pytest tests/test_eval_runner.py tests/test_cli_ask.py tests/test_cli_eva
 
 预期：3 passed。
 
-- [ ] **步骤 6：提交**
+- [x] **步骤 6：提交**
 
 ```bash
 git add data/eval ananhu_agent/evaluation ananhu_agent/cli/main.py tests/test_eval_runner.py tests/test_cli_eval.py
