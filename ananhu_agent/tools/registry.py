@@ -1,7 +1,7 @@
 from __future__ import annotations
 
 from collections.abc import Callable
-from dataclasses import dataclass
+from dataclasses import dataclass, field
 from typing import Any
 
 
@@ -19,6 +19,7 @@ class ToolDefinition:
     allowed_callers: list[str]
     required_input_keys: list[str]
     handler: Callable[[dict[str, Any]], dict[str, Any]]
+    output_required_keys: list[str] = field(default_factory=list)
 
 
 class ToolRegistry:

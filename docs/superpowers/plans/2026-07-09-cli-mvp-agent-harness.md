@@ -3262,7 +3262,7 @@ git commit -m "feat(observability): record automatic badcase candidates"
 - 修改：`ananhu_agent/tools/executor.py`
 - 修改：`tests/test_tool_executor.py`
 
-- [ ] **步骤 1：编写失败测试**
+- [x] **步骤 1：编写失败测试**
 
 在 `tests/test_tool_executor.py` 新增：
 
@@ -3298,7 +3298,7 @@ def test_tool_executor_records_tool_called_before_success(tmp_path):
     assert event_types == ["tool_called", "tool_finished"]
 ```
 
-- [ ] **步骤 2：运行测试验证失败**
+- [x] **步骤 2：运行测试验证失败**
 
 运行：
 
@@ -3308,7 +3308,7 @@ uv run pytest tests/test_tool_executor.py -v
 
 预期：FAIL，当前只记录 `tool_finished` / `tool_failed`。
 
-- [ ] **步骤 3：实现治理增强**
+- [x] **步骤 3：实现治理增强**
 
 要求：
 
@@ -3319,7 +3319,7 @@ uv run pytest tests/test_tool_executor.py -v
 - 同一 `request_id + tool_name + called_by + input` 重复调用时返回 `duplicate_tool_call` 或记录 warning trace，MVP 选择返回结构化失败。
 - 超时控制可先使用 `ThreadPoolExecutor` 包装同步 handler；超时返回 `tool_timeout`。
 
-- [ ] **步骤 4：运行测试验证通过**
+- [x] **步骤 4：运行测试验证通过**
 
 运行：
 
@@ -3329,7 +3329,7 @@ uv run pytest tests/test_tool_executor.py tests/test_orchestrator_vertical_slice
 
 预期：全部通过。
 
-- [ ] **步骤 5：提交**
+- [x] **步骤 5：提交**
 
 ```bash
 git add ananhu_agent/schemas.py ananhu_agent/tools/registry.py ananhu_agent/tools/executor.py tests/test_tool_executor.py

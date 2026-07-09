@@ -117,6 +117,7 @@ class ToolCallResult(BaseModel):
     input: dict[str, Any]
     output: dict[str, Any]
     fallback_used: bool = False
+    fallback_reason: str | None = None
 
 
 class AgentMessage(BaseModel):

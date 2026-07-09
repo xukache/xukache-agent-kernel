@@ -309,6 +309,7 @@ def create_default_orchestrator(base_path: Path) -> AgentOrchestrator:
             timeout_ms=3000,
             allowed_callers=["PolicyRAGAgent"],
             required_input_keys=["query"],
+            output_required_keys=["documents"],
             handler=search_policy,
         )
     )
@@ -320,6 +321,7 @@ def create_default_orchestrator(base_path: Path) -> AgentOrchestrator:
             timeout_ms=3000,
             allowed_callers=["PaymentCalculationAgent"],
             required_input_keys=["disability_grade", "monthly_wage"],
+            output_required_keys=["items", "assumptions"],
             handler=calculate_payment,
         )
     )
