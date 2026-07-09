@@ -962,7 +962,7 @@ git commit -m "feat: add intent revision and slot merge rules"
 - 创建：`ananhu_agent/context/context_manager.py`
 - 创建：`tests/test_prompt_context.py`
 
-- [ ] **步骤 1：编写失败测试**
+- [x] **步骤 1：编写失败测试**
 
 创建 `tests/test_prompt_context.py`：
 
@@ -1000,7 +1000,7 @@ def test_prompt_manager_loads_metadata_and_renders_sections():
     assert "上班路上交通事故算工伤吗？" in rendered.text
 ```
 
-- [ ] **步骤 2：运行测试验证失败**
+- [x] **步骤 2：运行测试验证失败**
 
 运行：
 
@@ -1010,7 +1010,7 @@ uv run pytest tests/test_prompt_context.py -v
 
 预期：FAIL，报错包含 `No module named 'ananhu_agent.prompts'`。
 
-- [ ] **步骤 3：实现 ContextManager、PromptManager 和模板**
+- [x] **步骤 3：实现 ContextManager、PromptManager 和模板**
 
 创建 `ananhu_agent/context/context_manager.py`：
 
@@ -1145,7 +1145,7 @@ template: |
   置信度低于阈值时返回追问。
 ```
 
-- [ ] **步骤 4：运行测试验证通过**
+- [x] **步骤 4：运行测试验证通过**
 
 运行：
 
@@ -1155,7 +1155,7 @@ uv run pytest tests/test_prompt_context.py -v
 
 预期：2 passed。
 
-- [ ] **步骤 5：提交**
+- [x] **步骤 5：提交**
 
 ```bash
 git add ananhu_agent/context/context_manager.py ananhu_agent/prompts tests/test_prompt_context.py
