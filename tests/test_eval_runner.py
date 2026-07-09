@@ -22,3 +22,20 @@ def test_eval_runner_outputs_metrics_and_badcases(tmp_path):
     badcases = (tmp_path / "badcases.jsonl").read_text(encoding="utf-8")
     assert "case_2" in badcases
     assert "eval_failed" in badcases
+
+
+def test_eval_runner_outputs_layered_metrics(tmp_path):
+    cases = tmp_path / "eval_cases.jsonl"
+    cases.write_text(
+        '{"id":"case_1","query":"四川十级工伤，月工资6000，大概能赔多少钱？","expected_intent":"payment_calculation","expected_slots":{"province":"四川省","disability_grade":"十级"},"expect_contains":["一次性伤残补助金"],"expected_citations":["四川省工伤保险条例实施办法"]}\n',
+        encoding="utf-8",
+    )
+    runner = EvalRunner(create_default_orchestrator(tmp_path), tmp_path)
+
+    metrics = runner.run(cases)
+
+    assert metrics["intent_accuracy"] == 1.0
+    assert metrics["slot_accuracy"] == 1.0
+    assert metrics["citation_accuracy"] == 1.0
+    assert metrics["tool_success_rate"] == 1.0
+    assert "latency_ms_avg" in metrics

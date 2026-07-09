@@ -3440,7 +3440,7 @@ git commit -m "feat(governance): strengthen policy answer validation"
 - 修改：`ananhu_agent/evaluation/runner.py`
 - 修改：`tests/test_eval_runner.py`
 
-- [ ] **步骤 1：编写失败测试**
+- [x] **步骤 1：编写失败测试**
 
 在 `tests/test_eval_runner.py` 新增：
 
@@ -3462,7 +3462,7 @@ def test_eval_runner_outputs_layered_metrics(tmp_path):
     assert "latency_ms_avg" in metrics
 ```
 
-- [ ] **步骤 2：运行测试验证失败**
+- [x] **步骤 2：运行测试验证失败**
 
 运行：
 
@@ -3472,7 +3472,7 @@ uv run pytest tests/test_eval_runner.py -v
 
 预期：FAIL，当前 metrics 只有 `total`、`passed`、`failed`。
 
-- [ ] **步骤 3：实现分层指标**
+- [x] **步骤 3：实现分层指标**
 
 要求：
 
@@ -3481,7 +3481,7 @@ uv run pytest tests/test_eval_runner.py -v
 - `EvalRunner.run()` 输出 `intent_accuracy`、`slot_accuracy`、`citation_accuracy`、`tool_success_rate`、`unsafe_expression_rate`、`latency_ms_avg`。
 - 缺少某类 expected 字段的 case 不参与该指标分母。
 
-- [ ] **步骤 4：运行测试验证通过**
+- [x] **步骤 4：运行测试验证通过**
 
 运行：
 
@@ -3491,7 +3491,7 @@ uv run pytest tests/test_eval_runner.py tests/test_cli_eval.py -v
 
 预期：全部通过。
 
-- [ ] **步骤 5：提交**
+- [x] **步骤 5：提交**
 
 ```bash
 git add ananhu_agent/evaluation/metrics.py ananhu_agent/evaluation/runner.py tests/test_eval_runner.py

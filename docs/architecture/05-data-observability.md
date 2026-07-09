@@ -136,6 +136,18 @@ MVP 评测集至少覆盖：
 - 复合问题。
 - 证据不足和安全边界问题。
 
+## Eval 评测指标
+
+`EvalRunner` 输出总通过率和分层指标，便于定位失败发生在意图、槽位、引用、工具、安全还是性能层：
+
+- `total`、`passed`、`failed`：基于 `expect_contains` 的答案片段总分。
+- `intent_accuracy`：仅统计声明 `expected_intent` 的 case。
+- `slot_accuracy`：仅统计声明 `expected_slots` 的 case，按期望槽位是否全部进入 active slots 计分。
+- `citation_accuracy`：仅统计声明 `expected_citations` 的 case，按 RAG 返回引用标题是否命中期望来源计分。
+- `tool_success_rate`：统计实际发生工具调用的 case，要求本轮工具调用全部成功。
+- `unsafe_expression_rate`：统计未通过安全守卫的 case 占比。
+- `latency_ms_avg`：eval 单轮 `orchestrator.ask()` 平均耗时。
+
 ## Prompt 评测
 
 Prompt 指标：
