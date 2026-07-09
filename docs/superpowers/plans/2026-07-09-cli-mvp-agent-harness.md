@@ -2129,7 +2129,7 @@ git commit -m "feat: add answer aggregation and safety checks"
 - 创建：`ananhu_agent/orchestrator/orchestrator.py`
 - 创建：`tests/test_orchestrator_vertical_slice.py`
 
-- [ ] **步骤 1：编写失败测试**
+- [x] **步骤 1：编写失败测试**
 
 创建 `tests/test_orchestrator_vertical_slice.py`：
 
@@ -2166,7 +2166,7 @@ def test_orchestrator_answers_payment_question_with_trace(tmp_path):
     assert orchestrator.report_store.read_all()[0]["final_intent"] == "payment_calculation"
 ```
 
-- [ ] **步骤 2：运行测试验证失败**
+- [x] **步骤 2：运行测试验证失败**
 
 运行：
 
@@ -2176,7 +2176,7 @@ uv run pytest tests/test_orchestrator_vertical_slice.py -v
 
 预期：FAIL，报错包含 `No module named 'ananhu_agent.orchestrator.orchestrator'`。
 
-- [ ] **步骤 3：实现 Orchestrator 和默认装配**
+- [x] **步骤 3：实现 Orchestrator 和默认装配**
 
 创建 `ananhu_agent/orchestrator/orchestrator.py`：
 
@@ -2441,7 +2441,7 @@ def create_default_orchestrator(base_path: Path) -> AgentOrchestrator:
     )
 ```
 
-- [ ] **步骤 4：运行测试验证通过**
+- [x] **步骤 4：运行测试验证通过**
 
 运行：
 
