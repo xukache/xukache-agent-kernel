@@ -14,6 +14,8 @@
 - 类型：后端型 Agent CLI 项目。
 - 当前阶段：MVP 架构基线，尚未实现业务代码。
 - 技术路线：不使用 Dify，基于 Agno 自研多 Agent 编排。
+- 环境管理：统一使用 `uv` 管理 Python、虚拟环境、依赖安装和命令运行。
+- Python 版本：固定使用 Python 3.11，版本文件为 `.python-version`。
 - 当前入口形态：无前端、无 HTTP API、交互式 CLI 优先。
 - 业务定位：安安虎工伤智能助手，面向工伤认定、劳动能力鉴定、待遇测算和政策咨询场景。
 
@@ -41,6 +43,7 @@
 8. 当前不做前端，不创建前端规范；当前不暴露 HTTP API，不创建 API 领域分册。
 9. 架构变更必须同步更新 `docs/architecture/99-changelog.md`。
 10. 每个开发任务必须遵守下方“开发分支流程”，不得直接在版本分支上开发并提交。
+11. Python 环境、依赖安装、测试和 CLI 运行必须通过 `uv` 执行；不要新增 `pip install`、`python -m pytest` 作为主路径命令。
 
 ## 开发分支流程
 
@@ -65,4 +68,12 @@
 
 ## 本地命令
 
-当前项目尚未初始化 Python 包。后续实现阶段再补充安装、运行、测试和 lint 命令。
+当前项目尚未初始化 Python 包。实现阶段必须使用 `uv` 和 Python 3.11：
+
+```bash
+uv python pin 3.11
+uv sync --extra dev
+uv run pytest -v
+uv run ananhu-agent ask "四川十级工伤，月工资6000，大概能赔多少钱？"
+uv run ananhu-agent eval data/eval/eval_cases.jsonl
+```
