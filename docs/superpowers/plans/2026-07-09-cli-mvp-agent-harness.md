@@ -1621,7 +1621,7 @@ git commit -m "feat: add local policy and payment tools"
 - 创建：`ananhu_agent/agents/intent_router.py`
 - 创建：`tests/test_intent_router_agent.py`
 
-- [ ] **步骤 1：编写失败测试**
+- [x] **步骤 1：编写失败测试**
 
 创建 `tests/test_intent_router_agent.py`：
 
@@ -1656,7 +1656,7 @@ def test_intent_router_extracts_payment_intent_and_slots_through_prompt_context(
     assert message.data["prompt_ref"] == "intent_router.v1"
 ```
 
-- [ ] **步骤 2：运行测试验证失败**
+- [x] **步骤 2：运行测试验证失败**
 
 运行：
 
@@ -1666,7 +1666,7 @@ uv run pytest tests/test_intent_router_agent.py -v
 
 预期：FAIL，报错包含 `No module named 'ananhu_agent.agents'`。
 
-- [ ] **步骤 3：实现 fake model 和 agent**
+- [x] **步骤 3：实现 fake model 和 agent**
 
 创建 `ananhu_agent/models/__init__.py` 和 `ananhu_agent/agents/__init__.py` 为空文件。
 
@@ -1759,7 +1759,7 @@ class IntentRouterAgent:
         )
 ```
 
-- [ ] **步骤 4：运行测试验证通过**
+- [x] **步骤 4：运行测试验证通过**
 
 运行：
 
