@@ -1769,7 +1769,7 @@ uv run pytest tests/test_intent_router_agent.py -v
 
 预期：1 passed。
 
-- [ ] **步骤 5：提交**
+- [x] **步骤 5：提交**
 
 ```bash
 git add ananhu_agent/models ananhu_agent/agents tests/test_intent_router_agent.py
@@ -1796,7 +1796,7 @@ git commit -m "feat: add deterministic intent router agent"
 - 创建：`ananhu_agent/agents/payment_calculation.py`
 - 创建：`tests/test_business_agents.py`
 
-- [ ] **步骤 1：编写失败测试**
+- [x] **步骤 1：编写失败测试**
 
 创建 `tests/test_business_agents.py`：
 
@@ -1840,7 +1840,7 @@ def test_policy_rag_agent_requests_policy_rag_tool():
     assert message.tool_calls[0].called_by == "PolicyRAGAgent"
 ```
 
-- [ ] **步骤 2：运行测试验证失败**
+- [x] **步骤 2：运行测试验证失败**
 
 运行：
 
@@ -1850,7 +1850,7 @@ uv run pytest tests/test_business_agents.py -v
 
 预期：FAIL，报错包含 `No module named 'ananhu_agent.agents.domain_consultation'`。
 
-- [ ] **步骤 3：实现业务 Agent**
+- [x] **步骤 3：实现业务 Agent**
 
 创建 `ananhu_agent/agents/domain_consultation.py`：
 
@@ -1935,7 +1935,7 @@ class PolicyRAGAgent:
         )
 ```
 
-- [ ] **步骤 4：运行测试验证通过**
+- [x] **步骤 4：运行测试验证通过**
 
 运行：
 
