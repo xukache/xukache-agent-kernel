@@ -59,6 +59,21 @@ class ConversationState(BaseModel):
     active_slots: dict[str, Any] = Field(default_factory=dict)
 
 
+class SessionState(BaseModel):
+    """跨轮会话记忆快照。
+
+    该结构只由 AgentOrchestrator 读写，用于在 CLI 多轮交互中恢复轻量上下文。
+    """
+
+    session_id: str
+    turn_id: int
+    history_summary: str = ""
+    last_user_intent: str | None = None
+    last_answer_summary: str = ""
+    active_slots: dict[str, Any] = Field(default_factory=dict)
+    updated_at: str
+
+
 class IntentResult(BaseModel):
     """路由规划前的意图识别结构化结果。"""
 

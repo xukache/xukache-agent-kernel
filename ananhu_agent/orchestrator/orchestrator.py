@@ -20,11 +20,18 @@ from ananhu_agent.schemas import (
     AgentPlan,
     IntentResult,
     RunReport,
+    SessionState,
     TaskState,
     ToolCallResult,
     TraceEvent,
+    now_cn,
 )
-from ananhu_agent.storage.runtime_stores import ReportStore, TaskStateStore, TraceRecorder
+from ananhu_agent.storage.runtime_stores import (
+    ReportStore,
+    SessionStateStore,
+    TaskStateStore,
+    TraceRecorder,
+)
 from ananhu_agent.tools.executor import ToolExecutor
 from ananhu_agent.tools.payment_calculation import calculate_payment
 from ananhu_agent.tools.policy_rag import search_policy
@@ -44,6 +51,7 @@ class AgentOrchestrator:
         trace_recorder: TraceRecorder,
         task_state_store: TaskStateStore,
         report_store: ReportStore,
+        session_state_store: SessionStateStore,
     ) -> None:
         self.intent_agent = intent_agent
         self.domain_agent = domain_agent
@@ -53,11 +61,13 @@ class AgentOrchestrator:
         self.trace_recorder = trace_recorder
         self.task_state_store = task_state_store
         self.report_store = report_store
+        self.session_state_store = session_state_store
 
     def ask(self, session_id: str, turn_id: int, user_query: str) -> AgentContext:
         """执行一轮从用户问题到最终答案的同步咨询链路。"""
 
         ctx = AgentContext.new_for_query(session_id, turn_id, user_query)
+        self._restore_session_state(ctx)
         self._record(ctx, "request_received", "orchestrator", {"user_query": user_query})
 
         intent_message = self._run_intent_agent(ctx)
@@ -78,8 +88,20 @@ class AgentOrchestrator:
         self._record(ctx, "safety_checked", "safety", ctx.safety_result.model_dump())
         self._record(ctx, "response_ready", "orchestrator", {"final_answer": ctx.final_answer})
 
+        self._append_session_state(ctx)
         self._append_runtime_evidence(ctx, intent_message)
         return ctx
+
+    def _restore_session_state(self, ctx: AgentContext) -> None:
+        latest = self.session_state_store.get_latest(ctx.request.session_id)
+        if latest is None:
+            return
+
+        # Agent 只读 ConversationState；历史上下文由编排器在单轮开始前统一注入。
+        ctx.conversation.history_summary = latest.history_summary
+        ctx.conversation.last_user_intent = latest.last_user_intent
+        ctx.conversation.last_answer_summary = latest.last_answer_summary
+        ctx.conversation.active_slots = dict(latest.active_slots)
 
     def _run_intent_agent(self, ctx: AgentContext) -> AgentMessage:
         intent_message = self.intent_agent.run(ctx)
@@ -195,6 +217,20 @@ class AgentOrchestrator:
             )
         )
 
+    def _append_session_state(self, ctx: AgentContext) -> None:
+        # 会话摘要先采用轻量截断，后续接入模型摘要时仍保持相同 SessionState 协议。
+        self.session_state_store.append(
+            SessionState(
+                session_id=ctx.request.session_id,
+                turn_id=ctx.request.turn_id,
+                history_summary=ctx.conversation.history_summary,
+                last_user_intent=ctx.intent_result.intent if ctx.intent_result else None,
+                last_answer_summary=(ctx.final_answer or "")[:120],
+                active_slots=ctx.conversation.active_slots,
+                updated_at=now_cn(),
+            )
+        )
+
     def _record(
         self,
         ctx: AgentContext,
@@ -228,6 +264,7 @@ def create_default_orchestrator(base_path: Path) -> AgentOrchestrator:
     trace_recorder = TraceRecorder(base_path / "traces.jsonl")
     task_state_store = TaskStateStore(base_path / "task_states.jsonl")
     report_store = ReportStore(base_path / "run_reports.jsonl")
+    session_state_store = SessionStateStore(base_path / "session_states.jsonl")
     registry = ToolRegistry()
     registry.register(
         ToolDefinition(
@@ -264,4 +301,5 @@ def create_default_orchestrator(base_path: Path) -> AgentOrchestrator:
         trace_recorder=trace_recorder,
         task_state_store=task_state_store,
         report_store=report_store,
+        session_state_store=session_state_store,
     )

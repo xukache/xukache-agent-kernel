@@ -1,7 +1,7 @@
 from pathlib import Path
 from typing import Any
 
-from ananhu_agent.schemas import RunReport, TaskState, TraceEvent
+from ananhu_agent.schemas import RunReport, SessionState, TaskState, TraceEvent
 from ananhu_agent.storage.jsonl_store import JsonlStore
 
 
@@ -52,3 +52,26 @@ class ReportStore:
 
     def read_all(self) -> list[dict[str, Any]]:
         return self.store.read_all()
+
+
+class SessionStateStore:
+    """多轮 CLI 会话状态存储。
+
+    SessionState 回答“同一 session 上一轮留下了什么上下文”，只服务于编排器恢复会话记忆。
+    """
+
+    def __init__(self, path: Path) -> None:
+        self.store = JsonlStore(path)
+
+    def append(self, state: SessionState) -> None:
+        self.store.append(state)
+
+    def read_all(self) -> list[dict[str, Any]]:
+        return self.store.read_all()
+
+    def get_latest(self, session_id: str) -> SessionState | None:
+        """按追加顺序返回指定 session 的最新状态。"""
+        for row in reversed(self.read_all()):
+            if row["session_id"] == session_id:
+                return SessionState(**row)
+        return None

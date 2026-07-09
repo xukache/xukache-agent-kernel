@@ -2996,7 +2996,7 @@ git commit -m "feat(cli): add interactive chat command"
 - 修改：`ananhu_agent/cli/main.py`
 - 创建：`tests/test_session_state.py`
 
-- [ ] **步骤 1：编写失败测试**
+- [x] **步骤 1：编写失败测试**
 
 创建 `tests/test_session_state.py`：
 
@@ -3019,7 +3019,7 @@ def test_session_state_persists_active_slots_between_turns(tmp_path):
     assert rows[-1]["active_slots"]["province"] == "四川省"
 ```
 
-- [ ] **步骤 2：运行测试验证失败**
+- [x] **步骤 2：运行测试验证失败**
 
 运行：
 
@@ -3029,7 +3029,7 @@ uv run pytest tests/test_session_state.py -v
 
 预期：FAIL，报错包含 `cannot import name 'SessionStateStore'`。
 
-- [ ] **步骤 3：实现 SessionState 与存储**
+- [x] **步骤 3：实现 SessionState 与存储**
 
 要求：
 
@@ -3040,7 +3040,7 @@ uv run pytest tests/test_session_state.py -v
 - `ask()` 结束时写入新的 session state。
 - 高风险槽位跨主题继承暂不复杂化，只继承现有 `merge_slots()` 允许的 active slots，并在 trace 中保留 `region_inherited` metadata。
 
-- [ ] **步骤 4：运行测试验证通过**
+- [x] **步骤 4：运行测试验证通过**
 
 运行：
 
@@ -3050,7 +3050,7 @@ uv run pytest tests/test_session_state.py tests/test_orchestrator_vertical_slice
 
 预期：2 passed。
 
-- [ ] **步骤 5：提交**
+- [x] **步骤 5：提交**
 
 ```bash
 git add ananhu_agent/schemas.py ananhu_agent/storage/runtime_stores.py ananhu_agent/orchestrator/orchestrator.py ananhu_agent/cli/main.py tests/test_session_state.py
