@@ -2793,7 +2793,7 @@ git commit -m "feat: add eval runner and badcase output"
 - 修改：`docs/backend-conventions.md`
 - 修改：`docs/architecture/99-changelog.md`
 
-- [ ] **步骤 1：查看当前文档**
+- [x] **步骤 1：查看当前文档**
 
 运行：
 
@@ -2804,7 +2804,7 @@ sed -n '1,220p' docs/architecture/99-changelog.md
 
 预期：能看到当前文档顶部仍是架构基线阶段的旧状态描述，且 changelog 没有 CLI MVP 实现记录。
 
-- [ ] **步骤 2：更新项目状态和后端命令**
+- [x] **步骤 2：更新项目状态和后端命令**
 
 在 `docs/backend-conventions.md` 中先把顶部项目状态段改为：
 
@@ -2843,7 +2843,7 @@ uv run pytest -v
 
 ```
 
-- [ ] **步骤 3：更新 changelog**
+- [x] **步骤 3：更新 changelog**
 
 在 `docs/architecture/99-changelog.md` 追加：
 
@@ -2857,7 +2857,7 @@ uv run pytest -v
 - MVP 工具先使用本地 fixture RAG 和确定性待遇测算，后续可在不改变 ToolExecutor 契约的前提下替换为真实 RAG / 模型。
 ```
 
-- [ ] **步骤 4：运行全量验证**
+- [x] **步骤 4：运行全量验证**
 
 运行：
 
@@ -2873,7 +2873,7 @@ uv run ananhu-agent eval data/eval/eval_cases.jsonl
 - ask 输出包含 `一次性伤残补助金`、`42000`、`以经办机构和正式材料为准`。
 - eval 输出 metrics 路径。
 
-- [ ] **步骤 5：提交**
+- [x] **步骤 5：提交**
 
 ```bash
 git add docs/backend-conventions.md docs/architecture/99-changelog.md
@@ -2899,7 +2899,7 @@ git commit -m "docs: document cli mvp commands"
 - 修改：`ananhu_agent/cli/main.py`
 - 创建：`tests/test_cli_chat.py`
 
-- [ ] **步骤 1：编写失败测试**
+- [x] **步骤 1：编写失败测试**
 
 创建 `tests/test_cli_chat.py`：
 
@@ -2934,7 +2934,7 @@ def test_cli_chat_help_command(tmp_path, monkeypatch):
     assert "/feedback bad" in result.output
 ```
 
-- [ ] **步骤 2：运行测试验证失败**
+- [x] **步骤 2：运行测试验证失败**
 
 运行：
 
@@ -2944,7 +2944,7 @@ uv run pytest tests/test_cli_chat.py -v
 
 预期：FAIL，报错包含 `No such command 'chat'`。
 
-- [ ] **步骤 3：实现 chat 命令**
+- [x] **步骤 3：实现 chat 命令**
 
 在 `ananhu_agent/cli/main.py` 中新增 `chat` 命令。要求：
 
@@ -2956,7 +2956,7 @@ uv run pytest tests/test_cli_chat.py -v
 - `/exit`、`exit`、`quit` 退出。
 - `/context`、`/trace`、`/badcase`、`/feedback` 先给出明确提示，具体写入能力在任务 16、17 补齐。
 
-- [ ] **步骤 4：运行测试验证通过**
+- [x] **步骤 4：运行测试验证通过**
 
 运行：
 
@@ -2966,7 +2966,7 @@ uv run pytest tests/test_cli_chat.py tests/test_cli_ask.py -v
 
 预期：3 passed。
 
-- [ ] **步骤 5：提交**
+- [x] **步骤 5：提交**
 
 ```bash
 git add ananhu_agent/cli/main.py tests/test_cli_chat.py
