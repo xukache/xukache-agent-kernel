@@ -10,11 +10,25 @@ def build_final_answer(ctx: AgentContext) -> str:
 
     documents = _collect_policy_documents(ctx)
     payment_result = _collect_payment_result(ctx)
+    if not documents:
+        return _build_conservative_answer(payment_result)
 
     lines = ["结论：需结合事实、地区政策和正式材料判断，以下为咨询参考。"]
     lines.extend(_build_payment_lines(payment_result))
     lines.extend(_build_citation_lines(documents))
     lines.extend(_build_guidance_lines(payment_result))
+    lines.append("风险提示：具体结论以经办机构和正式材料为准。")
+    return "\n".join(lines)
+
+
+def _build_conservative_answer(payment_result: dict[str, Any] | None) -> str:
+    lines = [
+        "结论：当前没有检索到可引用的结构化政策依据，不能给出确定结论。",
+        "依据：暂无可引用的结构化政策依据。",
+    ]
+    if payment_result:
+        lines.append("测算：因缺少可引用政策依据，金额仅能作为公式演示，不能作为待遇承诺。")
+    lines.append("建议：请补充地区、工伤认定材料、劳动能力鉴定结论和经办机构口径后再判断。")
     lines.append("风险提示：具体结论以经办机构和正式材料为准。")
     return "\n".join(lines)
 

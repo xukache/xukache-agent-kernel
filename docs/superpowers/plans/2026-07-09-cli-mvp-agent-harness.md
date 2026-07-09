@@ -3357,7 +3357,7 @@ git commit -m "feat(tools): harden tool executor governance"
 - 修改：`ananhu_agent/orchestrator/aggregator.py`
 - 创建：`tests/test_answer_governance_extended.py`
 
-- [ ] **步骤 1：编写失败测试**
+- [x] **步骤 1：编写失败测试**
 
 创建 `tests/test_answer_governance_extended.py`：
 
@@ -3384,7 +3384,7 @@ def test_safety_guard_rejects_medical_grade_commitment():
     assert "medical_grade_commitment" in result.warnings
 ```
 
-- [ ] **步骤 2：运行测试验证失败**
+- [x] **步骤 2：运行测试验证失败**
 
 运行：
 
@@ -3394,7 +3394,7 @@ uv run pytest tests/test_answer_governance_extended.py -v
 
 预期：FAIL，当前 `AnswerValidator.validate()` 不支持 `expected_region`。
 
-- [ ] **步骤 3：实现校验增强**
+- [x] **步骤 3：实现校验增强**
 
 要求：
 
@@ -3403,7 +3403,7 @@ uv run pytest tests/test_answer_governance_extended.py -v
 - `PolicySafetyGuard` 增加医疗/伤残等级承诺、替代经办判断、缺字段精确金额等规则。
 - 安全结果 warnings 使用稳定 issue code，不只返回命中的原始短语。
 
-- [ ] **步骤 4：运行测试验证通过**
+- [x] **步骤 4：运行测试验证通过**
 
 运行：
 
@@ -3413,7 +3413,7 @@ uv run pytest tests/test_answer_governance.py tests/test_answer_governance_exten
 
 预期：全部通过。
 
-- [ ] **步骤 5：提交**
+- [x] **步骤 5：提交**
 
 ```bash
 git add ananhu_agent/orchestrator/validators.py ananhu_agent/orchestrator/safety.py ananhu_agent/orchestrator/aggregator.py tests/test_answer_governance_extended.py

@@ -119,6 +119,13 @@ badcase 来源：
 - 输出 schema 不合法。
 - 安全守卫拦截。
 
+安全守卫 issue code：
+
+- `absolute_commitment`
+- `medical_grade_commitment`
+- `agency_decision_substitution`
+- `precise_amount_commitment`
+
 ## eval_cases
 
 MVP 评测集至少覆盖：
