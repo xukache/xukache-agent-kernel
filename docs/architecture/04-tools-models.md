@@ -45,6 +45,12 @@ output_schema:
   citations: array
 ```
 
+当前 MVP 代码基线已落地 `ToolDefinition` 和 `ToolRegistry`：
+
+- `name`、`description`、`risk_level`、`timeout_ms`、`allowed_callers` 作为工具元数据保存。
+- `required_input_keys` 作为 MVP 阶段的最小输入校验边界。
+- `handler` 只允许由 `ToolExecutor` 调用，Agent 不直接调用底层工具函数。
+
 ## ToolExecutor
 
 Agent 只能产生 `ToolCallRequest`，所有工具必须经过 `ToolExecutor`。
@@ -60,6 +66,21 @@ Agent 只能产生 `ToolCallRequest`，所有工具必须经过 `ToolExecutor`�
 - 错误码归一。
 - fallback 标记。
 - trace 写入。
+
+当前 MVP 代码基线已落地：
+
+- 未注册工具返回 `tool_not_registered`。
+- 调用方不在 `allowed_callers` 时返回 `caller_not_allowed`。
+- 缺少 `required_input_keys` 时返回 `invalid_input_schema`。
+- handler 异常统一返回 `tool_handler_error`，不向最终用户泄露原始异常。
+- 成功调用写入 `tool_finished` trace，失败调用写入 `tool_failed` trace。
+
+以下治理项需在真实 RAG / 真实模型接入前补齐，不得长期依赖最小实现：
+
+- 基于结构化 input / output schema 的类型校验。
+- 超时控制和取消策略。
+- 风险等级策略执行。
+- 重复调用拦截。
 
 ## ToolCallResult
 
@@ -99,4 +120,3 @@ Agent 只能产生 `ToolCallRequest`，所有工具必须经过 `ToolExecutor`�
 - 结构化计算由工具完成，模型只解释。
 - 低置信度优先追问，不盲目升级复杂链路。
 - 模型调用必须记录 prompt、usage、latency 和错误信息。
-
