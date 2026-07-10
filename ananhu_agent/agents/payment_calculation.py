@@ -1,7 +1,5 @@
 from __future__ import annotations
 
-from uuid import uuid4
-
 from ananhu_agent.schemas import AgentContext, AgentMessage, ToolCallRequest
 
 
@@ -21,7 +19,7 @@ class PaymentCalculationAgent:
             content="需要测算待遇并补充政策依据。",
             tool_calls=[
                 ToolCallRequest(
-                    tool_call_id=f"tool_{uuid4().hex[:8]}",
+                    tool_call_id=f"{ctx.request.request_id}:payment-calculation",
                     tool_name="PaymentCalculationTool",
                     called_by=self.name,
                     input={

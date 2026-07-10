@@ -1,7 +1,5 @@
 from __future__ import annotations
 
-from uuid import uuid4
-
 from ananhu_agent.schemas import AgentContext, AgentMessage, ToolCallRequest
 
 
@@ -20,7 +18,7 @@ class PolicyRAGAgent:
             content="检索政策依据。",
             tool_calls=[
                 ToolCallRequest(
-                    tool_call_id=f"tool_{uuid4().hex[:8]}",
+                    tool_call_id=f"{ctx.request.request_id}:policy-rag",
                     tool_name="PolicyRAGTool",
                     called_by=self.name,
                     input={

@@ -2,7 +2,7 @@
 
 安安虎工伤智能助手是面向工伤认定、劳动能力鉴定、待遇辅助测算和政策咨询的 Python 后端 Agent Harness。项目当前以 CLI 作为开发和验收入口，默认运行时为 `LangGraphWorkflowRuntime`，通过框架中立 `WorkflowRuntime` 端口调用。
 
-当前代码已经具备离线可回归闭环：CLI、MVP Agent、Prompt/上下文管理、CapabilityGateway、fixture 政策检索、确定性待遇测算、JSONL trace、badcase 和 eval。LangGraph 尚未接入；后续接入时只作为可替换运行时，不拥有业务状态、能力治理、Prompt、trace 或 eval 协议。
+当前代码已经具备离线可回归闭环：CLI、MVP Agent、Prompt/上下文管理、CapabilityGateway、fixture 政策检索、确定性待遇测算、JSONL trace、badcase、eval，以及 Native/LangGraph 双运行时差分验收。LangGraph 只作为可替换运行时，不拥有业务状态、能力治理、Prompt、trace 或 eval 协议。
 
 ## 当前状态
 
@@ -21,6 +21,7 @@ uv sync --extra dev
 uv run ananhu-agent version
 uv run ananhu-agent ask "四川十级工伤，月工资6000，大概能赔多少钱？"
 uv run ananhu-agent eval data/eval/eval_cases.jsonl
+uv run ananhu-agent eval data/eval/eval_cases.jsonl --runtime both
 uv run pytest -v
 ```
 
@@ -36,11 +37,14 @@ uv run ananhu-agent chat
 # 运行评测
 uv run ananhu-agent eval data/eval/eval_cases.jsonl
 
+# 双运行时差分验收
+uv run ananhu-agent eval data/eval/eval_cases.jsonl --runtime both
+
 # 查看版本
 uv run ananhu-agent version
 ```
 
-运行证据默认写入 `.ananhu-runtime/`，包括 trace、运行报告和 badcase 记录。
+运行证据默认写入 `.ananhu-runtime/`，包括 trace、运行报告和 badcase 记录。双运行时差分额外写入 `runtime-differential.json`。
 
 ## 项目结构
 
