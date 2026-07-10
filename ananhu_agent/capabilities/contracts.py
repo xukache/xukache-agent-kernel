@@ -48,6 +48,7 @@ class CapabilityRequest(BaseModel):
     """
 
     schema_version: Literal["capability.v1"] = Field(default=CAPABILITY_SCHEMA_VERSION)
+    run_id: str = Field(description="单次运行 ID，用于事件、trace 和幂等隔离。")
     request_id: str = Field(description="用户请求 ID，用于 trace 关联。")
     session_id: str = Field(description="会话 ID，用于 trace 关联。")
     capability_name: str = Field(description="能力名称；当前映射到 ToolDefinition.name。")

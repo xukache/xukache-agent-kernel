@@ -323,6 +323,7 @@ class NativeStageServices:
         for call in message.tool_calls:
             result = await self.capability_gateway.execute(
                 CapabilityRequest(
+                    run_id=state.run_id,
                     request_id=self.ctx.request.request_id,
                     session_id=self.ctx.request.session_id,
                     capability_name=call.tool_name,

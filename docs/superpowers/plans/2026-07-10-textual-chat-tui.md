@@ -133,7 +133,7 @@ git commit -m "docs(architecture): 发布 Textual Chat TUI 架构 v0.7"
 
 **文件：** `ananhu_agent/ports/run_event_sink.py`、`ananhu_agent/infrastructure/events/run_event_sinks.py`、`tests/test_run_progress_events.py`、`tests/test_storage.py`
 
-- [ ] **步骤 1：编写事件协议失败测试**
+- [x] **步骤 1：编写事件协议失败测试**
 
 | ID | 函数 |
 |---|---|
@@ -187,7 +187,7 @@ def test_duplicate_and_interleaved_runs_are_isolated():
     assert inspector.state_for("run_b").applied_sequences == [1]
 ```
 
-- [ ] **步骤 2：运行测试确认失败**
+- [x] **步骤 2：运行测试确认失败**
 
 ```bash
 uv run pytest tests/test_run_progress_events.py -v
@@ -195,7 +195,7 @@ uv run pytest tests/test_run_progress_events.py -v
 
 预期：FAIL，缺少 `RunProgressEvent`、sink 和 reducer。
 
-- [ ] **步骤 3：实现协议和最小 sink**
+- [x] **步骤 3：实现协议和最小 sink**
 
 在 `run_event_sink.py` 定义公共基类、每类具体事件和真正按 `kind` 判别的联合：
 
@@ -244,11 +244,11 @@ RunProgressEvent = Annotated[
 其余具体事件逐一声明自己的 `Literal[kind]` 和 payload 类型，不使用外层 kind + 任意 payload。sink
 入口使用 `TypeAdapter(RunProgressEvent)` 校验；组合 sink 在锁内编号后先 trace、再 queue。
 
-- [ ] **步骤 4：实现纯展示事件 reducer**
+- [x] **步骤 4：实现纯展示事件 reducer**
 
 `RunEventReducer` 放入 `ananhu_agent/cli/tui/presentation.py` 的无 Textual 纯 Python 区域，完成 duplicate、gap、终止屏障和跨 run 隔离；gap 立即停止 spinner，后续只接受 run_finished 清理确认。
 
-- [ ] **步骤 5：运行事件与存储测试**
+- [x] **步骤 5：运行事件与存储测试**
 
 ```bash
 uv run pytest tests/test_run_progress_events.py tests/test_storage.py -v
@@ -256,7 +256,7 @@ uv run pytest tests/test_run_progress_events.py tests/test_storage.py -v
 
 预期：本任务列出的 4 个 EVT 测试全部 PASS；transient canary 在序列化结果中零命中。
 
-- [ ] **步骤 6：Commit**
+- [x] **步骤 6：Commit**
 
 ```bash
 git add ananhu_agent/ports/run_event_sink.py ananhu_agent/infrastructure/events/run_event_sinks.py ananhu_agent/cli/tui/presentation.py tests/test_run_progress_events.py tests/test_storage.py

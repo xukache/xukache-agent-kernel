@@ -10,6 +10,7 @@ from ananhu_agent.capabilities.tool_executor_gateway import ToolExecutorCapabili
 from ananhu_agent.config.settings import RuntimeSettings
 from ananhu_agent.context.context_manager import ContextManager
 from ananhu_agent.models.model_router import ModelRouter
+from ananhu_agent.ports.run_event_sink import NoOpRunEventSink, RunEventSink
 from ananhu_agent.prompts.prompt_manager import PromptManager
 from ananhu_agent.runtimes.native.runtime import NativeWorkflowRuntime
 from ananhu_agent.storage.runtime_stores import (
@@ -29,6 +30,7 @@ from ananhu_agent.workflow.contracts import WorkflowRuntime
 def create_default_runtime(
     base_path: Path,
     settings: RuntimeSettings | None = None,
+    event_sink: RunEventSink | None = None,
 ) -> WorkflowRuntime:
     """创建默认 WorkflowRuntime。
 
@@ -37,11 +39,12 @@ def create_default_runtime(
     """
 
     settings = settings or RuntimeSettings(runtime_dir=base_path)
+    event_sink = event_sink or NoOpRunEventSink()
     model_router = ModelRouter(settings)
     trace_recorder = TraceRecorder(base_path / "traces.jsonl")
     registry = _default_tool_registry()
     tool_executor = ToolExecutor(registry, trace_recorder)
-    capability_gateway = ToolExecutorCapabilityGateway(tool_executor)
+    capability_gateway = ToolExecutorCapabilityGateway(tool_executor, event_sink=event_sink)
     runtime_kwargs = dict(
         intent_agent=IntentRouterAgent(
             model_router.gateway_for("intent_fast"),
@@ -58,6 +61,7 @@ def create_default_runtime(
         session_state_store=SessionStateStore(base_path / "session_states.jsonl"),
         badcase_store=BadcaseStore(base_path / "badcases.jsonl"),
         model_router=model_router,
+        event_sink=event_sink,
     )
     if settings.runtime == "native":
         return NativeWorkflowRuntime(**runtime_kwargs)

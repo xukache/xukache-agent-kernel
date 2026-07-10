@@ -78,6 +78,7 @@ class CapabilityFinishedPayload(BaseModel):
     status: str
     output_summary: dict[str, Any] = Field(default_factory=dict)
     fallback_used: bool = False
+    reused: bool = False
     latency_ms: int = Field(default=0, ge=0)
 
 

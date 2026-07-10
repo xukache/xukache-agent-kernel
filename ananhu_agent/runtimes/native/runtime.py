@@ -1,11 +1,30 @@
 from __future__ import annotations
 
+import asyncio
+from collections.abc import Awaitable, Callable
+from time import perf_counter
+
 from ananhu_agent.agents.domain_consultation import DomainConsultationAgent
 from ananhu_agent.agents.intent_router import IntentRouterAgent
 from ananhu_agent.agents.payment_calculation import PaymentCalculationAgent
 from ananhu_agent.agents.policy_rag import PolicyRAGAgent
 from ananhu_agent.capabilities.contracts import CapabilityGateway
 from ananhu_agent.models.model_router import ModelRouter
+from ananhu_agent.ports.run_event_sink import (
+    NodeFailedEvent,
+    NodeFailedPayload,
+    NodeFinishedEvent,
+    NodeFinishedPayload,
+    NodeStartedEvent,
+    NodeStartedPayload,
+    RunCancelledEvent,
+    RunCancelledPayload,
+    RunEventSink,
+    RunFinishedEvent,
+    RunFinishedPayload,
+    RunStartedEvent,
+    RunStartedPayload,
+)
 from ananhu_agent.runtimes.native.stages import NativeStageServices
 from ananhu_agent.schemas import (
     AgentContext,
@@ -26,12 +45,16 @@ from ananhu_agent.storage.runtime_stores import (
 from ananhu_agent.workflow.contracts import (
     RunRequest,
     RunStatus,
+    StopReason,
     WorkflowPhase,
     WorkflowResult,
     WorkflowRuntime,
     WorkflowState,
 )
 from ananhu_agent.workflow.reducer import ReducerResult, reduce_workflow_state
+
+RUNTIME_NAME = "native"
+RUNTIME_VERSION = "native.v1"
 
 
 class NativeWorkflowRuntime(WorkflowRuntime):
@@ -50,6 +73,7 @@ class NativeWorkflowRuntime(WorkflowRuntime):
         session_state_store: SessionStateStore,
         badcase_store: BadcaseStore,
         model_router: ModelRouter,
+        event_sink: RunEventSink,
     ) -> None:
         self.intent_agent = intent_agent
         self.domain_agent = domain_agent
@@ -62,9 +86,21 @@ class NativeWorkflowRuntime(WorkflowRuntime):
         self.session_state_store = session_state_store
         self.badcase_store = badcase_store
         self.model_router = model_router
+        self.event_sink = event_sink
 
     async def invoke(self, request: RunRequest) -> WorkflowResult:
-        """执行一次 Native run，所有阶段增量都经项目 reducer 合并。"""
+        """执行一次 Native run，并由统一边界发布唯一 run 生命周期。"""
+
+        return await _run_with_lifecycle(
+            request,
+            self.event_sink,
+            RUNTIME_NAME,
+            RUNTIME_VERSION,
+            lambda: self._invoke(request),
+        )
+
+    async def _invoke(self, request: RunRequest) -> WorkflowResult:
+        """执行 Native 业务阶段，所有增量都经项目 reducer 合并。"""
 
         ctx = _context_from_request(request)
         self._restore_session_state(ctx)
@@ -94,7 +130,7 @@ class NativeWorkflowRuntime(WorkflowRuntime):
         ):
             if state.phase is not phase:
                 continue
-            patch = await _run_stage(stages, phase, state)
+            patch = await _run_stage(stages, phase, state, self.event_sink)
             reduced = reduce_workflow_state(state, patch)
             if not reduced.ok:
                 return _failed_result(request, state, reduced)
@@ -212,12 +248,128 @@ async def _run_stage(
     stages: NativeStageServices,
     phase: WorkflowPhase,
     state: WorkflowState,
+    event_sink: RunEventSink,
 ):
-    if phase is WorkflowPhase.UNDERSTAND:
-        return await stages.understand(state)
-    if phase is WorkflowPhase.EXECUTE:
-        return await stages.execute(state)
-    return getattr(stages, phase.value)(state)
+    """执行共享业务阶段，并保证 started 与唯一 terminal 事件配对。"""
+
+    started = perf_counter()
+    event_fields = {
+        "run_id": state.run_id,
+        "request_id": state.request_id,
+        "session_id": state.session_id,
+        "node_id": phase.value,
+    }
+    event_sink.publish(NodeStartedEvent(
+        **event_fields,
+        public_payload=NodeStartedPayload(
+            phase=phase.value,
+            input_summary={
+                "status": state.status.value,
+                "case_fact_keys": sorted(state.case_facts),
+                "capability_result_count": len(state.capability_results),
+            },
+        ),
+    ))
+    try:
+        if phase is WorkflowPhase.UNDERSTAND:
+            patch = await stages.understand(state)
+        elif phase is WorkflowPhase.EXECUTE:
+            patch = await stages.execute(state)
+        else:
+            patch = getattr(stages, phase.value)(state)
+    except BaseException as exc:
+        event_sink.publish(NodeFailedEvent(
+            **event_fields,
+            public_payload=NodeFailedPayload(
+                phase=phase.value,
+                error_code=(
+                    "stage_cancelled"
+                    if isinstance(exc, asyncio.CancelledError)
+                    else "stage_failed"
+                ),
+                retryable=False,
+                latency_ms=int((perf_counter() - started) * 1000),
+                error_message=type(exc).__name__,
+            ),
+        ))
+        raise
+    event_sink.publish(NodeFinishedEvent(
+        **event_fields,
+        public_payload=NodeFinishedPayload(
+            phase=phase.value,
+            latency_ms=int((perf_counter() - started) * 1000),
+            patch_summary={
+                "source_phase": patch.source_phase.value,
+                "next_phase": patch.next_phase.value if patch.next_phase else None,
+                "status": patch.status.value if patch.status else None,
+                "fact_update_keys": sorted(patch.fact_updates),
+                "capability_result_count": len(patch.capability_results),
+                "evidence_count": len(patch.evidence),
+            },
+        ),
+    ))
+    return patch
+
+
+async def _run_with_lifecycle(
+    request: RunRequest,
+    event_sink: RunEventSink,
+    runtime_name: str,
+    runtime_version: str,
+    operation: Callable[[], Awaitable[WorkflowResult]],
+) -> WorkflowResult:
+    """统一 run 生命周期，确保取消和异常也由唯一终止屏障收束。"""
+
+    started = perf_counter()
+    result: WorkflowResult | None = None
+    status = RunStatus.FAILED.value
+    stop_reason = "runtime_failed"
+    event_fields = {
+        "run_id": request.run_id,
+        "request_id": request.request_id,
+        "session_id": request.session_id,
+    }
+    event_sink.publish(RunStartedEvent(
+        **event_fields,
+        public_payload=RunStartedPayload(
+            runtime_name=runtime_name,
+            runtime_version=runtime_version,
+        ),
+    ))
+    try:
+        result = await operation()
+        status = result.status.value
+        stop_reason = result.stop_reason.value if result.stop_reason else "unknown"
+        return result
+    except asyncio.CancelledError:
+        status = RunStatus.CANCELLED.value
+        stop_reason = StopReason.USER_CANCELLED.value
+        event_sink.publish(RunCancelledEvent(
+            **event_fields,
+            public_payload=RunCancelledPayload(),
+        ))
+        raise
+    finally:
+        final_state = None
+        if result and result.final_state:
+            final_state = {
+                "phase": result.final_state.phase.value,
+                "status": result.final_state.status.value,
+                "stop_reason": (
+                    result.final_state.stop_reason.value
+                    if result.final_state.stop_reason
+                    else None
+                ),
+            }
+        event_sink.publish(RunFinishedEvent(
+            **event_fields,
+            public_payload=RunFinishedPayload(
+                status=status,
+                stop_reason=stop_reason,
+                final_state=final_state,
+                latency_ms=int((perf_counter() - started) * 1000),
+            ),
+        ))
 
 
 def _model_usage_summary(ctx: AgentContext) -> dict:

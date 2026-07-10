@@ -53,6 +53,7 @@ def _gateway(tmp_path, *, timeout_ms: int = 3000) -> ToolExecutorCapabilityGatew
 def test_gateway_executes_policy_rag_and_preserves_trace_identity(tmp_path):
     gateway = _gateway(tmp_path)
     request = CapabilityRequest(
+        run_id="run_1",
         request_id="req_1",
         session_id="sess_1",
         capability_name="PolicyRAGTool",
@@ -71,6 +72,7 @@ def test_gateway_executes_policy_rag_and_preserves_trace_identity(tmp_path):
     assert result.policy.idempotency is CapabilityIdempotency.READ_ONLY_REPEATABLE
     trace_rows = gateway.trace_recorder.read_all()
     assert [row["event_type"] for row in trace_rows] == ["tool_called", "tool_finished"]
+    assert {row["run_id"] for row in trace_rows} == {"run_1"}
     assert trace_rows[-1]["node_id"] == "execute"
     assert trace_rows[-1]["logical_call_id"] == "call_policy_1"
     assert trace_rows[-1]["attempt"] == 1
@@ -79,6 +81,7 @@ def test_gateway_executes_policy_rag_and_preserves_trace_identity(tmp_path):
 def test_gateway_executes_payment_calculation(tmp_path):
     gateway = _gateway(tmp_path)
     request = CapabilityRequest(
+        run_id="run_1",
         request_id="req_1",
         session_id="sess_1",
         capability_name="PaymentCalculationTool",
@@ -99,6 +102,7 @@ def test_gateway_executes_payment_calculation(tmp_path):
 def test_gateway_preserves_tool_executor_error_for_illegal_caller(tmp_path):
     gateway = _gateway(tmp_path)
     request = CapabilityRequest(
+        run_id="run_1",
         request_id="req_1",
         session_id="sess_1",
         capability_name="PolicyRAGTool",
@@ -138,6 +142,7 @@ def test_gateway_preserves_timeout_error(tmp_path):
         ToolExecutor(registry, TraceRecorder(tmp_path / "trace.jsonl"))
     )
     request = CapabilityRequest(
+        run_id="run_1",
         request_id="req_1",
         session_id="sess_1",
         capability_name="PolicyRAGTool",
@@ -157,6 +162,7 @@ def test_gateway_preserves_timeout_error(tmp_path):
 def test_gateway_reuses_result_for_same_logical_call_id(tmp_path):
     gateway = _gateway(tmp_path)
     request = CapabilityRequest(
+        run_id="run_1",
         request_id="req_1",
         session_id="sess_1",
         capability_name="PolicyRAGTool",
