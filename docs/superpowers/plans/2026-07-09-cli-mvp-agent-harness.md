@@ -10,15 +10,15 @@
 
 ## 已完成阶段
 
-| 阶段 | 已完成任务 | 结果 |
-|---|---|---|
-| P1 工程基线 | 1-3 | Python 3.11、uv、Typer、Pydantic、JSONL 证据存储 |
-| P2 规则与上下文 | 4-5 | 槽位规则、PromptManager、ContextManager |
-| P3 能力治理 | 6-7 | ToolRegistry、ToolExecutor、fixture RAG、确定性测算 |
-| P4 Agent 闭环 | 8-11 | Fake Model、四 Agent、聚合、安全、Native Orchestrator |
-| P5 CLI 与评测 | 12-14 | ask、eval、metrics、badcase 和文档 |
-| P6 多轮与治理 | 15-22 | chat、session、feedback、自动 badcase、工具/安全增强、30+ eval cases |
-| P7 配置与历史适配 | 23-24 | Model profile 路由、Agno-compatible 透传适配层 |
+| 状态 | 阶段 | 已完成任务 | 结果 |
+|---|---|---|---|
+| [x] | P1 工程基线 | 1-3 | Python 3.11、uv、Typer、Pydantic、JSONL 证据存储 |
+| [x] | P2 规则与上下文 | 4-5 | 槽位规则、PromptManager、ContextManager |
+| [x] | P3 能力治理 | 6-7 | ToolRegistry、ToolExecutor、fixture RAG、确定性测算 |
+| [x] | P4 Agent 闭环 | 8-11 | Fake Model、四 Agent、聚合、安全、Native Orchestrator |
+| [x] | P5 CLI 与评测 | 12-14 | ask、eval、metrics、badcase 和文档 |
+| [x] | P6 多轮与治理 | 15-22 | chat、session、feedback、自动 badcase、工具/安全增强、30+ eval cases |
+| [x] | P7 配置与历史适配 | 23-24 | Model profile 路由、Agno-compatible 透传适配层 |
 
 ## 当前解释
 
