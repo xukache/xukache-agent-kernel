@@ -57,8 +57,31 @@ class IntentRouterAgent:
                         ],
                     },
                     "confidence": {"type": "number", "minimum": 0, "maximum": 1},
-                    "slots": {"type": "object"},
-                    "missing_slots": {"type": "array", "items": {"type": "string"}},
+                    "slots": {
+                        "type": "object",
+                        "properties": {
+                            "province": {
+                                "type": "string",
+                                "description": "省级行政区全称，例如四川省。",
+                            },
+                            "city": {"type": "string"},
+                            "disability_grade": {"type": "string"},
+                            "monthly_wage": {"type": "number"},
+                            "incident_date": {"type": "string"},
+                            "insured": {"type": "boolean"},
+                            "employer_status": {"type": "string"},
+                        },
+                        "additionalProperties": False,
+                    },
+                    "missing_slots": {
+                        "type": "array",
+                        "items": {"type": "string"},
+                        "description": (
+                            "只列出当前意图继续处理所必需且用户尚未提供的字段；"
+                            "不要列出可选字段。待遇测算已有 province、"
+                            "disability_grade、monthly_wage 时返回空数组。"
+                        ),
+                    },
                     "is_composite": {"type": "boolean"},
                 },
             },

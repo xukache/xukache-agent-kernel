@@ -108,6 +108,9 @@ def test_openai_compatible_gateway_parses_structured_output_and_usage() -> None:
     assert captured["url"] == "https://model.example.test/v1/chat/completions"
     assert captured["authorization"] == "Bearer secret-contract-key"
     assert captured["body"]["response_format"] == {"type": "json_object"}
+    assert "JSON" in captured["body"]["messages"][0]["content"]
+    assert '"output_schema"' in captured["body"]["messages"][0]["content"]
+    assert '"missing_slots"' in captured["body"]["messages"][0]["content"]
     assert captured["body"]["temperature"] == 0.35
     assert result.output["intent"] == "payment_calculation"
     assert result.provider == "openai_compatible"
