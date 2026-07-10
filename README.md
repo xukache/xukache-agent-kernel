@@ -7,6 +7,7 @@
 ## 当前状态
 
 - Python 3.11 + `uv` 工程已初始化。
+- Python 发行包名为 `ananhu-agent`，CLI 命令为 `ananhu-agent`。
 - CLI `ask`、`chat`、`eval` 和反馈相关命令已实现。
 - 当前默认运行时是 `NativeWorkflowRuntime`，通过框架中立 `WorkflowRuntime` 端口调用。
 - 当前四个 Agent 是 MVP 实现现状，不是永久模块边界。
