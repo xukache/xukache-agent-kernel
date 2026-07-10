@@ -33,7 +33,7 @@
 1. 业务流程由稳定阶段定义，不按 Agent 名称机械建图。
 2. LangGraph 负责调度，项目 reducer/transition policy 负责业务状态合并语义。
 3. Agent 无状态，只返回项目定义的结构化结果或状态增量。
-4. 当前外部能力经过 `ToolExecutor` 处理注册、schema、调用方、超时、重复调用和 trace；目标 `CapabilityGateway` 再补齐稳定幂等、重试、脱敏、jurisdiction 和 usage。
+4. 当前外部能力经过 `CapabilityGateway` 端口和 `ToolExecutor` 适配器处理注册、schema、调用方、超时、logical_call_id 去重和 trace；真实脱敏、jurisdiction 和 usage 仍在后续任务补齐。
 5. 案件事实、知识证据、会话记忆和 checkpoint 分离管理。
 6. Prompt、上下文、模型、知识库和工具均版本化并进入运行证据。
 7. 项目 trace 是审计和评测事实源，框架观测只能作为补充。
@@ -67,6 +67,7 @@ uv run ananhu-agent eval data/eval/eval_cases.jsonl
 ```text
 ananhu_agent/
   agents/              # 当前 MVP Agent 实现
+  capabilities/        # 框架中立能力请求、结果、策略和 ToolExecutor 适配器
   orchestrator/        # 当前 Native Runtime、聚合、规则和安全校验
   workflow/            # 框架中立请求、状态、状态增量、reducer 和停止原因协议
   context/             # 上下文构建和槽位规则
