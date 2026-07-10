@@ -97,3 +97,15 @@ Prompt 修改不能用单一 LLM-as-Judge 分数验收。法规引用、测算�
 ## Trace 要求
 
 每次模型调用记录：`prompt_id`、`prompt_version`、`model_profile`、输入 section、裁剪报告、关联 Evidence ID、schema 校验、token、延迟和错误。默认 trace 保存摘要、hash 和引用，不记录不必要的完整敏感原文。
+
+## TUI 展示与 Reasoning 边界
+
+Textual 运行检查器可展示 Prompt ID/version、profile、schema 摘要和裁剪脱敏后的 message 视图，但这些
+展示数据只能来自 ContextManager/PromptManager 已构造完成的真实 `ModelRequest`，不得用 profile 配置或
+LangGraph state 冒充模型输入。案件槽位只显示项目规范字段；省级地区继续在进入可信事实前归一化。
+
+provider 显式返回的 `reasoning_content` 不属于 Prompt、上下文、记忆或业务事实。它只经模型适配器归一
+化后进入序列化排除的瞬态 payload，按独立上限裁剪并执行与模型输出相同的敏感字段脱敏。Agent、
+WorkflowState、TaskState、RunReport、SessionState、trace、badcase、eval 和 differential artifact 不得
+保存、解析或依赖 reasoning 原文；新会话、清屏和退出时释放内存。该变化不改变 Prompt eval 口径，
+但必须增加 reasoning 持久化零命中与 secret canary 测试。

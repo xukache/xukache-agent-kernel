@@ -4,6 +4,14 @@
 
 本文记录架构文档和重大设计决策变化。凡是影响系统模块边界、核心数据模型、运行时、消息 / 事件、状态机、Agent 编排、Prompt、Tool、模型策略或观测诊断的变更，都必须在此记录。
 
+## v0.7 - 2026-07-10
+
+- `ananhu-agent chat` 直接替换为单栏 Textual TUI；旧逐行命令能力迁移为 action/modal，非交互命令保持兼容。
+- 新增框架中立 `RunProgressEvent`、public/transient 安全投影、单点 sequence、gap 失败和唯一终止屏障。
+- 新增取消状态与 `user_cancelled`、ObservableModelGateway、显式 reasoning 瞬态路径和 Usage reported 口径。
+- CapabilityRequest 补充 run 身份；`other` 采用双运行时等价的确定性无工具非空回复路径。
+- reasoning 原文禁止进入业务 trace、状态、报告、badcase、eval 和 differential artifact。
+
 ## v0.6 - 2026-07-10
 
 - 引入 Provider/Profile 两层模型目录，支持多个 OpenAI-compatible provider 和按模型档位路由。

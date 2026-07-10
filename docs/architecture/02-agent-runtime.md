@@ -167,9 +167,32 @@ checkpoint 必须带状态 schema、runtime、Prompt、Tool Registry、知识语
 ## 异步与流式边界
 
 - application service、模型、检索和能力执行采用 async 边界。
-- `WorkflowRuntime` 未来可同时提供 `invoke()` 和项目定义的 `stream()` 事件。
-- 当前 CLI 可以消费最终结果；未来外部流式协议不能直接暴露 LangGraph 事件。
+- `WorkflowRuntime` 通过注入的 `RunEventSink` 发布项目定义的实时运行事件；外部流式协议不能直接暴露 LangGraph 事件。
+- 当前 `chat` 使用同一 event loop 的无界 `asyncio.Queue` 消费事件；`ask`、`eval` 可使用 no-op sink。
 - 首个 LangGraph 实现不启用 ToolNode 直连、checkpoint、interrupt、复杂并行、后台队列或多路事件流。
+
+## 实时运行事件
+
+`RunProgressEvent` 是唯一实时协议，按 `kind` 判别并为 node、model、capability 和 run 生命周期定义独立
+payload。事件只携带项目身份和受控 Pydantic 投影，禁止出现 LangGraph state、message、Command、
+checkpoint、channel 或 Textual/Rich 类型。共享 `_run_stage()` 包装器统一发布 Native/LangGraph 节点
+生命周期，避免两个运行时分别维护埋点。
+
+`CompositeRunEventSink` 在按 run 加锁的临界区内为未编号事件分配严格递增的 `sequence_no`，然后依次
+写入 trace 和 queue。生产者不得维护计数器。消费者按 run 隔离并幂等忽略重复/旧序号；发现 gap 时
+立即以 `event_sequence_gap` 停止本地 spinner，后续只排空事件。`run_finished` 是唯一终止屏障，必须
+最后且仅发布一次；gap 后的终止屏障只确认清理，不覆盖失败状态。
+
+Runtime 最外层 `try/except/finally` 独占 run 终止事件的生产权。用户取消时发布 `run_cancelled`，随后仍
+发布 `run_finished(status=cancelled, stop_reason=user_cancelled)`。协议增加 `RunStatus.CANCELLED` 与
+`StopReason.USER_CANCELLED`；尚未产生的 Usage 和最终状态保持缺失。TUI 取消 worker 后最多等待 2 秒
+消费屏障，超时只报告本地退出错误并回收任务，不伪造业务事件。
+
+## Other 无工具路径
+
+`other` 在 plan 阶段选择确定性无工具路径：execute 不产生 CapabilityRequest，compose 生成问候或能力
+边界说明，之后仍经过 safety 并以 completed 结束。所有 StopReason 必须落到非空的
+`final_answer`、`clarification_question` 或 `error_message`；Native/LangGraph 的结果与事件语义必须等价。
 
 ## Contract Tests
 

@@ -70,6 +70,17 @@ run_failed
 - `logical_call_id`：同一次逻辑调用的稳定 ID，重试时不变化。
 - `attempt`：物理尝试次数，用于区分重试。
 
+## RunProgressEvent 投影
+
+实时事件由项目维护的 `RunProgressEvent` 判别联合定义。`public_payload` 是可持久化候选，
+`transient_payload` 设置 Pydantic 序列化排除，只允许当前 TUI 会话所需的裁剪脱敏 Prompt、message、
+reasoning 和详细 JSON。Trace sink 必须逐类调用显式 `to_trace_event()` 安全投影，禁止通用序列化整个
+实时事件。持久化投影记录 sequence、身份、状态、耗时和受控摘要，不记录 reasoning 原文。
+
+组合 sink 是 sequence 的唯一分配点，并保证同一 run 先 trace 后 queue。`run_finished` 是唯一终止屏障；
+取消也必须以 `run_cancelled` 后接 cancelled `run_finished` 收束。消费者发现 sequence gap 时记录本地
+`event_sequence_gap`，停止 spinner 并只等待屏障清理，禁止把乱序静默当作成功。
+
 ## 隐私与脱敏
 
 - trace、session 和 badcase 默认不保存不必要的完整查询和敏感材料原文。
@@ -92,6 +103,15 @@ run_failed
 模型 usage 由 `ModelResult` 提供并汇总到 RunReport，使用 `usage_source` 明确区分 `fake` 与
 `provider`。Fake token 和费用固定为零；provider usage 保留 input/output/cache/total token、币种和
 可选估算费用。真实 smoke 与离线 fake eval 分开运行和报告，不生成混合通过率。
+
+`ModelUsage.reported` 明确区分 provider 报告的零值和未报告。任一成功 provider 调用未报告时，本轮
+聚合显示 `tokens unknown`，不得用其余已知调用生成貌似完整的合计；Fake 使用
+`reported=False, usage_source=fake` 且不触发 provider unknown。总耗时覆盖完整 Runtime，模型输出速度
+只基于完整已报告的成功调用计算。
+
+reasoning 原文不进入 UsageRecord、TraceEvent、RunReport、TaskState、SessionState、badcase、eval 或
+differential artifact。安全测试必须用 canary 扫描序列化、repr、异常、日志和所有持久化产物零命中；
+公共 trace 只允许记录 reasoning 是否存在、原始字符数和是否裁剪。
 
 ## BadcaseRecord
 
