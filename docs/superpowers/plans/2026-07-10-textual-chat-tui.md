@@ -267,7 +267,7 @@ git commit -m "feat(runtime): 增加实时运行事件与安全投影"
 
 **文件：** workflow/capability contracts、两种 Runtime、ToolExecutor gateway、runtime contract tests
 
-- [ ] **步骤 1：扩展协议失败测试**
+- [x] **步骤 1：扩展协议失败测试**
 
 | ID | 函数 |
 |---|---|
@@ -315,13 +315,13 @@ def test_native_and_langgraph_emit_equivalent_progress_events():
     assert native == langgraph
 ```
 
-- [ ] **步骤 2：运行测试确认失败**
+- [x] **步骤 2：运行测试确认失败**
 
 ```bash
 uv run pytest tests/runtime_contracts/test_run_progress_contract.py tests/test_capability_gateway_contract.py -v
 ```
 
-- [ ] **步骤 3：扩展工作流和 Capability 协议**
+- [x] **步骤 3：扩展工作流和 Capability 协议**
 
 增加：
 
@@ -357,22 +357,22 @@ class CapabilityRequest(BaseModel):
 
 修正所有 CapabilityRequest 构造点和 tests fixture。
 
-- [ ] **步骤 4：在共享 `_run_stage()` 发布 node lifecycle**
+- [x] **步骤 4：在共享 `_run_stage()` 发布 node lifecycle**
 
 在 Native 和 LangGraph 已共用的 `_run_stage(stages, phase, state)` 周围发布 started/finished/failed。
 输入使用 state 摘要，输出使用 StatePatch 摘要；异常分支必须发布 node_failed 后重新抛出或归一化。
 
-- [ ] **步骤 5：由 Runtime 统一发布 run lifecycle**
+- [x] **步骤 5：由 Runtime 统一发布 run lifecycle**
 
 Native/LangGraph `invoke()` 使用统一 helper：run_started；捕获 `asyncio.CancelledError` 发布
 run_cancelled；finally 发布唯一 run_finished。TUI 和 stage 不得发布 run_finished。
 
-- [ ] **步骤 6：工具链发布 capability lifecycle**
+- [x] **步骤 6：工具链发布 capability lifecycle**
 
 ToolExecutorCapabilityGateway 从 request 继承 run identity，发布 started/finished/failed；现有 TraceEvent 保留
 兼容字段但不再产生 run_id=None 的新工具事件。
 
-- [ ] **步骤 7：运行 contract 与差分测试**
+- [x] **步骤 7：运行 contract 与差分测试**
 
 ```bash
 uv run pytest tests/runtime_contracts/test_run_progress_contract.py tests/test_capability_gateway_contract.py tests/test_tool_executor.py tests/test_runtime_differential.py -v
@@ -380,7 +380,7 @@ uv run pytest tests/runtime_contracts/test_run_progress_contract.py tests/test_c
 
 预期：两 Runtime 生命周期配对；run_finished 唯一且最后；工具身份完整；差分无禁止差异。
 
-- [ ] **步骤 8：Commit**
+- [x] **步骤 8：Commit**
 
 ```bash
 git add ananhu_agent/workflow/contracts.py ananhu_agent/capabilities/contracts.py ananhu_agent/runtimes/native/runtime.py ananhu_agent/runtimes/langgraph/runtime.py ananhu_agent/runtimes/native/stages.py ananhu_agent/capabilities/tool_executor_gateway.py ananhu_agent/tools/executor.py tests/runtime_contracts/test_run_progress_contract.py tests/test_capability_gateway_contract.py tests/test_tool_executor.py tests/test_runtime_differential.py
@@ -391,7 +391,7 @@ git commit -m "feat(runtime): 发布节点能力与取消生命周期事件"
 
 **文件：** model port/adapters/decorator、model tests、security tests
 
-- [ ] **步骤 1：编写 reasoning/usage 失败测试**
+- [x] **步骤 1：编写 reasoning/usage 失败测试**
 
 Reasoning 函数：`test_adapter_returns_explicit_reasoning_string`、
 `test_adapter_normalizes_missing_null_and_empty_reasoning_to_none`、
@@ -455,13 +455,13 @@ def test_multiple_reported_model_results_are_summed():
     assert "Σ 180 tokens" in format_usage_line(results, 6100)
 ```
 
-- [ ] **步骤 2：运行测试确认失败**
+- [x] **步骤 2：运行测试确认失败**
 
 ```bash
 uv run pytest tests/test_model_reasoning_contract.py tests/test_model_gateway_contract.py tests/test_tui_presentation.py -v
 ```
 
-- [ ] **步骤 3：扩展 ModelRequest/ModelResult/ModelUsage**
+- [x] **步骤 3：扩展 ModelRequest/ModelResult/ModelUsage**
 
 ```python
 class ModelRequest(BaseModel):
@@ -496,7 +496,7 @@ run/request/session/node/logical-call 身份，不使用 run-scoped 隐式全局
 Fake 使用 `reported=False, usage_source="fake"`；OpenAI adapter 仅当 usage 是合法 dict 且包含 provider
 token 字段时 `reported=True`。
 
-- [ ] **步骤 4：实现 ObservableModelGateway**
+- [x] **步骤 4：实现 ObservableModelGateway**
 
 ```python
 class ObservableModelGateway:
@@ -527,13 +527,13 @@ class ObservableModelGateway:
 
 持久化 public payload 只含 reasoning available/length/truncated；stage 删除重复 model started/finished。
 
-- [ ] **步骤 5：实现 Usage 聚合真值表**
+- [x] **步骤 5：实现 Usage 聚合真值表**
 
 在 `presentation.py` 实现接收 `list[ModelResult]` 的 `aggregate_usage()` 和 `format_usage_line()`；
 latency 从 ModelResult 读取。provider 任一未报告时总量
 unknown、速度 `--`，已知调用只在明细出现；inconsistent total 保留并标记。
 
-- [ ] **步骤 6：reasoning 全路径零落盘测试**
+- [x] **步骤 6：reasoning 全路径零落盘测试**
 
 运行一次真实 Runtime mock provider，将 `CANARY_REASONING` 放入 response，扫描：ModelResult dump/repr、
 AgentMessage、WorkflowState、TaskState、RunReport、SessionState、trace、badcase、eval/differential artifact。
@@ -544,7 +544,7 @@ uv run pytest tests/test_model_reasoning_contract.py tests/test_tui_security.py 
 
 预期：全部 PASS；canary 仅存在于测试进程内的瞬态断言对象。
 
-- [ ] **步骤 7：Commit**
+- [x] **步骤 7：Commit**
 
 ```bash
 git add ananhu_agent/ports/model_gateway.py ananhu_agent/infrastructure/models/openai_compatible.py ananhu_agent/infrastructure/models/fake.py ananhu_agent/models/observable_gateway.py ananhu_agent/runtime.py ananhu_agent/runtimes/native/stages.py ananhu_agent/agents/intent_router.py ananhu_agent/cli/tui/presentation.py tests/test_model_reasoning_contract.py tests/test_model_gateway_contract.py tests/test_intent_router_agent.py tests/test_tui_presentation.py tests/test_tui_security.py
