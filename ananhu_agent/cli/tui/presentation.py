@@ -5,6 +5,26 @@ from typing import Iterable
 
 from ananhu_agent.ports.model_gateway import ModelResult
 from ananhu_agent.ports.run_event_sink import RunProgressEvent, validate_run_progress_event
+from ananhu_agent.workflow.contracts import StopReason, WorkflowResult
+
+
+def visible_result_message(result: WorkflowResult) -> str:
+    """将框架中立结果投影为 CLI 与 TUI 都可直接展示的非空文本。"""
+
+    if result.final_answer:
+        return result.final_answer
+    if result.clarification_question:
+        return result.clarification_question
+    if result.error_message:
+        return result.error_message
+
+    messages = {
+        StopReason.INSUFFICIENT_EVIDENCE: "暂未检索到足以支持结论的政策依据，请补充地区或具体工伤情形后再试。",
+        StopReason.CAPABILITY_FAILED: "相关能力暂时不可用，请稍后重试或补充信息。",
+        StopReason.SAFETY_BLOCKED: "为避免造成误导，暂不能给出该回复，请补充具体情况。",
+        StopReason.USER_CANCELLED: "本次咨询已取消。",
+    }
+    return messages.get(result.stop_reason, "系统暂时无法生成有效回复，请稍后重试。")
 
 
 @dataclass

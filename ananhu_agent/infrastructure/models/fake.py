@@ -22,6 +22,7 @@ class FakeModelGateway:
 
 
 def _classify_and_extract(query: str) -> dict[str, Any]:
+    query = _current_query_from_prompt(query)
     slots: dict[str, Any] = {}
     is_vague_recognition_question = "这个能不能算" in query
     if "四川" in query:
@@ -37,7 +38,7 @@ def _classify_and_extract(query: str) -> dict[str, Any]:
         intent = "payment_calculation"
     elif "劳动能力鉴定" in query:
         intent = "labor_capacity"
-    elif "工伤" in query or "交通事故" in query or is_vague_recognition_question:
+    elif "工伤" in query or "交通事故" in query or "政策" in query or "赔" in query or is_vague_recognition_question:
         intent = "work_injury_recognition"
     else:
         intent = "other"
@@ -49,3 +50,10 @@ def _classify_and_extract(query: str) -> dict[str, Any]:
         "is_composite": False,
         "missing_slots": ["accident_type"] if is_vague_recognition_question else [],
     }
+
+
+def _current_query_from_prompt(prompt: str) -> str:
+    """只读取 Prompt 的当前问题分区，避免模板规则词污染离线意图分类。"""
+
+    matched = re.search(r"\[Context\]\s*\n(.*?)\n\s*\[Output Schema\]", prompt, re.DOTALL)
+    return matched.group(1).strip() if matched else prompt

@@ -6,6 +6,7 @@ import asyncio
 import pytest
 
 from ananhu_agent.config.settings import RuntimeSettings
+from ananhu_agent.cli.tui import presentation
 from ananhu_agent.runtime import create_default_runtime
 from ananhu_agent.capabilities.contracts import (
     CapabilityError,
@@ -162,3 +163,67 @@ def test_runtime_contracts_do_not_import_langgraph_types():
     assert "import langgraph" not in source.lower()
     assert "StateGraph" not in source
     assert "Command" not in source
+
+
+@pytest.mark.parametrize(
+    "runtime_scenario",
+    [
+        pytest.param("clarification", id="clarification"),
+        pytest.param("insufficient_evidence", id="insufficient-evidence"),
+        pytest.param("capability_failed", id="capability-failed"),
+        pytest.param("safety_blocked", id="safety-blocked"),
+    ],
+)
+def test_all_real_runtime_stop_paths_have_visible_messages(tmp_path, monkeypatch, runtime_scenario):
+    if runtime_scenario == "clarification":
+        result = asyncio.run(_runtime(tmp_path, "native").invoke(_request("这个能不能算？")))
+    elif runtime_scenario == "insufficient_evidence":
+        result = asyncio.run(_runtime(tmp_path, "native").invoke(_request("辽宁特殊政策怎么赔？")))
+    elif runtime_scenario == "capability_failed":
+        runtime = _runtime(tmp_path, "native")
+
+        async def fail_capability(request):
+            return CapabilityResult(
+                request_id=request.request_id,
+                session_id=request.session_id,
+                capability_name=request.capability_name,
+                caller=request.caller,
+                node_id=request.node_id,
+                logical_call_id=request.logical_call_id,
+                attempt=request.attempt,
+                status=CapabilityStatus.FAILED,
+                policy=CapabilityPolicy(
+                    risk_level="read_only",
+                    timeout_ms=1,
+                    idempotency=CapabilityIdempotency.READ_ONLY_REPEATABLE,
+                ),
+                error=CapabilityError(code="tool_timeout", message="tool_timeout"),
+                tool_call_result={
+                    "tool_call_id": request.logical_call_id,
+                    "tool_name": request.capability_name,
+                    "called_by": request.caller,
+                    "tool_status": "failed",
+                    "tool_error_code": "tool_timeout",
+                    "latency_ms": 1,
+                    "input": request.input,
+                    "output": {},
+                    "fallback_used": True,
+                    "fallback_reason": "tool_timeout",
+                },
+            )
+
+        runtime.capability_gateway.execute = fail_capability
+        result = asyncio.run(runtime.invoke(_request("四川十级工伤，月工资6000，大概能赔多少钱？")))
+    else:
+        from ananhu_agent.runtimes.native import stages
+
+        class BlockingSafetyGuard:
+            def check(self, answer: str) -> SafetyResult:
+                return SafetyResult(passed=False, warnings=["absolute_commitment"])
+
+        monkeypatch.setattr(stages, "PolicySafetyGuard", BlockingSafetyGuard)
+        result = asyncio.run(_runtime(tmp_path, "native").invoke(
+            _request("四川十级工伤，月工资6000，大概能赔多少钱？")
+        ))
+
+    assert presentation.visible_result_message(result)

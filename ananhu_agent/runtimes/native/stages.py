@@ -13,7 +13,7 @@ from ananhu_agent.context.slot_rules import merge_slots
 from ananhu_agent.models.model_router import ModelRouter
 from ananhu_agent.ports.model_gateway import ModelGatewayError
 from ananhu_agent.orchestrator.aggregator import build_final_answer
-from ananhu_agent.orchestrator.rules import revise_intent
+from ananhu_agent.orchestrator.rules import other_intent_message, revise_intent
 from ananhu_agent.orchestrator.safety import PolicySafetyGuard
 from ananhu_agent.orchestrator.validators import AnswerValidator
 from ananhu_agent.schemas import AgentContext, AgentMessage, AgentPlan, IntentResult, TraceEvent
@@ -203,7 +203,10 @@ class NativeStageServices:
         )
 
     def plan(self, state: WorkflowState) -> StatePatch:
-        if self.ctx.intent_result and self.ctx.intent_result.intent == "payment_calculation":
+        if self.ctx.intent_result and self.ctx.intent_result.intent == "other":
+            # 非领域输入不调用业务 Agent 或能力网关，仍保留后续安全阶段。
+            self.ctx.agent_plan = AgentPlan(route_agents=[], required_tools=[])
+        elif self.ctx.intent_result and self.ctx.intent_result.intent == "payment_calculation":
             self.ctx.agent_plan = AgentPlan(
                 route_agents=["PaymentCalculationAgent", "PolicyRAGAgent"],
                 required_tools=["PaymentCalculationTool", "PolicyRAGTool"],
@@ -224,6 +227,16 @@ class NativeStageServices:
         )
 
     async def execute(self, state: WorkflowState) -> StatePatch:
+        if self.ctx.intent_result and self.ctx.intent_result.intent == "other":
+            return StatePatch(
+                patch_id=f"{state.run_id}:execute",
+                run_id=state.run_id,
+                source_phase=WorkflowPhase.EXECUTE,
+                next_phase=WorkflowPhase.VALIDATE_EVIDENCE,
+                node_id="execute",
+                logical_call_id=f"{state.run_id}:execute",
+            )
+
         route_message = self._run_business_agent()
         self.ctx.agent_outputs.append(route_message)
         await self._execute_capabilities(state, route_message, "execute")
@@ -271,7 +284,10 @@ class NativeStageServices:
         )
 
     def compose(self, state: WorkflowState) -> StatePatch:
-        self.ctx.final_answer = build_final_answer(self.ctx)
+        if self.ctx.intent_result and self.ctx.intent_result.intent == "other":
+            self.ctx.final_answer = other_intent_message(self.ctx.request.user_query)
+        else:
+            self.ctx.final_answer = build_final_answer(self.ctx)
         citations = [
             document["citation"]
             for result in self.ctx.tool_results

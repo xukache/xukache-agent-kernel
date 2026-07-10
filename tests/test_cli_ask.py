@@ -1,6 +1,7 @@
 from typer.testing import CliRunner
 
 from ananhu_agent.cli.main import app
+from ananhu_agent.workflow.contracts import RunStatus, WorkflowResult
 
 
 def test_cli_ask_outputs_final_answer(tmp_path, monkeypatch):
@@ -13,3 +14,23 @@ def test_cli_ask_outputs_final_answer(tmp_path, monkeypatch):
     assert result.exit_code == 0
     assert "一次性伤残补助金" in result.output
     assert "Trace:" in result.output
+
+
+def test_cli_ask_never_prints_blank_result(tmp_path, monkeypatch):
+    class EmptyRuntime:
+        async def invoke(self, request):
+            return WorkflowResult(
+                run_id=request.run_id,
+                request_id=request.request_id,
+                session_id=request.session_id,
+                status=RunStatus.FAILED,
+                stop_reason=None,
+            )
+
+    monkeypatch.setenv("ANANHU_RUNTIME_DIR", str(tmp_path))
+    monkeypatch.setattr("ananhu_agent.cli.main.create_default_runtime", lambda _: EmptyRuntime())
+
+    result = CliRunner().invoke(app, ["ask", "测试空结果"])
+
+    assert result.exit_code == 0
+    assert "系统暂时无法生成有效回复" in result.output
