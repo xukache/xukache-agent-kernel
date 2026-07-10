@@ -26,7 +26,7 @@
   -> Trace / TaskState / RunReport / Badcase / Eval
 ```
 
-目标稳定业务阶段已在任务 26 中锁定；任务 27-31 将继续演进状态增量、CapabilityGateway、证据校验、Usage 和双 Runtime 链路，当前代码尚未具备全部目标协议。
+目标稳定业务阶段已在任务 26 中锁定，状态增量、reducer 和 trace 调用身份已在任务 27 中落地；任务 28-31 将继续演进 CapabilityGateway、证据校验、Usage 和双 Runtime 链路，当前代码尚未具备全部目标协议。
 
 ## 架构原则
 
@@ -68,7 +68,7 @@ uv run ananhu-agent eval data/eval/eval_cases.jsonl
 ananhu_agent/
   agents/              # 当前 MVP Agent 实现
   orchestrator/        # 当前 Native Runtime、聚合、规则和安全校验
-  workflow/            # 框架中立请求、状态、结果和停止原因协议
+  workflow/            # 框架中立请求、状态、状态增量、reducer 和停止原因协议
   context/             # 上下文构建和槽位规则
   prompts/             # 版本化 Prompt
   tools/               # ToolRegistry、ToolExecutor 和业务能力

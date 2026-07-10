@@ -258,6 +258,11 @@ class TraceEvent(BaseModel):
     session_id: str
     event_type: str
     phase: str
+    runtime_name: str | None = None
+    runtime_version: str | None = None
+    node_id: str | None = None
+    logical_call_id: str | None = None
+    attempt: int | None = None
     payload: dict[str, Any]
     latency_ms: int | None = None
     created_at: str
@@ -271,14 +276,24 @@ class TraceEvent(BaseModel):
         phase: str,
         payload: dict[str, Any],
         latency_ms: int | None = None,
+        runtime_name: str | None = None,
+        runtime_version: str | None = None,
+        node_id: str | None = None,
+        logical_call_id: str | None = None,
+        attempt: int | None = None,
     ) -> TraceEvent:
-        """创建带有事件 ID 和标准时间戳的 trace 事件。"""
+        """创建带有事件 ID、运行时身份和标准时间戳的 trace 事件。"""
         return cls(
             id=f"trace_{uuid4().hex[:12]}",
             request_id=request_id,
             session_id=session_id,
             event_type=event_type,
             phase=phase,
+            runtime_name=runtime_name,
+            runtime_version=runtime_version,
+            node_id=node_id,
+            logical_call_id=logical_call_id,
+            attempt=attempt,
             payload=payload,
             latency_ms=latency_ms,
             created_at=now_cn(),
