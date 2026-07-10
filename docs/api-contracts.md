@@ -7,7 +7,7 @@
 - 当前交付入口是 Typer CLI。
 - 当前没有 HTTP API、WebSocket、SSE、前端或小程序直连接口。
 - 因为没有真实外部 API，当前不创建 `docs/api-contracts/` 领域分册。
-- 当前 CLI 仍直接装配 `AgentOrchestrator`。完成框架中立协议后，CLI 只负责输入输出适配，应用用例、`RunRequest` 和 `WorkflowResult` 不得依赖 Typer。
+- 当前 CLI 通过 `WorkflowRuntime` 端口调用默认 Native Runtime。CLI 只负责输入输出适配，`RunRequest` 和 `WorkflowResult` 不依赖 Typer。
 
 这项限制只约束当前交付范围，不限制 Agent 内核未来支持异步流式输出、多模态输入或其他客户端。
 
@@ -32,7 +32,7 @@
 5. 定义 PII 脱敏、审计、保留期限和删除规则。
 6. 更新本文并创建 `docs/api-contracts/00-conventions.md`、领域契约和 API changelog。
 
-## 未来兼容原则
+## 外部接口演进原则
 
 - HTTP、CLI、语音或其他入口都调用同一 application use case。
 - 外部协议不得直接暴露 LangGraph `Command`、message、checkpoint 或 channel 类型。
@@ -44,4 +44,4 @@
 - 不提前虚构尚未存在的接口路径。
 - 不把 CLI 参数误写成 HTTP 契约。
 - 不把 LangGraph/LangSmith 内部事件当作公开流式协议。
-- 新增或修改外部接口时，契约文档、schema、实现、测试和 changelog 必须同一任务更新。
+- 新增或修改外部接口时，契约文档、schema、实现、测试和 changelog 必须在同一变更中更新。

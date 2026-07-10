@@ -1,20 +1,27 @@
-from ananhu_agent.orchestrator.orchestrator import create_default_orchestrator
+import asyncio
+
+from ananhu_agent.runtime import create_default_runtime
+from ananhu_agent.storage.runtime_stores import ReportStore, TaskStateStore, TraceRecorder
+from ananhu_agent.workflow.contracts import RunRequest
 
 
-def test_orchestrator_answers_payment_question_with_trace(tmp_path):
-    orchestrator = create_default_orchestrator(tmp_path)
+def test_native_runtime_answers_payment_question_with_trace(tmp_path):
+    runtime = create_default_runtime(tmp_path)
 
-    ctx = orchestrator.ask(
+    result = asyncio.run(runtime.invoke(RunRequest(
+        run_id="run_vertical",
+        request_id="req_vertical",
         session_id="sess_1",
         turn_id=1,
         user_query="四川十级工伤，月工资6000，大概能赔多少钱？",
-    )
+        created_at="2026-07-10T00:00:00+08:00",
+    )))
 
-    assert ctx.final_answer is not None
-    assert "一次性伤残补助金" in ctx.final_answer
-    assert "42000" in ctx.final_answer
-    assert "以经办机构和正式材料为准" in ctx.final_answer
-    events = orchestrator.trace_recorder.read_all()
+    assert result.final_answer is not None
+    assert "一次性伤残补助金" in result.final_answer
+    assert "42000" in result.final_answer
+    assert "以经办机构和正式材料为准" in result.final_answer
+    events = TraceRecorder(tmp_path / "traces.jsonl").read_all()
     event_types = [event["event_type"] for event in events]
     assert event_types[0] == "request_received"
     assert "intent_recognized" in event_types
@@ -30,5 +37,5 @@ def test_orchestrator_answers_payment_question_with_trace(tmp_path):
     assert model_events[0]["payload"]["model_profile"] == "intent_fast"
     assert model_events[0]["payload"]["model_config"]["provider"] == "fake"
     assert model_events[0]["payload"]["model_config"]["model"] == "deterministic-intent"
-    assert orchestrator.task_state_store.read_all()[0]["current_phase"] == "response_ready"
-    assert orchestrator.report_store.read_all()[0]["final_intent"] == "payment_calculation"
+    assert TaskStateStore(tmp_path / "task_states.jsonl").read_all()[0]["current_phase"] == "response_ready"
+    assert ReportStore(tmp_path / "run_reports.jsonl").read_all()[0]["final_intent"] == "payment_calculation"

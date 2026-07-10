@@ -11,12 +11,12 @@
 
 ## 框架隔离监控
 
-以下情况视为架构违规，必须在同一任务修正：
+以下情况视为架构违规，必须在同一变更中修正：
 
 - domain/application/Agent/Tool/Eval 公共协议导入 LangGraph、LangChain、Agno 或模型供应商类型。
 - LangGraph state 被当作案件事实或数据库 schema。
 - Graph node 内包含本应属于 application/domain 的业务规则。
-- Native orchestrator 被完整包装进一个图节点，形成双状态机。
+- Native Runtime 被完整包装进一个图节点，形成双状态机。
 - LangGraph/LangSmith trace 替代项目 TraceEvent。
 - 框架 checkpointer 被当作唯一业务状态库。
 
@@ -46,12 +46,12 @@
 - 当前四 Agent 是否被误写成永久强制架构。
 - fake/fixture 测试是否被误写成真实业务验收。
 - 当前无 API 是否被误写成永久不支持外部接口。
-- 已作废任务是否仍被列为待执行路线。
+- 已作废计划项是否仍被列为待执行路线。
 
 ## 禁止项
 
 - 不为了目录或名词现代化进行无行为收益的大规模重写。
-- 不在没有真实需求和测试前建设通用 DAG、复杂任务平台或多套 checkpoint。
+- 不在没有真实需求和测试前建设通用 DAG、复杂工作流平台或多套 checkpoint。
 - 不提前虚构 API、流式事件或多模态实现。
-- 不让任务计划覆盖当前架构事实源。
-- 不删除已完成实现历史；应明确标注历史、兼容或作废状态。
+- 不让实施计划覆盖当前架构事实源。
+- 不删除已发布的审计历史和版本快照；实现代码中未使用的旧架构、兼容入口和废弃逻辑应在对应变更中删除，并在 changelog 标注迁移影响。

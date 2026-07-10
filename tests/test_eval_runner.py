@@ -1,7 +1,7 @@
 from pathlib import Path
 
 from ananhu_agent.evaluation.runner import EvalRunner
-from ananhu_agent.orchestrator.orchestrator import create_default_orchestrator
+from ananhu_agent.runtime import create_default_runtime
 
 
 def test_eval_runner_outputs_metrics_and_badcases(tmp_path):
@@ -11,7 +11,7 @@ def test_eval_runner_outputs_metrics_and_badcases(tmp_path):
         '{"id":"case_2","query":"劳动能力鉴定需要准备哪些材料？","expect_contains":["这个片段不会出现，用来验证 badcase 写入"]}\n',
         encoding="utf-8",
     )
-    runner = EvalRunner(create_default_orchestrator(tmp_path), tmp_path)
+    runner = EvalRunner(create_default_runtime(tmp_path), tmp_path)
 
     metrics = runner.run(cases)
 
@@ -30,7 +30,7 @@ def test_eval_runner_outputs_layered_metrics(tmp_path):
         '{"id":"case_1","query":"四川十级工伤，月工资6000，大概能赔多少钱？","expected_intent":"payment_calculation","expected_slots":{"province":"四川省","disability_grade":"十级"},"expect_contains":["一次性伤残补助金"],"expected_citations":["四川省工伤保险条例实施办法"]}\n',
         encoding="utf-8",
     )
-    runner = EvalRunner(create_default_orchestrator(tmp_path), tmp_path)
+    runner = EvalRunner(create_default_runtime(tmp_path), tmp_path)
 
     metrics = runner.run(cases)
 

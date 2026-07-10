@@ -17,7 +17,7 @@
 | 层级 | 内容 | 变化频率 |
 |---|---|---|
 | 稳定段 | 职责、输出契约、安全规则、能力 schema | 低 |
-| 半稳定段 | jurisdiction、任务类型、Prompt/Tool/语料版本 | 中 |
+| 半稳定段 | jurisdiction、请求类型、Prompt/Tool/语料版本 | 中 |
 | 动态段 | 当前请求、案件事实、证据、能力结果、近期对话 | 高 |
 
 缓存键至少包含 `prompt_version`、`capability_registry_version`、`policy_corpus_version`、`jurisdiction` 和 `model_profile`。模型供应商缓存只用于性能优化。
@@ -52,7 +52,7 @@
 
 ```text
 Case facts             跨会话业务事实
-Working memory         当前任务、待补充项、关键失败
+Working memory         当前请求、待补充项、关键失败
 Conversation summary   连续对话辅助信息
 Evidence cache         带语料版本和有效期的检索结果
 Calculation snapshot   带输入和公式版本的计算结果

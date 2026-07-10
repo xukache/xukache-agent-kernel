@@ -62,7 +62,7 @@ class ConversationState(BaseModel):
 class SessionState(BaseModel):
     """跨轮会话记忆快照。
 
-    该结构只由 AgentOrchestrator 读写，用于在 CLI 多轮交互中恢复轻量上下文。
+    该结构只由 WorkflowRuntime 读写，用于在 CLI 多轮交互中恢复轻量上下文。
     """
 
     session_id: str
@@ -214,7 +214,7 @@ class BadcaseRecord(BaseModel):
 class AgentContext(BaseModel):
     """传入无状态 Agent 的完整单轮上下文。
 
-    只有 AgentOrchestrator 可以变更或替换该对象；Agent 只读取上下文并返回 AgentMessage，
+    只有 Native Runtime 阶段服务可以变更或替换该对象；Agent 只读取上下文并返回 AgentMessage，
     不直接写入任务状态。
     """
 

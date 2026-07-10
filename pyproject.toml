@@ -18,9 +18,19 @@ dev = [
 [project.scripts]
 ananhu-agent = "ananhu_agent.cli.main:app"
 
+[build-system]
+requires = ["setuptools>=69"]
+build-backend = "setuptools.build_meta"
+
 [tool.pytest.ini_options]
 testpaths = ["tests"]
 pythonpath = ["."]
 
 [tool.uv]
 package = true
+
+[tool.setuptools.packages.find]
+include = ["ananhu_agent*"]
+
+[tool.setuptools.package-data]
+ananhu_agent = ["prompts/templates/*.yaml"]

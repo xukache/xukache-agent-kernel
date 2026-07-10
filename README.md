@@ -8,10 +8,10 @@
 
 - Python 3.11 + `uv` 工程已初始化。
 - CLI `ask`、`chat`、`eval` 和反馈相关命令已实现。
-- 当前 `AgentOrchestrator` 是已实现的 Native Runtime，不是长期唯一调度器。
+- 当前默认运行时是 `NativeWorkflowRuntime`，通过框架中立 `WorkflowRuntime` 端口调用。
 - 当前四个 Agent 是 MVP 实现现状，不是永久模块边界。
 - 当前模型和政策检索以确定性 fake/fixture 为主，验证的是协议和离线工程闭环，不代表真实模型与真实政策语料已经完成生产验收。
-- 已新增框架中立 `RunRequest`、`WorkflowState`、`WorkflowResult`、`WorkflowPhase`、`RunStatus` 和 `StopReason` 协议；LangGraph 尚未接入，必须先完成 reducer、能力网关和运行时端口，再引入依赖。
+- 已新增框架中立 `RunRequest`、`WorkflowState`、`WorkflowResult`、`WorkflowPhase`、`RunStatus`、`StopReason` 和 `WorkflowRuntime` 协议；LangGraph 尚未接入。
 
 ## 当前 Native MVP 链路
 
@@ -26,14 +26,14 @@
   -> Trace / TaskState / RunReport / Badcase / Eval
 ```
 
-目标稳定业务阶段已在任务 26 中锁定，状态增量、reducer 和 trace 调用身份已在任务 27 中落地；任务 28-31 将继续演进 CapabilityGateway、证据校验、Usage 和双 Runtime 链路，当前代码尚未具备全部目标协议。
+当前稳定业务阶段、状态增量、reducer、trace 调用身份、CapabilityGateway 和默认 `WorkflowRuntime` / `NativeWorkflowRuntime` 链路已经落地。证据校验、Usage 和 LangGraph Runtime 仍属于后续演进范围，当前代码尚未具备全部目标协议。
 
 ## 架构原则
 
 1. 业务流程由稳定阶段定义，不按 Agent 名称机械建图。
 2. LangGraph 负责调度，项目 reducer/transition policy 负责业务状态合并语义。
 3. Agent 无状态，只返回项目定义的结构化结果或状态增量。
-4. 当前外部能力经过 `CapabilityGateway` 端口和 `ToolExecutor` 适配器处理注册、schema、调用方、超时、logical_call_id 去重和 trace；真实脱敏、jurisdiction 和 usage 仍在后续任务补齐。
+4. 当前外部能力经过 `CapabilityGateway` 端口和 `ToolExecutor` 适配器处理注册、schema、调用方、超时、logical_call_id 去重和 trace；真实脱敏、jurisdiction 和 usage 仍需后续补齐。
 5. 案件事实、知识证据、会话记忆和 checkpoint 分离管理。
 6. Prompt、上下文、模型、知识库和工具均版本化并进入运行证据。
 7. 项目 trace 是审计和评测事实源，框架观测只能作为补充。
@@ -68,7 +68,9 @@ uv run ananhu-agent eval data/eval/eval_cases.jsonl
 ananhu_agent/
   agents/              # 当前 MVP Agent 实现
   capabilities/        # 框架中立能力请求、结果、策略和 ToolExecutor 适配器
-  orchestrator/        # 当前 Native Runtime、聚合、规则和安全校验
+  orchestrator/        # 聚合、规则、安全校验和 badcase 规则
+  runtime.py           # 默认 Runtime 组合根
+  runtimes/            # Native Runtime；LangGraph Runtime 后续加入
   workflow/            # 框架中立请求、状态、状态增量、reducer 和停止原因协议
   context/             # 上下文构建和槽位规则
   prompts/             # 版本化 Prompt
@@ -76,7 +78,6 @@ ananhu_agent/
   models/              # 模型 profile、路由和测试替身
   storage/             # session、trace、report、badcase 存储
   evaluation/          # eval runner 和分层指标
-  agno_adapters/       # 已完成任务 24 的历史兼容层，非未来主运行时
 docs/
   architecture.md
   architecture/
@@ -85,7 +86,7 @@ docs/
 tests/
 ```
 
-目标结构将在后续任务中增量演进为 `domain/`、`application/`、`ports/`、`runtimes/native/`、`runtimes/langgraph/` 和 `infrastructure/`，不会在一次任务中整体搬迁。
+目标结构将增量演进为 `domain/`、`application/`、`ports/`、`runtimes/native/`、`runtimes/langgraph/` 和 `infrastructure/`，不会一次性整体搬迁。
 
 ## 文档索引
 
@@ -107,7 +108,7 @@ tests/
 
 ## 当前非目标
 
-- 当前任务不实现 HTTP API、WebSocket、前端或小程序。
+- 当前不实现 HTTP API、WebSocket、前端或小程序。
 - 不为了多 Agent 展示继续拆分专项 Agent。
 - 不在框架中立协议完成前接入 LangGraph checkpoint 和复杂并行图。
 - 不将 fake model、fixture RAG 的通过率描述为真实业务效果。

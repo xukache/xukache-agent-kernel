@@ -14,7 +14,7 @@ def test_cli_chat_runs_until_exit(tmp_path, monkeypatch):
     )
 
     assert result.exit_code == 0
-    assert "安安虎工伤智能助手 Agno MVP" in result.output
+    assert "安安虎工伤智能助手 CLI" in result.output
     assert "一次性伤残补助金" in result.output
     assert "Trace:" in result.output
 

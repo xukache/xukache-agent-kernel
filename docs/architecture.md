@@ -4,9 +4,9 @@
 
 ## 文档状态
 
-- 当前阶段：四 Agent Native Runtime 离线闭环已实现，正在进行框架中立化和 LangGraph 运行时演进。
+- 当前阶段：NativeWorkflowRuntime 离线闭环已实现，正在准备 LangGraph 运行时接入。
 - 当前架构版本：v0.2，完整快照见 `architecture/versions/v0.2-framework-neutral-baseline.md`。
-- 当前运行时：`AgentOrchestrator` 驱动的 Native Runtime。
+- 当前运行时：`NativeWorkflowRuntime`，通过 `WorkflowRuntime` 端口调用。
 - 目标运行时：LangGraph 作为默认、可替换的工作流运行时。
 - 核心原则：领域、应用、Agent、Capability、Trace 和 Eval 协议不依赖 LangGraph。
 - 外部接口：当前只有 CLI；没有 HTTP API、WebSocket 或前端。
@@ -17,7 +17,7 @@
 1. 对应 `docs/architecture/` 分册中的当前规则。
 2. `docs/architecture/99-changelog.md` 中较新的架构决策。
 3. `TECH_ARCHITECTURE_MVP.md` 指向的当前只读版本正文。
-4. 已完成任务计划只作为实现历史，不覆盖当前架构事实。
+4. 实施计划只作为执行历史，不覆盖当前架构事实。
 
 ## 阅读顺序
 
@@ -49,7 +49,7 @@
 
 - 当前不启用 HTTP / WebSocket 领域契约分册。
 - 当前不建设前端规范。
-- 当前不启用复杂并行 Agent 仲裁、通用任务平台和多路流式协议。
+- 当前不启用复杂并行 Agent 仲裁、通用工作流平台和多路流式协议。
 - 当前不宣称 fake model、fixture RAG 或未启用 checkpoint 的能力已经生产可用。
 
 这些是阶段边界，不是 Agent 内核的永久限制。
@@ -59,4 +59,4 @@
 - 模块边界、状态协议、运行时所有权、事件、权限或评测变化时，同步更新对应分册。
 - 架构级变化必须记录在 `99-changelog.md`。
 - API 状态变化先更新 `docs/api-contracts.md`。
-- 不在 README、AGENTS 和任务计划中重复维护详细架构；只写摘要并链接事实源。
+- 不在 README、AGENTS 和实施计划中重复维护详细架构；只写摘要并链接事实源。

@@ -7,7 +7,7 @@
 ## 当前实现
 
 - CLI 作为开发和验收入口。
-- 四个 MVP Agent 和 `AgentOrchestrator` Native Runtime。
+- `NativeWorkflowRuntime`、MVP Agent、CapabilityGateway 和 Runtime contract tests。
 - Prompt、上下文、工具、模型 profile、session 和 JSONL 运行证据。
 - fake model、fixture policy RAG、确定性测算和 30 条以上 eval cases。
 

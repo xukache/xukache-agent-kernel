@@ -44,7 +44,7 @@
 - [x] 任务 26：锁定业务阶段并定义核心状态协议
 - [x] 任务 27：定义 StatePatch、Reducer、调用身份和 Trace 协议
 - [x] 任务 28：建立 CapabilityGateway 端口和 ToolExecutor 适配
-- [ ] 任务 29：阶段化 Native Runtime 并建立 Runtime Contract
+- [x] 任务 29：阶段化 Native Runtime 并建立 Runtime Contract
 - [ ] 任务 30：接入最小串行 LangGraph Runtime
 - [ ] 任务 31：双运行时差分验收
 - [ ] 任务 32：接入真实 ModelGateway
@@ -103,7 +103,7 @@ uv run pytest -v
 
 **目标：** 先从当前行为提取稳定阶段，再定义不依赖框架的请求、状态和结果，避免枚举反向修改。
 
-**涉及模块：** workflow contracts、characterization tests、旧 `AgentContext` mapper。
+**涉及模块：** workflow contracts、runtime contract tests。
 
 **前置依赖：** 任务 25。
 
@@ -113,7 +113,7 @@ uv run pytest -v
 2. 从测试确认 `understand -> merge_facts -> validate_facts -> clarify/resolve_jurisdiction -> plan -> execute -> validate_evidence -> compose -> safety -> complete`。
 3. 定义 `RunRequest`、`WorkflowState`、`WorkflowResult`、`WorkflowPhase`、`RunStatus` 和 `StopReason`。
 4. 定义 request/run/session/case/message 标识关系和 `schema_version`。
-5. 测试 JSON round-trip 和旧 `AgentContext` 显式映射，暂不改变运行行为。
+5. 测试 JSON round-trip 和框架中立状态协议，暂不改变运行行为。
 
 **验证命令：** `uv run pytest tests/test_workflow_contracts.py tests/test_orchestrator_characterization.py -v`
 
@@ -160,7 +160,7 @@ uv run pytest -v
 
 **验收标准：** Agent/Runtime 只依赖 gateway port；现有工具行为不变；相同逻辑调用不会产生不可解释的重复执行。
 
-### - [ ] 任务 29：阶段化 Native Runtime 并建立 Runtime Contract
+### - [x] 任务 29：阶段化 Native Runtime 并建立 Runtime Contract
 
 **目标：** 将现有 orchestrator 拆成阶段服务，并让 CLI/Eval 依赖 `WorkflowRuntime` 端口。
 
@@ -177,6 +177,8 @@ uv run pytest -v
 5. 建立单 runtime contract suite，覆盖完成、追问、能力失败、安全拦截、StopReason、CapabilityRequest 和 TraceEvent。
 
 **验证命令：** `uv run pytest tests/runtime_contracts tests/test_cli_ask.py tests/test_cli_eval.py -v`
+
+**事实源状态：** 已新增 `WorkflowRuntime.invoke()`、`NativeWorkflowRuntime`、Native 阶段服务和 runtime contract suite；CLI/EvalRunner 已切换到 Runtime port；旧 orchestrator 兼容入口已删除。
 
 **验收标准：** `ask()` 不再原地修改大状态对象；阶段可独立测试；CLI/Eval 不依赖具体 runtime；无 LangGraph 依赖。
 

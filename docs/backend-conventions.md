@@ -30,13 +30,13 @@ ananhu_agent/
   application/          # 用例、阶段服务、状态转换、响应组装
   ports/                # Runtime、Model、Knowledge、Capability、Storage 端口
   runtimes/
-    native/             # 当前 orchestrator 的演进实现
+    native/             # 当前默认 Native Runtime
     langgraph/          # LangGraph 专有图、node 和 mapper
   infrastructure/       # 模型、检索、存储、观测适配
   interfaces/           # CLI 和未来外部入口
 ```
 
-迁移采用小任务增量完成。现有 `agents/`、`orchestrator/`、`tools/` 等目录在对应端口落地前继续有效，不做一次性目录搬迁。
+迁移采用小步增量完成。现有 `agents/`、`orchestrator/`、`tools/` 等目录只保留仍被 Runtime 使用的业务组件，不保留未使用的兼容入口。
 
 ## 依赖规则
 
@@ -44,15 +44,15 @@ ananhu_agent/
 - `application` 只依赖 domain 和 ports。
 - runtime 与 infrastructure 实现 ports，不能反向成为业务层依赖。
 - LangGraph 类型只允许出现在 `runtimes/langgraph/` 和组合根。
-- 当前 CLI 和 EvalRunner 仍装配 `AgentOrchestrator`；完成任务 29 后改为依赖 `WorkflowRuntime`，不直接实例化具体图节点。
+- 当前 CLI 和 EvalRunner 依赖 `WorkflowRuntime` 端口，由组合根 `create_default_runtime()` 默认装配 Native Runtime，不直接实例化具体图节点。
 
 ## Runtime 迁移规则
 
-- 当前 `AgentOrchestrator` 视为 Native Runtime，不再作为永久唯一状态推进方。
-- 当前运行时仍使用共享 `AgentContext` 和 `AgentMessage`；任务 26 已新增 `WorkflowState` 显式映射，任务 27 已新增 `StatePatch` 和纯 Python reducer，任务 29 完成后再迁移到 `WorkflowRuntime`。
+- 当前 `NativeWorkflowRuntime` 通过 `WorkflowRuntime.invoke()` 提供默认运行时；不得新增旧 orchestrator 兼容入口。
+- Native Runtime 阶段服务必须以 `WorkflowState` 为输入、以 `StatePatch` 为输出，并经纯 Python reducer 合并。
 - 状态转换和 reducer 使用普通 Python 纯函数，可脱离 LangGraph 测试。
 - 目标节点返回 `StatePatch`，不得原地修改共享状态。
-- 不允许把完整 Native orchestrator 包在单个 LangGraph 节点中。
+- 不允许把完整 Native Runtime 包在单个 LangGraph 节点中。
 - 首个 LangGraph 实现保持串行，不提前启用复杂并行、interrupt 或 checkpoint。
 - Native 与 LangGraph Runtime 必须执行同一 contract tests。
 
@@ -98,4 +98,4 @@ ananhu_agent/
 - Agent、Capability、Repository 和 Runtime 使用 contract tests。
 - Native/LangGraph 使用相同 fixture 验证结果、StopReason、能力调用和 trace。
 - Fake Model 用于确定性回归；真实 provider smoke 显式 opt-in，结果单独报告。
-- 文档任务至少运行 Markdown 链接/旧口径扫描和现有全量测试，确认文档没有把未实现能力写成已完成。
+- 文档变更至少运行 Markdown 链接/过期口径扫描和现有全量测试，确认文档没有把未实现能力写成已完成。
