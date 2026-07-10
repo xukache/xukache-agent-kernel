@@ -16,7 +16,7 @@
 | `CaseRecord` | 目标 | 当前案件有哪些可信事实 |
 | `RunSnapshot` | 目标 | 这次运行当前到哪里 |
 | `CheckpointEnvelope` | 条件目标 | 运行时如何恢复 |
-| `UsageRecord` | 目标 | 消耗了哪些模型、token 和能力资源 |
+| `UsageRecord` | 当前模型字段已实现，能力字段待增强 | 消耗了哪些模型、token 和能力资源 |
 | `EvaluationArtifact` | 目标增强 | 如何复现完整评测上下文 |
 
 这些对象使用不同生命周期，不得用 trace 直接恢复，也不得用 checkpoint 替代审计。
@@ -37,7 +37,7 @@ created_at
 producer
 ```
 
-当前已在 `ananhu_agent/workflow/contracts.py` 为 `RunRequest`、`WorkflowState` 和 `WorkflowResult` 增加 `schema_version`、`run_id`、`request_id`、`session_id`、`case_id` 和 `message_id`。`TraceEvent` 已包含可选 `runtime_name`、`runtime_version`、`node_id`、`attempt` 和 `logical_call_id`；当前 Runtime 与 Capability 链路按项目 trace schema 写入这些字段。后续 usage、Prompt、模型、知识语料和公式版本必须继续与同一运行证据关联。
+当前已在 `ananhu_agent/workflow/contracts.py` 为 `RunRequest`、`WorkflowState` 和 `WorkflowResult` 增加 `schema_version`、`run_id`、`request_id`、`session_id`、`case_id` 和 `message_id`。`TraceEvent` 已包含可选 `run_id`、`runtime_name`、`runtime_version`、`node_id`、`attempt` 和 `logical_call_id`；当前 Runtime、Model 与 Capability 链路按项目 trace schema 写入相关字段。后续 usage、Prompt、知识语料和公式版本必须继续与同一运行证据关联。
 
 ## TraceEvent
 
@@ -88,6 +88,10 @@ run_failed
 - run、node、tenant 和业务标签。
 
 计费账本由项目维护，不依赖单一模型 SDK 或 LangSmith 聚合口径。
+
+模型 usage 由 `ModelResult` 提供并汇总到 RunReport，使用 `usage_source` 明确区分 `fake` 与
+`provider`。Fake token 和费用固定为零；provider usage 保留 input/output/cache/total token、币种和
+可选估算费用。真实 smoke 与离线 fake eval 分开运行和报告，不生成混合通过率。
 
 ## BadcaseRecord
 

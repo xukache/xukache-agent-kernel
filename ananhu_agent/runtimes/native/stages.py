@@ -11,6 +11,7 @@ from ananhu_agent.capabilities.contracts import (
 )
 from ananhu_agent.context.slot_rules import merge_slots
 from ananhu_agent.models.model_router import ModelRouter
+from ananhu_agent.ports.model_gateway import ModelGatewayError
 from ananhu_agent.orchestrator.aggregator import build_final_answer
 from ananhu_agent.orchestrator.rules import revise_intent
 from ananhu_agent.orchestrator.safety import PolicySafetyGuard
@@ -61,9 +62,32 @@ class NativeStageServices:
         self.runtime_name = runtime_name
         self.runtime_version = runtime_version
 
-    def understand(self, state: WorkflowState) -> StatePatch:
+    async def understand(self, state: WorkflowState) -> StatePatch:
         self._record(state, "request_received", "understand", {"user_query": state.case_facts["user_query"]})
-        intent_message = self.intent_agent.run(self.ctx)
+        model_profile = "intent_fast"
+        model_config = self.model_router.get_profile(model_profile)
+        model_logical_call_id = f"{state.run_id}:understand:model"
+        self._record(state, "model_started", "understand", {
+            "model_profile": model_profile,
+            "model_config": model_config,
+            "prompt_ref": "intent_router.v1",
+        }, logical_call_id=model_logical_call_id)
+        try:
+            intent_message = await self.intent_agent.run(
+                self.ctx,
+                run_id=state.run_id,
+                node_id="understand",
+                logical_call_id=model_logical_call_id,
+            )
+        except ModelGatewayError as exc:
+            self._record(state, "model_failed", "understand", {
+                "model_profile": model_profile,
+                "provider": exc.provider,
+                "error_code": exc.code.value,
+                "retryable": exc.retryable,
+                "status_code": exc.status_code,
+            }, logical_call_id=model_logical_call_id)
+            raise
         self.ctx.agent_outputs.append(intent_message)
         self._record(
             state,
@@ -77,14 +101,22 @@ class NativeStageServices:
         )
         self._record(
             state,
-            "model_called",
+            "model_finished",
             "understand",
             {
-                "model_profile": "intent_fast",
-                "model_config": self.model_router.get_profile("intent_fast"),
+                "model_profile": model_profile,
+                "model_config": model_config,
                 "prompt_ref": intent_message.data["prompt_ref"],
+                **intent_message.data["model_result"],
             },
+            logical_call_id=model_logical_call_id,
         )
+        # 保留旧事件名，确保历史 trace 消费方可渐进迁移。
+        self._record(state, "model_called", "understand", {
+            "model_profile": model_profile,
+            "model_config": model_config,
+            "prompt_ref": intent_message.data["prompt_ref"],
+        }, logical_call_id=model_logical_call_id)
         self._record(state, "intent_recognized", "understand", intent_message.data)
         self._last_intent_message = intent_message
         return StatePatch(
@@ -317,17 +349,19 @@ class NativeStageServices:
         event_type: str,
         phase: str,
         payload: dict,
+        logical_call_id: str | None = None,
     ) -> None:
         self.trace_recorder.record(
             TraceEvent.new(
                 request_id=state.request_id,
+                run_id=state.run_id,
                 session_id=state.session_id,
                 event_type=event_type,
                 phase=phase,
                 runtime_name=self.runtime_name,
                 runtime_version=self.runtime_version,
                 node_id=phase,
-                logical_call_id=f"{state.run_id}:{phase}",
+                logical_call_id=logical_call_id or f"{state.run_id}:{phase}",
                 attempt=1,
                 payload=payload,
             )

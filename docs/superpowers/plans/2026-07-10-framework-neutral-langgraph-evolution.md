@@ -47,7 +47,7 @@
 - [x] 任务 29：阶段化 Native Runtime 并建立 Runtime Contract
 - [x] 任务 30：接入最小串行 LangGraph Runtime
 - [x] 任务 31：双运行时差分验收
-- [ ] 任务 32：接入真实 ModelGateway
+- [x] 任务 32：接入真实 ModelGateway
 - [ ] 任务 33：建立真实 KnowledgeGateway 与政策基线
 - [ ] 任务 34：运行真实咨询 Smoke Eval
 
@@ -232,7 +232,7 @@ uv run pytest tests/test_runtime_selection.py -v
 
 **验收标准：** 无禁止差异；项目 trace 是两种运行时共同事实源；EvalRunner 不读取 LangGraph 内部对象。
 
-### - [ ] 任务 32：接入真实 ModelGateway
+### - [x] 任务 32：接入真实 ModelGateway
 
 **目标：** 以项目模型端口接入一个真实 provider，不依赖 LangGraph 模型封装。
 
@@ -243,6 +243,9 @@ uv run pytest tests/test_runtime_selection.py -v
 **步骤流程：** 定义 provider-neutral 请求响应；适配真实模型；记录 token/费用/错误；保留 Fake Model；建立无 key skip 和有 key smoke。
 
 **验证命令：** `uv run pytest tests/test_model_gateway_contract.py -v`；真实 smoke 使用显式环境变量运行。
+
+**事实源状态：** 已实现框架中立 async ModelGateway、Fake 与 OpenAI-compatible adapter、
+集中配置、模型 trace/usage 和 opt-in smoke；默认 Fake 保持离线确定性，真实 provider 显式启用。
 
 **验收标准：** Native/LangGraph 复用同一 gateway；无 key CI 不失败；真实结果和 fake 指标分开报告。
 

@@ -82,7 +82,17 @@ tool_call_result
 - 模型不得决定可信 jurisdiction、权限或政策有效性。
 - Fake Model 是 contract test 替身；真实模型实验单独启用和报告。
 
-`ModelRouter` 后续演进为 `ModelGateway/ModelRegistry` 时应保留当前 profile 配置和 trace 字段连续性。
+当前公共端口使用项目定义的 async `ModelGateway.generate_structured()`，输入输出为
+`ModelRequest`、`ModelResult` 和 `ModelGatewayError`，不得暴露 provider SDK、LangGraph message
+或 HTTP 响应类型。Native 与 LangGraph Runtime 通过同一组合根复用 gateway。
+
+默认 `FakeModelGateway` 保持离线回归确定性。真实适配器实现 OpenAI-compatible
+`/chat/completions` 最小子集，profile 使用 `provider=openai_compatible`；API key、base URL 和
+显式 smoke 开关由环境配置提供，不写入 profile、trace 或 artifact。无 key 的常规测试必须 skip。
+
+结构化调用至少记录 Prompt 引用、profile、provider、model、finish reason、attempt、延迟、输入/
+输出/cache/total token 和可选费用估算。配置、鉴权、限流、超时、provider、响应格式和 schema
+错误使用项目错误码归一化。`ModelRouter` 只保留 profile registry/组合职责，不再向 Agent 暴露具体客户端。
 
 ## KnowledgeGateway
 

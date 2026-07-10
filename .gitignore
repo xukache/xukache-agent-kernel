@@ -1,5 +1,8 @@
 .pytest_cache/
 .venv/
+.env
+.env.*
+!.env.example
 .ananhu-runtime/
 __pycache__/
 *.py[cod]

@@ -1,6 +1,7 @@
 from __future__ import annotations
 
 from ananhu_agent.config.settings import RuntimeSettings
+from ananhu_agent.infrastructure.models.fake import FakeModelGateway
 from ananhu_agent.runtime import create_default_runtime
 from ananhu_agent.runtimes.langgraph.runtime import LangGraphWorkflowRuntime
 from ananhu_agent.runtimes.native.runtime import NativeWorkflowRuntime
@@ -27,3 +28,17 @@ def test_runtime_can_be_selected_from_environment(tmp_path, monkeypatch):
     runtime = create_default_runtime(tmp_path)
 
     assert isinstance(runtime, NativeWorkflowRuntime)
+
+
+def test_both_runtime_compositions_use_project_model_gateway(tmp_path):
+    native = create_default_runtime(
+        tmp_path / "native",
+        RuntimeSettings(runtime="native", runtime_dir=tmp_path / "native"),
+    )
+    langgraph = create_default_runtime(
+        tmp_path / "langgraph",
+        RuntimeSettings(runtime="langgraph", runtime_dir=tmp_path / "langgraph"),
+    )
+
+    assert isinstance(native.intent_agent.model_gateway, FakeModelGateway)
+    assert isinstance(langgraph.intent_agent.model_gateway, FakeModelGateway)

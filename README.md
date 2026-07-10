@@ -2,7 +2,7 @@
 
 安安虎工伤智能助手是面向工伤认定、劳动能力鉴定、待遇辅助测算和政策咨询的 Python 后端 Agent Harness。项目当前以 CLI 作为开发和验收入口，默认运行时为 `LangGraphWorkflowRuntime`，通过框架中立 `WorkflowRuntime` 端口调用。
 
-当前代码已经具备离线可回归闭环：CLI、MVP Agent、Prompt/上下文管理、CapabilityGateway、fixture 政策检索、确定性待遇测算、JSONL trace、badcase、eval，以及 Native/LangGraph 双运行时差分验收。LangGraph 只作为可替换运行时，不拥有业务状态、能力治理、Prompt、trace 或 eval 协议。
+当前代码已经具备离线可回归闭环：CLI、MVP Agent、Prompt/上下文管理、CapabilityGateway、ModelGateway、fixture 政策检索、确定性待遇测算、JSONL trace、badcase、eval，以及 Native/LangGraph 双运行时差分验收。LangGraph 只作为可替换运行时，不拥有业务状态、能力治理、Prompt、trace 或 eval 协议。
 
 ## 当前状态
 
@@ -11,7 +11,7 @@
 - Python 发行包名：`ananhu-agent`。
 - CLI 命令：`ananhu-agent`。
 - 当前外部入口：CLI；没有 HTTP API、WebSocket 或前端。
-- 当前模型和政策检索以 fake/fixture 为主，用于验证协议和离线工程闭环，不代表真实模型和真实政策语料的生产验收。
+- 模型默认使用 Fake，可显式切换通用 OpenAI-compatible provider；政策检索仍使用 fixture。这些能力不代表真实咨询链路的生产验收。
 
 ## 快速开始
 
@@ -46,6 +46,27 @@ uv run ananhu-agent version
 
 运行证据默认写入 `.ananhu-runtime/`，包括 trace、运行报告和 badcase 记录。双运行时差分额外写入 `runtime-differential.json`。
 
+## 真实模型配置
+
+默认配置不会读取 key 或访问网络。切换 OpenAI-compatible provider 时集中配置模型 profile，
+密钥不会进入 profile、trace 或评测产物：
+
+```bash
+export ANANHU_MODEL_API_KEY="..."
+export ANANHU_MODEL_BASE_URL="https://provider.example/v1"
+export ANANHU_MODELS='{"intent_fast":{"provider":"openai_compatible","model":"provider-model","temperature":0,"timeout_seconds":30}}'
+
+uv run ananhu-agent ask "工伤认定需要哪些条件？"
+```
+
+真实连接 smoke 默认跳过，需显式启用并单独指定模型：
+
+```bash
+ANANHU_REAL_MODEL_SMOKE=1 \
+ANANHU_REAL_MODEL="provider-model" \
+uv run pytest tests/test_model_gateway_contract.py -v
+```
+
 ## 项目结构
 
 ```text
@@ -55,7 +76,9 @@ ananhu_agent/
   cli/             # Typer CLI 入口
   context/         # 上下文构建和槽位规则
   evaluation/      # eval runner 和指标
-  models/          # 模型 profile、路由和 fake model
+  models/          # 模型 profile 与 gateway 路由
+  ports/           # ModelGateway 等框架中立端口
+  infrastructure/  # OpenAI-compatible、Fake 等基础设施适配器
   orchestrator/    # 聚合、规则、安全校验和 badcase 规则
   prompts/         # 版本化 Prompt
   runtime.py       # 默认 Runtime 组合根

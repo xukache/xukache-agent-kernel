@@ -199,7 +199,7 @@ class NativeWorkflowRuntime(WorkflowRuntime):
                 output_schema_valid_rate=(
                     1.0 if ctx.verification_result and ctx.verification_result.passed else 0.0
                 ),
-                token_usage={},
+                token_usage=_model_usage_summary(ctx),
                 latency_ms=0,
                 fallback_used=fallback_used,
                 safety_result=ctx.safety_result.model_dump() if ctx.safety_result else {},
@@ -213,9 +213,41 @@ async def _run_stage(
     phase: WorkflowPhase,
     state: WorkflowState,
 ):
+    if phase is WorkflowPhase.UNDERSTAND:
+        return await stages.understand(state)
     if phase is WorkflowPhase.EXECUTE:
         return await stages.execute(state)
     return getattr(stages, phase.value)(state)
+
+
+def _model_usage_summary(ctx: AgentContext) -> dict:
+    """汇总项目 ModelResult，Fake 与真实 provider 保持不同来源标识。"""
+
+    results = [
+        message.data["model_result"]
+        for message in ctx.agent_outputs
+        if "model_result" in message.data
+    ]
+    if not results:
+        return {}
+    usages = [result["usage"] for result in results]
+    sources = {usage["usage_source"] for usage in usages}
+    estimated_costs = [usage["estimated_cost"] for usage in usages]
+    currencies = {usage["currency"] for usage in usages if usage["currency"]}
+    return {
+        "usage_source": next(iter(sources)) if len(sources) == 1 else "mixed",
+        "input_tokens": sum(usage["input_tokens"] for usage in usages),
+        "output_tokens": sum(usage["output_tokens"] for usage in usages),
+        "cache_tokens": sum(usage["cache_tokens"] for usage in usages),
+        "total_tokens": sum(usage["total_tokens"] for usage in usages),
+        "estimated_cost": (
+            round(sum(cost for cost in estimated_costs if cost is not None), 8)
+            if estimated_costs and all(cost is not None for cost in estimated_costs)
+            else None
+        ),
+        "currency": next(iter(currencies)) if len(currencies) == 1 else None,
+        "calls": len(results),
+    }
 
 
 def _context_from_request(request: RunRequest) -> AgentContext:
