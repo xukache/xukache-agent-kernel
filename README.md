@@ -78,8 +78,8 @@ ananhu_agent/
 docs/
   architecture.md
   architecture/
-  api-contracts.md
-  backend-conventions.md
+  api-contracts.md       # 当前外部 API 状态和启用条件
+  backend-conventions.md # Python 后端规范
 tests/
 ```
 
