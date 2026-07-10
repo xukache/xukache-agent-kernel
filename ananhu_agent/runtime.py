@@ -9,6 +9,7 @@ from ananhu_agent.agents.policy_rag import PolicyRAGAgent
 from ananhu_agent.capabilities.tool_executor_gateway import ToolExecutorCapabilityGateway
 from ananhu_agent.config.settings import RuntimeSettings
 from ananhu_agent.context.context_manager import ContextManager
+from ananhu_agent.models.observable_gateway import ObservableModelGateway, TransientSanitizer
 from ananhu_agent.models.model_router import ModelRouter
 from ananhu_agent.ports.run_event_sink import NoOpRunEventSink, RunEventSink
 from ananhu_agent.prompts.prompt_manager import PromptManager
@@ -45,9 +46,14 @@ def create_default_runtime(
     registry = _default_tool_registry()
     tool_executor = ToolExecutor(registry, trace_recorder)
     capability_gateway = ToolExecutorCapabilityGateway(tool_executor, event_sink=event_sink)
+    intent_model_gateway = ObservableModelGateway(
+        model_router.gateway_for("intent_fast"),
+        events=event_sink,
+        sanitizer=TransientSanitizer(),
+    )
     runtime_kwargs = dict(
         intent_agent=IntentRouterAgent(
-            model_router.gateway_for("intent_fast"),
+            intent_model_gateway,
             ContextManager(),
             PromptManager(settings.prompt_template_dir),
         ),

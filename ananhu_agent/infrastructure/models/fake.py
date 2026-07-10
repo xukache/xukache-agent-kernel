@@ -16,7 +16,7 @@ class FakeModelGateway:
             model="deterministic-intent",
             profile=request.profile,
             finish_reason="stop",
-            usage=ModelUsage(usage_source="fake"),
+            usage=ModelUsage(usage_source="fake", reported=False),
             attempt=request.attempt,
         )
 

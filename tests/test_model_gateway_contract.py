@@ -20,6 +20,7 @@ def _request(prompt: str = "四川十级工伤，月工资6000，大概能赔多
     return ModelRequest(
         run_id="run_model_contract",
         request_id="req_model_contract",
+        session_id="sess_model_contract",
         node_id="understand",
         logical_call_id="run_model_contract:understand:model",
         profile="intent_fast",
@@ -54,6 +55,7 @@ def test_fake_gateway_returns_project_result_and_fake_usage() -> None:
     assert result.usage.usage_source == "fake"
     assert result.usage.total_tokens == 0
     assert result.usage.estimated_cost is None
+    assert result.usage.reported is False
 
 
 def test_openai_compatible_gateway_parses_structured_output_and_usage() -> None:
@@ -120,6 +122,7 @@ def test_openai_compatible_gateway_parses_structured_output_and_usage() -> None:
     assert result.usage.cache_tokens == 20
     assert result.usage.total_tokens == 150
     assert result.usage.usage_source == "provider"
+    assert result.usage.reported is True
 
 
 def test_openai_compatible_gateway_normalizes_authentication_error_without_secret() -> None:
@@ -199,8 +202,8 @@ def test_openai_compatible_gateway_rejects_output_that_violates_schema() -> None
     assert captured.value.code is ModelErrorCode.OUTPUT_SCHEMA
 
 
-@pytest.mark.parametrize("usage", [None, {"prompt_tokens": "not-a-number"}])
-def test_openai_compatible_gateway_normalizes_invalid_usage(usage) -> None:
+@pytest.mark.parametrize("usage", [None, {}, {"prompt_tokens": "not-a-number"}])
+def test_openai_compatible_gateway_marks_unreported_or_invalid_usage_unknown(usage) -> None:
     transport = httpx.MockTransport(
         lambda request: httpx.Response(
             200,
@@ -227,10 +230,11 @@ def test_openai_compatible_gateway_normalizes_invalid_usage(usage) -> None:
         transport=transport,
     )
 
-    with pytest.raises(ModelGatewayError) as captured:
-        asyncio.run(gateway.generate_structured(_request()))
+    result = asyncio.run(gateway.generate_structured(_request()))
 
-    assert captured.value.code is ModelErrorCode.RESPONSE_FORMAT
+    assert result.usage.reported is False
+    assert result.usage.usage_source == "provider_unreported"
+    assert result.usage.total_tokens == 0
 
 
 def test_real_model_smoke_is_explicit_opt_in() -> None:

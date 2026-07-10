@@ -55,6 +55,7 @@ class ModelFinishedPayload(BaseModel):
     output_summary: dict[str, Any] = Field(default_factory=dict)
     reasoning_available: bool = False
     reasoning_length: int = Field(default=0, ge=0)
+    reasoning_original_chars: int = Field(default=0, ge=0)
     reasoning_truncated: bool = False
     latency_ms: int = Field(default=0, ge=0)
 
@@ -66,6 +67,7 @@ class ModelFailedPayload(BaseModel):
     retryable: bool = False
     latency_ms: int = Field(default=0, ge=0)
     error_message: str | None = None
+    status_code: int | None = None
 
 
 class CapabilityStartedPayload(BaseModel):
