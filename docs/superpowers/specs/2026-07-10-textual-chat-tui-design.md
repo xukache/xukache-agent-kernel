@@ -18,13 +18,14 @@
 2. 单栏展示用户消息、可折叠执行过程、AI Markdown 回复和本轮 Usage。
 3. 运行期间实时更新节点、模型、工具和校验状态。
 4. 每个节点和工具的输入、输出支持独立展开、收起和 JSON 高亮。
-5. 使用项目自己的事件、状态和 Usage 协议，不引入 Agno Runtime 或 LangGraph 类型。
+5. 模型显式返回 `reasoning_content` 时，在对应模型节点下提供默认折叠的“模型思考”。
+6. 使用项目自己的事件、状态和 Usage 协议，不引入 Agno Runtime 或 LangGraph 类型。
 
 前置条件：OpenAI-compatible JSON Schema 指令、规范槽位名和省级行政区归一化修复已独立验证并合并。
 
 ## 2. 非目标
 
-- 不展示模型隐藏思维链、内部推理 token 或供应商私有 reasoning 内容。
+- 不推断或生成模型隐藏思维链；只展示 provider 响应中显式返回并经适配器归一化的 reasoning 内容。
 - 不新增 HTTP API、WebSocket、前端页面或远程调试服务。
 - 不替换 `WorkflowRuntime`、项目 reducer、TraceRecorder 或 CapabilityGateway 的治理职责。
 - 不在本任务实现模型流式输出；TUI 实时更新的是项目运行事件和阶段状态。
@@ -50,6 +51,7 @@
    │  ├─ 节点输入
    │  ├─ 模型调用
    │  │  ├─ 模型输入
+   │  │  ├─ 模型思考（provider 显式返回时出现）
    │  │  └─ 模型输出
    │  └─ 节点输出
    ├─ merge_facts
@@ -80,6 +82,7 @@ AI Markdown 消息
 - 回答完成后，整个执行过程自动收起，只显示摘要。
 - 用户手动展开后，在当前轮内保持展开状态。
 - 节点、模型、工具或安全校验失败时自动展开失败路径。
+- 模型思考默认保持折叠，用户明确展开后才渲染原文。
 - 鼠标点击或键盘 `Enter` 展开、收起；`r` 切换摘要与脱敏原始 JSON。
 
 ### 3.4 快捷键
@@ -121,6 +124,10 @@ WorkflowRuntime
 
 Textual 不读取 LangGraph event、message、checkpoint 或 channel。Native 与 LangGraph 必须产生相同的项目级运行事件，TUI 只按 `run_id`、`request_id` 和 `logical_call_id` 关联。
 
+模型思考不来自 Runtime 或 LangGraph。OpenAI-compatible adapter 只解析 provider 响应中显式存在的
+`message.reasoning_content`，归一化为项目 `ModelResult.reasoning_content` 可选字段；未返回时保持
+`None`。Agent 和 Runtime 不解析 reasoning 文本，也不以 reasoning 内容驱动业务决策。
+
 ### 5.2 事件补充
 
 在现有模型、工具和业务 trace 基础上补充：
@@ -147,6 +154,7 @@ Textual 不读取 LangGraph event、message、checkpoint 或 channel。Native �
 - 节点输入：phase、已确认案件事实、意图、证据计数和能力结果计数。
 - 节点输出：目标 phase、被更新字段和 append/merge 数量。
 - 模型输入：Prompt ID/version、profile、schema 摘要和裁剪后的消息。
+- 模型思考：provider 显式返回的 `reasoning_content` 原文，默认折叠。
 - 模型输出：结构化业务输出、finish reason、usage 和耗时。
 - 工具输入输出：CapabilityGateway 治理后实际参数、结果、状态、fallback 和耗时。
 
@@ -159,6 +167,10 @@ Textual 不读取 LangGraph event、message、checkpoint 或 channel。Native �
 - provider 完整错误体中的潜在敏感字段。
 
 长 Prompt、工具结果和文档正文按字符数与条目数裁剪，并标记原始长度。TraceRecorder 仍是完整业务证据来源，但同样遵守密钥禁止规则。
+
+reasoning 内容按独立上限裁剪并执行与模型输出相同的敏感字段脱敏。首版只在当前 TUI 会话内展示
+裁剪后的 reasoning，不把 reasoning 原文写入业务 trace、badcase 或 eval artifact；trace 只记录
+`reasoning_available`、原始字符数和裁剪状态。
 
 ## 7. Usage 状态行
 
@@ -192,6 +204,8 @@ AI 消息完整输出后显示本轮所有模型调用的聚合数据：
 - `ananhu_agent/cli/tui/widgets/turn.py`：单轮用户/过程/AI/Usage 组合。
 - `ananhu_agent/cli/tui/widgets/run_inspector.py`：节点、模型、工具树。
 - `ananhu_agent/cli/tui/presentation.py`：事件到展示模型的纯转换、裁剪和脱敏。
+- `ananhu_agent/ports/model_gateway.py`：为 `ModelResult` 增加可选 provider-neutral `reasoning_content`。
+- `ananhu_agent/infrastructure/models/openai_compatible.py`：解析显式 `message.reasoning_content`。
 - `ananhu_agent/ports/run_event_sink.py`：框架中立事件发布端口。
 - `ananhu_agent/infrastructure/events/queue_sink.py`：Textual 队列适配器。
 - `ananhu_agent/cli/main.py`：`chat` 改为启动 Textual App。
@@ -204,15 +218,17 @@ Rich/Textual 类型只能存在于 `cli/tui` 展示层。domain、application、
 2. Fake Runtime：验证事件按 run/request 关联并实时更新正确轮次。
 3. Contract：Native/LangGraph 产生等价的 node started/finished/failed 事件。
 4. Presentation：节点、模型、工具输入输出摘要、JSON 裁剪和敏感字段脱敏。
-5. Usage：单模型、多模型、fake、缺失 usage、失败调用和速度计算。
-6. `other`：问候与非领域问题都有可见能力说明，且不调用政策与测算工具。
-7. Error：模型、工具、证据和安全失败自动展开且没有空白消息。
-8. Regression：`ask`、`eval`、双运行时差分和现有 CLI 命令保持通过。
+5. Reasoning：显式 reasoning 正常展示、默认折叠、缺失时隐藏、裁剪脱敏且不进入 trace 原文。
+6. Usage：单模型、多模型、fake、缺失 usage、失败调用和速度计算。
+7. `other`：问候与非领域问题都有可见能力说明，且不调用政策与测算工具。
+8. Error：模型、工具、证据和安全失败自动展开且没有空白消息。
+9. Regression：`ask`、`eval`、双运行时差分和现有 CLI 命令保持通过。
 
 ## 11. 验收标准
 
 - `uv run ananhu-agent chat` 直接进入 Textual TUI。
 - 用户可用键盘或鼠标逐层展开每个节点、模型和工具的输入输出。
+- provider 显式返回 reasoning 时可展开查看原文；无 reasoning 时不显示空节点。
 - 执行树在 Runtime 运行期间实时更新，完成后自动收起。
 - AI 消息支持 Markdown，消息末尾展示本轮聚合 Usage。
 - `你好` 和其他 `other` 输入不会产生空白回复。
@@ -224,6 +240,7 @@ Rich/Textual 类型只能存在于 `cli/tui` 展示层。domain、application、
 ## 12. 已知限制
 
 - 首版不支持模型 token 级流式输出。
+- 首版只兼容 OpenAI-compatible `message.reasoning_content`；其他 provider 方言后续按适配器扩展。
 - Textual TUI 需要支持 ANSI 和交互输入的终端；CI 使用 Pilot/headless 测试。
 - 超大 JSON 只展示裁剪视图，完整业务证据通过受控 trace 查询。
 - 复制能力取决于终端剪贴板支持；不支持时提供保存脱敏片段的替代提示。
