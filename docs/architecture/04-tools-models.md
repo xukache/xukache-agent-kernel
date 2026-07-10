@@ -90,6 +90,10 @@ tool_call_result
 `/chat/completions` 最小子集，profile 使用 `provider=openai_compatible`；API key、base URL 和
 显式 smoke 开关由环境配置提供，不写入 profile、trace 或 artifact。无 key 的常规测试必须 skip。
 
+模型目录使用 `providers + profiles` 两层结构。`providers` 保存 OpenAI-compatible 协议、base URL 和
+API key 环境变量名；`profiles` 保存业务模型档位并引用 provider。Prompt metadata 和阶段服务只选择
+`model_profile`，Agent 不感知 provider、URL 或密钥。
+
 结构化调用至少记录 Prompt 引用、profile、provider、model、finish reason、attempt、延迟、输入/
 输出/cache/total token 和可选费用估算。配置、鉴权、限流、超时、provider、响应格式和 schema
 错误使用项目错误码归一化。`ModelRouter` 只保留 profile registry/组合职责，不再向 Agent 暴露具体客户端。
