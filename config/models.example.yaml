@@ -1,0 +1,23 @@
+providers:
+  deepseek:
+    protocol: openai_compatible
+    base_url: https://api.deepseek.com/v1
+    api_key_env: DEEPSEEK_API_KEY
+
+  qwen:
+    protocol: openai_compatible
+    base_url: https://dashscope.aliyuncs.com/compatible-mode/v1
+    api_key_env: QWEN_API_KEY
+
+profiles:
+  intent_fast:
+    provider: deepseek
+    model: deepseek-chat
+    temperature: 0
+    timeout_seconds: 20
+
+  compose_quality:
+    provider: qwen
+    model: qwen-plus
+    temperature: 0.2
+    timeout_seconds: 45
