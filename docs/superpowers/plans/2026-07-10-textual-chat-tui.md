@@ -555,7 +555,7 @@ git commit -m "feat(model): 增加可观测 reasoning 与 usage 语义"
 
 **文件：** stages/rules/contracts、`tests/test_other_intent_flow.py`、runtime contracts
 
-- [ ] **步骤 1：编写失败测试**
+- [x] **步骤 1：编写失败测试**
 
 权威 pytest 函数为：`test_greeting_returns_exact_capability_message_without_tools[native|langgraph]`、
 `test_non_domain_other_invites_rewrite_without_tools[native|langgraph]`、
@@ -582,29 +582,29 @@ def test_all_real_runtime_stop_paths_have_visible_messages(runtime_scenario):
     assert result.final_answer or result.clarification_question or result.error_message
 ```
 
-- [ ] **步骤 2：运行测试确认失败**
+- [x] **步骤 2：运行测试确认失败**
 
 ```bash
 uv run pytest tests/test_other_intent_flow.py tests/runtime_contracts/test_native_runtime_contract.py -v
 ```
 
-- [ ] **步骤 3：实现 other 计划与 compose**
+- [x] **步骤 3：实现 other 计划与 compose**
 
 `plan` 对 `intent=other` 生成 `route_agents=[]、required_tools=[]`；execute 返回空 capability patch；
 compose 生成确定性能力说明；safety 仍执行；最终 completed。非问候 other 增加“请改写为工伤相关问题”。
 
-- [ ] **步骤 4：统一停止原因到可见消息**
+- [x] **步骤 4：统一停止原因到可见消息**
 
 新增纯函数 `visible_result_message(result)`，ask 与 TUI 共用；任何空值组合转成结构化内部错误文案，
 不允许 `typer.echo(None)` 或空 Textual Markdown。
 
-- [ ] **步骤 5：运行流程回归**
+- [x] **步骤 5：运行流程回归**
 
 ```bash
 uv run pytest tests/test_other_intent_flow.py tests/runtime_contracts/test_native_runtime_contract.py tests/test_orchestrator_vertical_slice.py tests/test_cli_ask.py -v
 ```
 
-- [ ] **步骤 6：Commit**
+- [x] **步骤 6：Commit**
 
 ```bash
 git add ananhu_agent/runtimes/native/stages.py ananhu_agent/orchestrator/rules.py ananhu_agent/workflow/contracts.py ananhu_agent/cli/main.py tests/test_other_intent_flow.py tests/runtime_contracts/test_native_runtime_contract.py tests/test_orchestrator_vertical_slice.py tests/test_cli_ask.py
