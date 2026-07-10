@@ -1,0 +1,27 @@
+Screen {
+    layout: vertical;
+    min-width: 80;
+    overflow-x: hidden;
+}
+
+#chat-input {
+    dock: bottom;
+    height: 3;
+}
+
+#chat-status {
+    dock: bottom;
+    height: 1;
+}
+
+.turn-user {
+    color: $accent;
+}
+
+.turn-usage {
+    color: $text-muted;
+}
+
+#json-detail {
+    overflow-x: auto;
+}

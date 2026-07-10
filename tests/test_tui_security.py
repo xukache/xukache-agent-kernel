@@ -2,7 +2,9 @@ from __future__ import annotations
 
 import asyncio
 import json
+import secrets
 
+from ananhu_agent.cli.tui.presentation import sanitize
 from ananhu_agent.models.observable_gateway import ObservableModelGateway, TransientSanitizer
 from ananhu_agent.ports.model_gateway import ModelRequest, ModelResult, ModelUsage
 from ananhu_agent.ports.run_event_sink import NoOpRunEventSink
@@ -73,3 +75,60 @@ def test_reasoning_canary_never_enters_runtime_persistence(tmp_path) -> None:
     serialized = json.dumps(persisted, ensure_ascii=False)
 
     assert "CANARY_REASONING" not in serialized
+
+
+def test_nested_secret_sanitizer_masks_keys_and_configured_values() -> None:
+    canary = secrets.token_urlsafe(24)
+    value = {
+        "headers": {"Authorization": f"Bearer {canary}"},
+        "items": [{"token": canary}],
+        "home": "/home/xukai",
+    }
+
+    clean = sanitize(value, configured_secrets={canary})
+
+    assert canary not in json.dumps(clean)
+    assert clean["home"] == "/home/xukai"
+
+
+def test_sanitizer_masks_query_headers_and_case_variants() -> None:
+    canary = secrets.token_urlsafe(24)
+    value = {
+        "Api_Key": canary,
+        "url": f"https://provider.example/v1?access_token={canary}&page=1",
+        "headers": {"X-TOKEN": canary},
+    }
+
+    clean = sanitize(value)
+    serialized = json.dumps(clean)
+
+    assert canary not in serialized
+    assert "page=1" in clean["url"]
+    assert "access_token=%2A%2A%2A" in clean["url"]
+
+
+def test_sanitizer_masks_url_userinfo_credentials() -> None:
+    canary = secrets.token_urlsafe(24)
+
+    clean = sanitize({"endpoint": f"https://proxy:{canary}@provider.example/v1"})
+
+    assert canary not in json.dumps(clean)
+    assert clean["endpoint"] == "https://***@provider.example/v1"
+
+
+def test_sanitized_provider_error_never_contains_canary() -> None:
+    canary = secrets.token_urlsafe(24)
+    error_payload = {
+        "error": {"message": f"provider rejected Bearer {canary}"},
+        "request_headers": {"cookie": canary},
+    }
+
+    clean = sanitize(error_payload, configured_secrets={canary})
+
+    assert canary not in json.dumps(clean)
+
+
+def test_non_sensitive_environment_values_are_preserved() -> None:
+    clean = sanitize({"HOME": "/home/xukai", "LANG": "zh_CN.UTF-8"})
+
+    assert clean == {"HOME": "/home/xukai", "LANG": "zh_CN.UTF-8"}
