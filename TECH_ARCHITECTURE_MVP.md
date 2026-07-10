@@ -1,1705 +1,449 @@
-# 安安虎工伤智能助手 Agno 多 Agent 重构版技术架构（MVP v0.1）
+# 安安虎工伤智能助手 Agent Harness 技术架构（MVP v0.2）
 
-## 0. 文档版本信息
+## 0. 文档信息
 
 | 字段 | 内容 |
 |---|---|
-| 文档版本 | MVP v0.1 |
-| 创建日期 | 2026-07-08 |
-| 当前阶段 | 无前端交互式 CLI MVP |
-| 技术路线 | 不使用 Dify，基于 Agno 自研多 Agent 编排 |
-| 适用范围 | MVP 技术架构设计、业务流程、数据流、Agent 协作、上下文协议、评测与治理设计 |
-| 非目标 | 本版本不创建代码结构、不实现业务代码、不接入前端 |
+| 状态 | 当前 MVP 架构基线 |
+| 版本 | v0.2 |
+| 更新日期 | 2026-07-10 |
+| 技术路线 | LangGraph 默认运行时 + 框架中立业务内核 |
+| 当前实现 | Native Runtime、四 Agent 离线闭环、CLI、JSONL 运行证据 |
+| 当前限制 | 未接入 LangGraph、真实模型和生产知识库 |
 
-### 0.1 版本管理约定
+本文件描述当前有效的 MVP 架构。详细且持续维护的规则位于 `docs/architecture/`；冲突时以分册和 `docs/architecture/99-changelog.md` 中较新的决策为准。
 
-技术架构文档按版本演进，避免后续迭代反复覆盖历史设计：
+## 1. 架构目标
 
-```text
-TECH_ARCHITECTURE.md          # 当前工作版本，始终指向最新架构说明
-TECH_ARCHITECTURE_MVP.md      # 后续可固化的 MVP 版本快照
-TECH_ARCHITECTURE_V0.2.md     # 后续增强版，例如加入 FastAPI API 层
-TECH_ARCHITECTURE_V0.3.md     # 后续增强版，例如加入语音 / 图片 Agent
-```
+系统首先是一个可信的工伤咨询 Agent Harness，而不是某个 Agent 框架的示例工程。它需要长期支持政策咨询、案件事实管理、地区知识路由、混合检索、待遇辅助测算、多步推理、流式事件、多模态能力、全链路 trace、token 计量、badcase 和评测闭环。
 
-Git 分支约定：
+第一性原理下，稳定资产是：
 
-```text
-mvp          # CLI MVP 版本主线
-v0.2-api     # 后续 FastAPI / WebSocket 服务化版本
-v0.3-prod    # 后续多地市部署、监控和运维增强版本
-```
+- 案件事实、事实来源和确认状态。
+- 服务地市、政策适用范围和知识证据。
+- 业务状态转换、停止原因和错误语义。
+- Agent、Capability、Prompt、Response 的项目协议。
+- Trace、Usage、Badcase、Eval 等运行证据。
 
-每次架构升级需要记录：
+LangGraph、模型供应商、向量库和存储实现都是可替换基础设施。
 
-- 新增能力。
-- 删除或暂缓能力。
-- 数据模型变化。
-- Agent 分工变化。
-- 工具调用变化。
-- 评测指标变化。
-- 对旧版本的兼容性影响。
+## 2. 当前范围与演进范围
 
-## 1. 文档目标
+### 2.1 当前已实现
 
-本文档用于指导基于现有 `ananhu_common-main` 项目，重新设计并实现一个不依赖 Dify、完全基于 Agno 框架的行业多 Agent 系统。
+- CLI `ask`、`chat`、`eval` 和反馈闭环。
+- `IntentRouterAgent`、`PolicyRAGAgent`、`DomainConsultationAgent`、`PaymentCalculationAgent`。
+- `AgentOrchestrator` 驱动的单轮/轻量多轮 Native Runtime。
+- `PromptManager`、`ContextManager`、`ToolRegistry`、`ToolExecutor`。
+- Fake Model、fixture policy RAG、确定性待遇测算。
+- Session、Trace、TaskState、RunReport、Badcase 和分层 Eval。
 
-第一阶段目标不是直接复刻线上小程序后端，而是先实现一个无前端交互式 CLI 版本，跑通完整 Agent 闭环：
+这些能力证明离线协议和工程闭环可运行，不证明真实模型输出质量、生产政策知识质量或 LangGraph 恢复能力。
 
-```text
-用户输入
-  ↓
-意图识别
-  ↓
-任务拆解与 Agent 路由
-  ↓
-知识检索 / 工具调用 / 模型生成
-  ↓
-结果聚合与校验
-  ↓
-交互式 CLI 输出
-  ↓
-Trace、评测、badcase 记录
-```
+### 2.2 本轮架构演进目标
 
-## 2. 可行性判断：Agno 是否适合
+- 从共享 `AgentContext` 演进为 `RunRequest + WorkflowState + StatePatch + WorkflowResult`。
+- 从固定 `AgentOrchestrator` 所有权演进为框架中立 `WorkflowRuntime` 端口。
+- 将当前编排器保留为 `NativeWorkflowRuntime`。
+- 在协议稳定后增加 `LangGraphWorkflowRuntime`，作为默认可配置运行时。
+- 使用相同 contract tests、eval cases 和 trace 语义比较两个运行时。
 
-结论：可行，而且适合做当前项目的重构版。
+### 2.3 当前非目标
 
-Agno 提供 Agent、Team、Workflow、Tools、Knowledge、Memory、Storage、Metrics 和 AgentOS 等能力，适合构建多 Agent 系统。对本项目最关键的是：
+- HTTP API、WebSocket、前端和小程序接入。
+- 复杂后台任务平台和通用 DAG 平台。
+- 为每个现有 Agent 创建子图。
+- 在没有真实恢复需求前建设多套 checkpoint 存储。
+- 为展示多 Agent 而拆分更多专项 Agent。
 
-- **多 Agent 编排：** 可以用 Team 或 Workflow 表达多个专家 Agent 的协作关系。
-- **多模型适配：** 不同 Agent 可以绑定不同模型，例如简单意图分类用低成本模型，复杂法规推理用强推理模型。
-- **工具调用：** RAG 检索、待遇测算、隐患识别、语音识别都可以封装为 Agno Tool。
-- **状态管理：** 可以用 session state、memory 和 storage 保存会话上下文、用户画像、trace 和 badcase。
-- **CLI 友好：** 第一版无需前端，可以直接通过 CLI 输入问题、观察路由、检索、调用工具和最终回答。
-
-需要注意：
-
-- Agno 不能自动解决业务拆分、评测指标、知识库质量和工具设计问题，这些仍需要系统设计。
-- 如果直接把每个功能包成 Agent，而没有路由、记忆、评测和监控，仍然会变成「多 Agent 名词包装」。
-- 第一版应控制范围，优先做「工伤咨询 + 本地 RAG + 待遇测算 + CLI trace」的小闭环。
-- MVP 不追求 Agent 数量多，只保留 4 个职责差异明确的核心 Agent。工伤认定、劳动能力鉴定、参保认定等文本咨询先统一归入 `DomainConsultationAgent`，后续根据真实 badcase 再决定是否拆分。
-
-## 3. 参考现有项目能力
-
-现有 `ananhu_common-main` 已有以下可复用业务资产：
-
-| 现有能力 | 当前位置 | 重构后处理方式 |
-|---|---|---|
-| 工伤政策文档和地方政策 | `data/documents/` | 迁移为 Knowledge / RAG 数据源 |
-| Milvus 向量检索 | `rag/vector_store/`、`rag/tools/rag_tool.py` | 抽象成 `PolicyRAGTool` |
-| 混合检索与重排序 | `hybrid_retriever.py`、`bge_reranker.py` | 保留思路，重构接口 |
-| 工伤认定、参保认定、劳动能力鉴定任务分类 | `rag/rag_config.py` | 作为意图分类和 Agent 路由基础 |
-| 待遇测算 | `payment_evaluation_service.py` | 抽象成 `PaymentCalculationTool` |
-| 隐患识别 | `hdanger_service.py` | 第一版 CLI 可先预留，不作为 P0 |
-| 语音识别 | `call_service.py`、FunASR | CLI 第一版不做语音，P1 再接 |
-| 内容安全 | 百度 / 阿里云内容安全 | CLI 第一版预留审核接口，P1 接入 |
-| WebSocket 流式协议 | `chat_service.py` | CLI 第一版不需要，后续 API 版再做 |
-
-## 4. 平台类型与阶段范围
-
-### 4.1 平台类型
-
-第一阶段是 CLI Agent 应用，不包含前端、不包含 WebSocket、不包含政府小程序适配。
-
-后续演进：
+## 3. 总体架构
 
 ```text
-CLI MVP
-  ↓
-本地评测与 trace
-  ↓
-FastAPI Agent 服务
-  ↓
-WebSocket / 小程序接入
-  ↓
-多地市部署与监控看板
+CLI / future interfaces
+        |
+        v
+Application Use Cases
+        |
+        +--> Domain Policies / State Transition Rules
+        +--> AgentRunner / PromptContextService
+        +--> CapabilityGateway
+        +--> KnowledgeGateway / ModelGateway
+        +--> TraceSink / UsageLedger / RunRepository
+        |
+        v
+WorkflowRuntime Port
+        +--> NativeWorkflowRuntime
+        +--> LangGraphWorkflowRuntime
 ```
 
-### 4.2 第一阶段 CLI MVP 范围
-
-P0 只做能证明「完整多 Agent 闭环」的最小范围：
-
-1. 文本输入。
-2. 意图识别。
-3. Agent 路由，MVP 只路由到 4 个核心 Agent。
-4. 工伤法规 RAG 检索。
-5. 工伤认定 / 劳动能力鉴定 / 待遇测算 3 类任务。
-6. 多模型配置。
-7. 结果聚合与依据校验。
-8. CLI 输出 trace。
-9. 最小评测集与 badcase 记录。
-
-不做：
-
-- 前端页面。
-- WebSocket。
-- 语音输入。
-- 图片识别。
-- OSS 报告导出。
-- 线上权限系统。
-- 完整内容安全服务。
-
-这些放到 P1 / P2。
-
-### 4.2.1 异步与流式边界
-
-MVP 不做复杂异步任务架构。系统外部表现为单轮同步咨询：用户输入一个问题，`AgentOrchestrator` 完成路由、工具调用、校验和最终回答后返回。
-
-允许使用 async I/O 来实现模型调用、RAG 检索、数据库读写和文件写入，但不引入后台任务队列、并行 Agent 调度、任务暂停 / 取消 / resume、任务句柄或多路 WebSocket 事件流。
-
-流式输出不是 MVP 核心目标。若后续需要改善 CLI 体验，可以只在最终答案生成阶段做轻量 streaming：
+推荐目标目录：
 
 ```text
-意图识别 -> RAG / 测算工具 -> 答案聚合 -> 最终回答流式打印
+ananhu_agent/
+  domain/
+  application/
+  ports/
+  runtimes/
+    native/
+    langgraph/
+  infrastructure/
+  interfaces/
 ```
 
-这仍然是同步主流程，只是展示方式变成边生成边打印。Trace 记录最终完整回答，不记录每个 token。
+当前目录按任务增量迁移，禁止为了目录整齐进行一次性重写。
 
-MVP 明确不做：
+## 4. 三个架构平面
 
-- 后台 Agent 持续运行。
-- 多 Agent 并行执行和仲裁。
-- 用户中途插队提问。
-- 任务暂停、恢复、取消。
-- WebSocket 多路事件流。
-- 复杂异步调度器。
+### 4.1 控制面
 
-### 4.3 MVP Agent 收敛原则
+负责请求如何推进：
 
-MVP 不按业务名词拆 Agent，而按职责差异拆 Agent。如果两个模块的输入、工具、模型要求、评测指标和失败模式都相似，就先合并。
+- 工作流阶段和条件路由。
+- 模型与能力调用。
+- 重试、终止、中断和有限并行。
+- Native 或 LangGraph 运行时选择。
 
-MVP 只保留：
+### 4.2 状态面
 
-| Agent | 保留原因 |
+负责系统记住什么以及恢复什么：
+
+- `CaseRecord`：跨会话案件事实。
+- `SessionRecord`：连续对话状态。
+- `WorkflowState`：单次 run 的可序列化业务状态。
+- `CheckpointEnvelope`：运行时恢复快照。
+- `MemoryEntry`：有来源、有效期和失效规则的工作记忆。
+
+### 4.3 证据面
+
+负责系统如何被审计、计量和评测：
+
+- `TraceEvent`：只追加事件时间线。
+- `RunReport`：单次运行摘要。
+- `UsageRecord`：模型、检索和能力用量。
+- `BadcaseRecord`：失败分类和修复闭环。
+- `EvaluationArtifact`：可复现评测证据。
+
+三个平面可以关联，但不能使用同一存储对象代替彼此。
+
+## 5. 工作流设计
+
+### 5.1 稳定业务阶段
+
+图表达业务阶段，不表达 Agent 清单：
+
+```text
+receive_request
+  -> understand_request
+  -> merge_case_facts
+  -> validate_required_facts
+  -> clarify | resolve_jurisdiction
+  -> plan_capabilities
+  -> retrieve_or_calculate
+  -> validate_evidence
+  -> compose_response
+  -> safety_check
+  -> complete
+```
+
+简单咨询可以跳过不需要的阶段。复杂需求未来可以在 `plan_capabilities` 后有限并行，但所有分支必须使用相同的案件事实版本和 jurisdiction scope。
+
+### 5.2 调度权与状态语义
+
+目标运行时规则：
+
+- Native Runtime 或 LangGraph Runtime 拥有调度权。
+- 项目定义的 transition policy 和 reducer 拥有业务状态合并语义。
+- Agent 或阶段服务返回 `AgentOutcome` 或 `StatePatch`，不得原地修改共享状态。
+- 每个状态字段必须有明确写入者、合并规则和失效规则。
+
+当前兼容实现仍由 `AgentOrchestrator` 原地推进 `AgentContext`，Agent 返回 `AgentMessage` 和 `ToolCallRequest`。该协议在任务 26-29 完成前继续有效，不应被误写成已经迁移。
+
+### 5.3 停止原因
+
+至少区分：
+
+```text
+completed
+clarification_required
+insufficient_evidence
+jurisdiction_unresolved
+capability_failed
+safety_blocked
+step_limit_reached
+retry_limit_reached
+cancelled
+internal_error
+```
+
+`status`、`phase` 和 `stop_reason` 分开建模，避免将所有未完成情况归为模糊失败。
+
+## 6. LangGraph 使用边界
+
+### 6.1 允许 LangGraph 负责
+
+- 节点注册、边和条件路由。
+- 单次 run 内的状态推进。
+- interrupt、resume 和人工确认触发。
+- 节点级重试和必要的有限并行。
+- 运行时 checkpoint 的读写适配。
+
+### 6.2 禁止 LangGraph 拥有
+
+- 领域实体和案件事实结构。
+- Agent、Capability、Prompt、Evidence、Response 公共协议。
+- 业务 reducer、错误码和停止原因语义。
+- Tool 权限、幂等、超时和重试策略。
+- session/case/run 标识规则。
+- 项目 trace、usage、badcase 和 eval schema。
+- 唯一可读的 checkpoint 数据格式。
+
+### 6.3 类型隔离
+
+以下类型只能出现在 `runtimes/langgraph/` 和组合根：
+
+```text
+StateGraph
+Command
+RunnableConfig
+LangGraph message/channel/checkpoint types
+```
+
+LangGraph state 是 `WorkflowState` 的运行时投影，不是领域事实源。
+
+## 7. 核心项目协议
+
+### 7.1 请求和状态
+
+```text
+RunRequest
+  request_id
+  session_id
+  case_id
+  message_id
+  text
+  attachments
+  trusted_jurisdiction
+  consent_scope
+
+WorkflowState
+  schema_version
+  run_id
+  phase
+  status
+  case_facts
+  intent_result
+  execution_plan
+  capability_results
+  evidence
+  draft_response
+  validation_result
+  safety_result
+  stop_reason
+
+StatePatch
+  fact_updates
+  evidence_updates
+  capability_updates
+  response_update
+  next_phase
+  stop_reason
+```
+
+`trusted_jurisdiction` 只能来自可信业务输入或用户明确选择。模型提取的 `mentioned_region` 只能作为候选事实，不能直接改变权限或知识库边界。
+
+### 7.2 Agent 协议
+
+```text
+AgentInput
+AgentOutcome
+AgentDecision
+AgentDescriptor
+AgentError
+```
+
+允许的决策收敛为：`route`、`request_information`、`invoke_capability`、`delegate`、`respond`、`fail`。
+
+当前四 Agent 作为 MVP 实现继续保留，但长期是否独立取决于是否具备独立目标、上下文、权限和评测价值。`PolicyRAGAgent` 和 `PaymentCalculationAgent` 可在后续演进为应用服务或 Capability，不强制保持 Agent 身份。
+
+### 7.3 能力协议
+
+```text
+CapabilitySpec
+CapabilityRequest
+CapabilityExecutionContext
+CapabilityResult
+CapabilityError
+CapabilityPolicy
+```
+
+`CapabilityResult` 至少包含 `status`、结构化 `data`、`evidence`、`capability_version`、`input_digest`、`duration_ms`、`retryable` 和 `error_code`。
+
+## 8. Tool 与能力治理
+
+现有 `ToolExecutor` 已实现注册、输入必填校验、调用方白名单、进程内重复调用拦截、超时、输出必填校验和工具 trace。
+
+目标 `CapabilityGateway` 在保留上述能力的基础上补齐以下治理链路：
+
+```text
+显式注册
+  -> schema 校验
+  -> 权限和 jurisdiction 检查
+  -> 幂等检查
+  -> 超时/重试策略
+  -> 执行
+  -> 结果 schema 校验
+  -> 脱敏
+  -> trace + usage
+```
+
+目标调用协议使用稳定关联字段：
+
+```text
+run_id
+node_id
+attempt
+capability_call_key
+capability_version
+```
+
+图节点重试不得产生不可解释的重复副作用。检索、计算和未来写操作必须声明各自幂等等级。
+
+## 9. 模型与知识检索
+
+### 9.1 ModelGateway
+
+业务代码依赖模型能力 profile，不依赖供应商 SDK。统一记录模型、参数、token、延迟、缓存和错误信息。Provider cache 只是性能优化，不能影响业务正确性。
+
+### 9.2 KnowledgeGateway
+
+知识检索在召回前执行可信元数据过滤：
+
+```text
+tenant
++ jurisdiction
++ effective_at
++ review_status
++ audience_role
++ source_type
++ document_version
+```
+
+目标检索链路：
+
+```text
+metadata filter
+  -> lexical retrieval
+  -> vector retrieval
+  -> fusion
+  -> rerank
+  -> citation validation
+```
+
+MVP 可以使用确定性检索，但输出必须是结构化 `EvidenceItem`，包含来源、条款、地区、效力时间、版本、内容摘要和检索得分。无充分证据时必须追问、限定回答或拒答。
+
+## 10. Prompt、上下文和记忆
+
+- Prompt 由稳定段、半稳定段和动态段组成，并带版本和变更说明。
+- ContextManager 按证据等级分配 token 预算，不按时间粗暴截断。
+- 当前请求、已确认关键事实、安全规则和直接支撑结论的证据不可被静默裁掉。
+- 记忆不是聊天历史，也不是知识库。
+- 每条事实带来源、确认状态、置信度、有效期和替代关系。
+- 案件事实、地区、政策语料版本或公式版本变化时，相关检索和测算快照必须失效。
+
+每次构建上下文输出 `ContextBuildReport`，记录候选项、入选项、token、裁剪原因和淘汰证据 ID。
+
+## 11. 状态、Checkpoint 与恢复
+
+```text
+CaseRecord       跨 session 的业务案件事实
+SessionRecord    连续对话和低风险工作记忆
+RunSnapshot      当前 run 的审计投影
+Checkpoint       运行时恢复数据
+TraceEvent       不可变过程证据
+RunReport        最终统计摘要
+```
+
+恢复的是带 `schema_version` 的可序列化 `WorkflowState`。恢复前检查 runtime、Prompt、Tool Registry、政策语料和状态 schema 版本。无法安全迁移时必须停止恢复并给出明确原因。
+
+## 12. 观测、用量和评测
+
+项目 trace 是权威业务证据。LangGraph/LangSmith 事件通过映射器补充 `runtime_name`、`runtime_node`、`attempt`、`checkpoint_id`，不能替代项目事件。
+
+评测按机制分层：
+
+- 路由：意图、复合需求和流程选择。
+- 事实：抽取、冲突发现和确认状态。
+- RAG：地区/时效过滤、召回、排序、引用和结论支持率。
+- 测算：输入、公式版本、误差和缺失输入处理。
+- 答复：事实一致性、不确定性披露和安全边界。
+- Runtime：状态转换、重试、恢复、幂等和 trace 完整性。
+- 成本：token、模型调用、能力调用和延迟。
+
+Native 与 LangGraph Runtime 必须运行同一 contract tests 和 eval cases，比较最终语义、关键状态转换、能力调用和 trace，而不是要求框架内部事件完全一致。
+
+## 13. 对外接口边界
+
+当前 CLI 是开发与验收入口。应用层用例不得依赖 Typer，因此未来 HTTP、WebSocket、语音或其他入口可以复用同一 `RunRequest`、流式事件和 `WorkflowResult` 协议。
+
+当前不实现公开 API。具体状态和启用条件见 `docs/api-contracts.md`。
+
+## 14. 技术栈
+
+| 类别 | 选择 |
 |---|---|
-| `IntentRouterAgent` | 负责意图识别、槽位抽取和低置信度判断，是所有后续路由的入口。 |
-| `PolicyRAGAgent` | 负责法规和地方政策检索，是政务咨询可信度的核心。 |
-| `DomainConsultationAgent` | 统一处理工伤认定、劳动能力鉴定、参保认定等文本咨询，避免早期过度拆分。 |
-| `PaymentCalculationAgent` | 待遇测算是结构化计算任务，和普通政策问答差异明显，应单独拆分。 |
+| Python | 3.11 |
+| 环境与依赖 | uv |
+| 数据协议 | Pydantic |
+| CLI | Typer |
+| 默认工作流运行时 | LangGraph，待协议重构完成后接入 |
+| 当前运行时 | Native AgentOrchestrator |
+| 测试 | pytest |
+| 当前持久化 | JSONL |
+| Prompt | YAML + 版本元信息 |
 
-MVP 不在 Agent 清单中列出“未来可能拆分的 Agent”。工伤认定、劳动能力鉴定、参保认定先通过 `DomainConsultationAgent + task_type` 承接；答案校验、信息追问、安全守卫先用规则或函数承接；语音和图片输入不进入 CLI MVP。
+不把具体模型 SDK、向量库或 LangSmith 设为领域层依赖。
 
-后续是否拆分，只看真实证据：高频 badcase、独立工具链、独立评测指标、独立 Prompt / 规则同时成立时，才从现有 Agent 中拆出新 Agent。
-
-### 4.4 参考项目可接入设计
-
-本节基于 `饮食推荐Agent` 和 `EchoMind面试型多agent项目` 的设计进行取舍。接入原则是：只吸收能增强 MVP 工程闭环的设计，不因为“多 Agent”概念而扩大 Agent 数量。
-
-#### 4.4.1 MVP 建议接入
-
-| 来源 | 设计 | 安安虎 MVP 接入方式 | 接入原因 |
-|---|---|---|---|
-| 饮食推荐 Agent | Orchestrator 持有状态，Worker Agent 无状态 | `AgentOrchestrator` 作为唯一状态写入方；各 Agent 只接收 `AgentContext` 并返回结构化结果 | 避免 Agent 内部 memory 与会话状态不一致，也便于 CLI trace 回放 |
-| 饮食推荐 Agent | 意图识别后增加规则二次矫正 | `IntentRouterAgent` 输出后进入 `IntentReviseRule`，修正低置信度、关键词强命中、复合意图 | 政务场景不能完全依赖 LLM 分类，规则兜底能提升稳定性 |
-| 饮食推荐 Agent | 槽位字典约束与多轮槽位合并 | 建立工伤咨询槽位字典，LLM 只能输出合法枚举；多轮对话采用 current 覆盖 history、空值保留 history | 适合工伤认定、劳动能力鉴定、待遇测算的材料补全和追问 |
-| 饮食推荐 Agent | Trace 作为单一事实来源 | 每轮 CLI 对话保存 `trace_id`、事件时间线、Agent I/O、工具调用、latency、token、fallback 标记 | 支撑 badcase、评测、面试展示和后续线上排障 |
-| 饮食推荐 Agent | LLM 全链路 fallback | 意图识别失败走关键词；追问失败走模板；RAG 失败给保守回复；测算失败提示缺失字段 | MVP 即使模型异常也能返回可解释结果 |
-| 饮食推荐 Agent | 输出层 RiskGuard | 新增 `PolicySafetyGuard`，检查绝对化承诺、法律结果保证、医疗/伤残等级确定性判断等高风险表达 | 工伤政务咨询必须强调“以经办机构和正式材料为准” |
-| EchoMind | 三路融合意图识别 | MVP 采用简化版：LLM 意图 + 关键词规则；向量相似问题召回先作为 P1 | 当前 MVP 已有 RAG 重点，先不额外引入意图向量库 |
-| EchoMind | 评测与监控闭环 | CLI 提供 `/eval <dataset>`，按 trace/badcase 数据计算 intent、slot、citation、calculation、fallback 指标 | 让项目从“能对话”变成“可评估、可迭代” |
-| Pico | 控制面 / 状态面 / 证据面 | 控制面由 `AgentOrchestrator` 负责，状态面由 `SessionState` / `MemoryManager` 负责，证据面由 `TraceRecorder` / `EvalRunner` / `BadcaseStore` 负责 | 把系统从“Agent 调用集合”提升为可治理的 Agent Harness |
-| Pico | Run artifacts | 每轮咨询生成 `TaskState`、`trace`、`report` 三类运行证据 | 支撑复盘、评测和 badcase 定位 |
-| Pico | ContextManager 分段预算 | 上下文拆成系统规则、active slots、recent turns、RAG evidence、current query，并记录裁剪 metadata | 多轮政务咨询会膨胀，必须保证当前问题和政策依据优先保留 |
-| Pico | ToolExecutor 统一工具边界 | RAG、待遇测算、地区过滤全部经过统一工具执行层 | 模型不能直接碰业务工具，否则 trace、评测和安全治理都不可信 |
-| Pico | 分层评测 | 分别评估 intent、slot、RAG、citation、calculation、safety、answer | 失败时能定位是哪一层坏了，而不是只得到一个模糊总分 |
-
-#### 4.4.2 MVP 暂不接入
-
-| 设计 | 暂不接入原因 | 后续接入条件 |
-|---|---|---|
-| 自动 Agent 降权 | MVP 只有 4 个核心 Agent，且不是多个同职责 Agent 竞争，自动降权没有足够收益 | P2 引入多个模型或多个检索策略并行竞争后再做 |
-| 三层记忆完整实现：Redis 工作记忆 + 向量情景记忆 + 用户画像 | CLI MVP 不需要 Redis；长期用户画像在政务咨询中也有隐私和合规成本 | FastAPI 服务化、多用户会话、真实线上日志接入后再做 |
-| 复合问题并行调用多个 Worker | MVP 可以支持复合意图识别，但先串行编排，避免过早引入并发复杂度 | 出现“待遇测算 + 工伤认定 + 地方材料清单”这类高频复合问题后再并行 |
-| 前端 Trace / 标注页面 | 用户已明确第一阶段无前端 CLI | API 版本或后台管理版本再建设 |
-| PERSONAL / PUBLIC 双数据源模式 | 饮食项目中的个人库/公共库适合推荐业务；安安虎当前更像国家政策库 + 地方政策库 | 后续多地市上线时演进为 `national_policy` / `local_policy` / `case_library` 三类知识源 |
-| Pico 的代码仓库上下文 | 安安虎不是代码仓库 Agent，不需要 repo、branch、dirty status、file fingerprint | 不接入 |
-| Pico 的文件读写 / patch / shell 工具 | 工伤咨询不需要代码文件操作，接入会污染业务边界 | 不接入 |
-| Pico 的 delegate 子 Agent | 会让 MVP 再次膨胀成很多 Agent，违背当前收敛原则 | 不接入 |
-| 完整 checkpoint / resume 漂移识别 | Pico 防的是代码仓库变化；安安虎 MVP 只需要防地区、政策版本、关键槽位误继承 | 只做轻量 session 恢复 |
-| MCP / Skill 扩展体系 | 属于平台化能力，当前阶段先把 RAG、测算、trace、badcase 做稳 | P2 之后再评估 |
-| 复杂 prompt cache benchmark | 成本优化价值低于正确性、依据性和安全性 | 架构预留，不作为 MVP 目标 |
-
-#### 4.4.3 对安安虎 MVP 的具体调整
-
-结合上述参考项目，MVP 架构增加以下设计约束：
-
-1. **Agent 无状态。** Agno Agent 不直接保存业务状态，所有上下文由 `AgentContext` 注入，最终状态由 `AgentOrchestrator` 写回。
-2. **路由结果必须可修正。** `IntentRouterAgent` 的输出不是最终路由，必须经过规则层修正和置信度判断。
-3. **槽位必须结构化。** 工伤咨询的地区、事故类型、时间、责任、伤情、材料状态、工资、缴费状态等字段必须有 schema，禁止只靠自然语言上下文传递。
-4. **Trace 先于功能扩张。** 新增任何 Agent、Tool 或规则，都必须先定义 trace 事件，否则后续无法定位 badcase。
-5. **Guard 是 MVP 必需能力。** 政务咨询输出必须经过保守性和依据完整性检查，避免输出“肯定认定工伤”“一定能赔多少钱”等绝对化结论。
-
-## 5. 业务流程梳理
-
-### 5.1 政府办事大厅咨询流程
+## 15. 演进顺序
 
 ```text
-群众提出问题
-  ↓
-系统识别意图：工伤认定 / 劳动能力鉴定 / 参保认定 / 待遇测算 / 其他
-  ↓
-抽取地区、伤情、时间、事故场景、材料状态等关键信息
-  ↓
-判断问题是否信息不足
-  ├── 不足：追问补充信息
-  └── 足够：路由到对应专家 Agent
-  ↓
-专家 Agent 调用法规 RAG、测算工具或其他工具
-  ↓
-聚合结果，检查法规依据、地区一致性和风险提示
-  ↓
-返回：结论 + 依据 + 办事材料 + 下一步建议 + 风险提示
+修正文档事实源
+  -> 定义框架中立状态和增量协议
+  -> 拆分 Native Runtime 阶段函数
+  -> 定义 WorkflowRuntime 端口和 contract tests
+  -> 接入最小串行 LangGraph Runtime
+  -> 双运行时回归与 trace 对齐
+  -> 接入真实 ModelGateway 和政策 KnowledgeGateway
+  -> 有真实需求后启用 checkpoint、interrupt 和有限并行
 ```
 
-### 5.2 工伤认定咨询流程
+禁止先安装 LangGraph，再让现有 `AgentContext` 直接成为 Graph State。
 
-典型问题：
+## 16. 主要风险与应对
 
-```text
-上班路上发生交通事故，能不能认定工伤？
-```
-
-流程：
-
-```text
-IntentRouterAgent
-  ↓
-识别为 work_injury_recognition
-  ↓
-抽取：事故类型、时间、地点、责任划分、地区
-  ↓
-DomainConsultationAgent（task_type=work_injury_recognition）
-  ↓
-PolicyRAGTool 检索《工伤保险条例》与地方政策
-  ↓
-AnswerValidator 检查法规依据和条件表达
-  ↓
-FinalAnswerAggregator 输出
-```
-
-### 5.3 劳动能力鉴定咨询流程
-
-典型问题：
-
-```text
-劳动能力鉴定需要准备哪些材料？
-```
-
-流程：
-
-```text
-IntentRouterAgent
-  ↓
-DomainConsultationAgent（task_type=labor_capacity）
-  ↓
-PolicyRAGTool 检索鉴定标准、经办规程、地方办事指南
-  ↓
-输出材料清单、办理路径、注意事项
-```
-
-### 5.4 待遇测算流程
-
-典型问题：
-
-```text
-四川 35 岁，伤残十级，大概能赔多少钱？
-```
-
-流程：
-
-```text
-IntentRouterAgent
-  ↓
-PaymentCalculationAgent
-  ↓
-抽取省份、年龄、性别、伤残等级、事故类型
-  ↓
-信息缺失则由 IntentRouterAgent / PaymentCalculationAgent 生成追问
-  ↓
-PaymentCalculationTool 结构化计算
-  ↓
-PolicyRAGTool 补充政策依据
-  ↓
-Aggregator 输出测算结果和免责声明
-```
-
-## 6. 数据流设计
-
-### 6.1 在线请求数据流
-
-```text
-CLI 输入
-  ↓
-RequestContext
-  - request_id
-  - user_query
-  - city / province
-  - session_id
-  ↓
-IntentResult
-  - intent
-  - confidence
-  - slots
-  - is_composite
-  - missing_slots
-  ↓
-IntentReviseRule
-  - keyword_override
-  - confidence_gate
-  - composite_intent_policy
-  ↓
-SlotMergeResult
-  - current_slots
-  - active_slots
-  - missing_slots
-  ↓
-AgentPlan
-  - route_agents
-  - required_tools
-  - execution_mode
-  ↓
-ToolCallResults
-  - retrieved_docs
-  - calculation_result
-  - external_result
-  ↓
-AgentOutputs
-  - domain_answer
-  - evidence
-  - risk_notes
-  ↓
-VerifiedAnswer
-  - final_answer
-  - citations
-  - confidence
-  - warnings
-  ↓
-PolicySafetyGuard
-  - citation_required
-  - region_consistency
-  - no_absolute_commitment
-  ↓
-TraceRecord / BadcaseRecord
-```
-
-### 6.2 知识库数据流
-
-```text
-data/documents/
-  ↓
-DocumentLoader
-  ↓
-DocumentChunker
-  ↓
-EmbeddingModel
-  ↓
-VectorStore
-  ↓
-Retriever
-  ↓
-Reranker
-  ↓
-PolicyRAGTool
-```
-
-### 6.3 评测数据流
-
-```text
-eval_cases.jsonl
-  ↓
-CLI eval runner
-  ↓
-AgentOrchestrator
-  ↓
-输出 answer + trace
-  ↓
-Rule-based checks + LLM-as-Judge
-  ↓
-metrics.json
-  ↓
-badcase.jsonl
-```
-
-### 6.4 Agent 间上下文传递数据流
-
-不同 Agent 之间不直接传递自然语言长文本，而是通过统一 `AgentContext` 和结构化 `AgentMessage` 传递上下文。
-
-```text
-AgentContext
-  ↓
-IntentRouterAgent 写入 intent_result
-  ↓
-IntentReviseRule 修正 intent_result，SlotMergeRule 合并 active_slots
-  ↓
-AgentOrchestrator 根据修正后的 intent_result 写入 agent_plan
-  ↓
-DomainAgent 读取 intent_result / agent_plan / memory，写入 agent_outputs
-  ↓
-ToolExecutor 写入 tool_results
-  ↓
-ResultAggregator 读取 agent_outputs / tool_results，生成 draft_final_answer
-  ↓
-AnswerValidator 读取 draft_final_answer / agent_outputs / tool_results，写入 verification_result
-  ↓
-PolicySafetyGuard 读取 draft_final_answer / citations / warnings，写入 safety_result
-  ↓
-ResultAggregator 根据 verification_result / safety_result 生成 final_answer
-```
-
-这种设计有 3 个目的：
-
-- **可追踪：** 每个 Agent 读了什么、写了什么，都可以进入 trace。
-- **可测试：** 单个 Agent 可以用固定 `AgentContext` 做单元测试。
-- **可替换：** 后续替换模型或 Agent 实现，不影响上下文协议。
-
-## 7. 总体架构设计
-
-```text
-CLI
-  ↓
-AgentOrchestrator
-  ├── IntentRouterAgent
-  ├── IntentReviseRule
-  ├── SlotMergeRule
-  ├── ContextManager
-  ├── PromptManager
-  ├── AgentRegistry
-  ├── MemoryManager
-  ├── ToolRegistry
-  ├── ToolExecutor
-  ├── ResultAggregator
-  ├── AnswerValidator
-  ├── PolicySafetyGuard
-  └── TraceRecorder
-       ↓
-MVP Agents
-  ├── DomainConsultationAgent
-  ├── PaymentCalculationAgent
-  └── PolicyRAGAgent
-       ↓
-Tools
-  ├── PolicyRAGTool
-  ├── PaymentCalculationTool
-  ├── RegionPolicyFilterTool
-  └── CitationFormatterTool
-       ↓
-Infrastructure
-  ├── ModelRouter
-  ├── VectorStore
-  ├── MemoryStore
-  ├── TaskStateStore
-  ├── TraceStore
-  ├── ReportStore
-  └── EvalStore
-```
-
-这套架构参考 Pico 的 Agent Harness 思路，但只吸收运行时治理能力，不吸收代码 Agent 的文件操作能力：
-
-| 面 | MVP 组件 | 作用 |
-|---|---|---|
-| 控制面 | `AgentOrchestrator`、`PromptManager`、`ContextManager`、`ToolRegistry`、`ToolExecutor`、`ModelRouter` | 决定一轮咨询怎么推进、怎么组装 prompt、怎么调用模型和工具 |
-| 状态面 | `SessionState`、`MemoryManager`、`TaskStateStore` | 保存当前会话、槽位、路由、工具状态和轻量恢复信息 |
-| 证据面 | `TraceRecorder`、`ReportStore`、`EvalStore`、`BadcaseStore` | 保存可回放、可评测、可对比的运行证据 |
-| 治理面 | `AnswerValidator`、`PolicySafetyGuard`、fallback 规则 | 控制引用依据、地区一致性、政务安全和降级策略 |
-
-## 8. Agent 设计
-
-### 8.1 Agent 设计原则
-
-1. 按业务职责拆分，而不是按技术名词拆分。
-2. 每个 Agent 必须有明确输入、输出和可评测指标。
-3. 简单任务用轻量模型，复杂推理用强模型。
-4. 工具调用必须可记录、可回放、可评测。
-5. Agent 输出必须结构化，便于聚合和校验。
-6. MVP 只保留职责差异明确的 Agent，不为了「多 Agent」而拆 Agent。
-
-### 8.2 MVP Agent 清单
-
-MVP 只实现 4 个核心 Agent。其他能力不进入 MVP Agent 清单，避免把“未来可能拆分的能力”误读为当前必须实现的 Agent。
-
-| Agent | 职责 | 模型建议 | P0/P1 |
-|---|---|---|---|
-| `IntentRouterAgent` | 意图识别、槽位抽取、置信度判断 | 轻量快速模型 + 规则兜底 | P0 |
-| `PolicyRAGAgent` | 法规检索、引用依据组织 | 中等模型或无模型工具型 Agent | P0 |
-| `DomainConsultationAgent` | 工伤认定、劳动能力鉴定、参保认定等文本政策咨询 | 中等模型，复杂问题可升级强推理模型 | P0 |
-| `PaymentCalculationAgent` | 待遇测算解释和工具调用 | 中等模型 + 计算工具 | P0 |
-
-### 8.3 MVP 路由策略
-
-```text
-用户问题
-  ↓
-IntentRouterAgent
-  ├── policy_consultation / work_injury_recognition / labor_capacity / insurance_participation
-  │       ↓
-  │   DomainConsultationAgent
-  │       ↓
-  │   PolicyRAGAgent
-  │
-  └── payment_calculation
-          ↓
-      PaymentCalculationAgent
-          ↓
-      PolicyRAGAgent（补充依据）
-```
-
-如果 `IntentRouterAgent` 判断置信度低于阈值，MVP 不进入复杂多 Agent 协作，而是直接生成追问。
-
-MVP 路由不直接采用 LLM 原始输出，而是采用三段式决策：
-
-```text
-IntentRouterAgent 原始识别
-  ↓
-IntentReviseRule 规则修正
-  ↓
-AgentOrchestrator 生成最终 AgentPlan
-```
-
-`IntentReviseRule` 至少包含以下规则：
-
-| 规则 | 条件 | 处理 |
-|---|---|---|
-| 低置信度追问 | `confidence < 0.6` 且缺少关键槽位 | 不进入业务 Agent，返回追问 |
-| 待遇测算强命中 | 用户输入包含“赔多少钱 / 待遇 / 一次性伤残补助金 / 医疗补助金”等 | 优先修正为 `payment_calculation` |
-| 认定咨询强命中 | 用户输入包含“算不算工伤 / 能不能认定 / 上下班途中 / 非本人主要责任”等 | 优先修正为 `work_injury_recognition` |
-| 鉴定咨询强命中 | 用户输入包含“劳动能力鉴定 / 伤残等级 / 鉴定材料 / 复查鉴定”等 | 优先修正为 `labor_capacity` |
-| 地区继承保护 | 当前轮未提供地区，但历史会话有地区 | 可以继承，但 trace 中标记 `region_inherited=true` |
-| 地区冲突保护 | 当前轮地区与历史地区冲突 | 以当前轮为准，并记录 `region_overridden=true` |
-
-复合意图在 MVP 阶段只做识别和串行处理，不做并行调度。例如“我在丹东上班受伤，能不能认定工伤，十级能赔多少钱”会被拆成：
-
-```text
-DomainConsultationAgent -> PolicyRAGAgent -> PaymentCalculationAgent -> ResultAggregator
-```
-
-后续如果复合问题占比高，再升级为并行 Team / Workflow。
-
-## 9. Agent 间上下文传递设计
-
-### 9.1 核心原则
-
-Agent 之间不共享可变全局变量，也不互相直接调用内部方法。所有协作都通过 `AgentContext` 传递。
-
-每个 Agent 的执行边界：
-
-```text
-读取 AgentContext
-  ↓
-执行本 Agent 决策 / 工具调用 / 生成
-  ↓
-返回 AgentMessage 或 AgentResult
-  ↓
-由 AgentOrchestrator 合并回 AgentContext
-```
-
-`AgentOrchestrator` 是唯一允许合并上下文的组件。
-
-### 9.2 `AgentContext` 格式
-
-```json
-{
-  "request": {
-    "request_id": "req_20260708_0001",
-    "session_id": "sess_001",
-    "turn_id": 1,
-    "user_query": "四川 35 岁，伤残十级，大概能赔多少钱？",
-    "input_type": "text",
-    "province": "四川省",
-    "city": "成都市",
-    "created_at": "2026-07-08T21:30:00+08:00"
-  },
-  "conversation": {
-    "history_summary": "用户正在咨询工伤待遇测算。",
-    "last_user_intent": "payment_calculation",
-    "last_answer_summary": "",
-    "active_slots": {
-      "province": "四川省",
-      "city": "成都市"
-    }
-  },
-  "intent_result": {
-    "intent": "payment_calculation",
-    "confidence": 0.89,
-    "is_composite": false,
-    "slots": {
-      "age": 35,
-      "injury_level": "十级",
-      "province": "四川省"
-    },
-    "missing_slots": ["gender"]
-  },
-  "agent_plan": {
-    "route_agents": [
-      "PaymentCalculationAgent",
-      "PolicyRAGAgent"
-    ],
-    "execution_mode": "sequential",
-    "reason": "需要先计算待遇，再补充政策依据。"
-  },
-  "tool_results": [],
-  "agent_outputs": [],
-  "draft_final_answer": null,
-  "verification_result": null,
-  "safety_result": null,
-  "final_answer": null,
-  "trace": {
-    "events": [],
-    "latency_ms": 0,
-    "status": "running"
-  }
-}
-```
-
-### 9.2.1 工伤业务槽位 schema
-
-MVP 需要把关键业务信息显式结构化，避免 Agent 之间只靠自然语言摘要传递。槽位分为通用槽位、工伤认定槽位、劳动能力鉴定槽位和待遇测算槽位。
-
-| 槽位 | 类型 | 适用任务 | 说明 |
-|---|---|---|---|
-| `province` | string | 全部 | 省份，用于政策过滤 |
-| `city` | string | 全部 | 地市，用于合作地区和地方政策匹配 |
-| `accident_time` | string/date | 工伤认定 | 事故发生时间 |
-| `accident_scene` | enum | 工伤认定 | 工作时间、工作场所、上下班途中、外出工作等 |
-| `traffic_responsibility` | enum | 工伤认定 | 本人主要责任、非本人主要责任、责任不明 |
-| `employment_status` | enum | 工伤认定 / 参保认定 | 劳动关系、劳务关系、灵活就业、未知 |
-| `insured_status` | enum | 参保认定 / 待遇测算 | 已参保、未参保、不确定 |
-| `injury_level` | enum | 劳动能力鉴定 / 待遇测算 | 一级至十级、未鉴定、不确定 |
-| `medical_status` | enum | 劳动能力鉴定 | 治疗中、停工留薪期、已出院、病情稳定 |
-| `average_wage` | number | 待遇测算 | 本人工资或缴费工资 |
-| `age` | int | 待遇测算 | 年龄，影响部分长期待遇估算 |
-| `gender` | enum | 待遇测算 | 男、女、未知 |
-| `terminate_labor_relation` | bool | 待遇测算 | 是否解除或终止劳动关系 |
-| `materials_status` | array | 办事指南 | 已有材料，例如诊断证明、劳动合同、事故证明 |
-
-槽位合并规则：
-
-| 规则 | 说明 |
+| 风险 | 应对 |
 |---|---|
-| 当前轮非空优先 | 当前轮明确提供的槽位覆盖历史槽位 |
-| 当前轮为空保留历史 | 用户只补充一个字段时，不清空其他已知字段 |
-| 地区字段显式记录来源 | 继承历史地区时标记 `source=history`，当前轮提供时标记 `source=current_turn` |
-| 高风险字段不盲目继承 | `injury_level`、`average_wage`、`traffic_responsibility` 等影响结论的字段，跨主题时需要重新确认 |
-| 非法枚举丢弃并追问 | LLM 输出不在枚举范围内时，不写入上下文，改为 `missing_slots` |
-
-### 9.3 `AgentMessage` 格式
-
-每个 Agent 返回结构化消息，不直接返回最终长答案。
-
-```json
-{
-  "agent_name": "PaymentCalculationAgent",
-  "message_type": "domain_result",
-  "confidence": 0.82,
-  "content": {
-    "summary": "已根据四川省、35 岁、十级伤残进行待遇测算，但缺少性别字段，使用平均退休年龄作为临时估算。",
-    "structured_result": {
-      "medical_aid": 12345.67,
-      "disability_aid": 23456.78,
-      "total": 35802.45
-    },
-    "assumptions": [
-      "未提供性别，暂按平均退休年龄估算。"
-    ],
-    "warnings": [
-      "测算结果仅供咨询参考，最终以经办机构核定为准。"
-    ]
-  },
-  "evidence": [
-    {
-      "source_type": "tool",
-      "source_name": "PaymentCalculationTool",
-      "ref_id": "tool_call_001"
-    }
-  ],
-  "next_actions": [
-    {
-      "type": "clarify",
-      "field": "gender",
-      "question": "请问伤者性别是男还是女？这会影响部分长期待遇测算。"
-    }
-  ]
-}
-```
-
-### 9.4 `ToolCallResult` 格式
-
-```json
-{
-  "tool_call_id": "tool_call_001",
-  "tool_name": "PolicyRAGTool",
-  "called_by": "PolicyRAGAgent",
-  "input": {
-    "query": "四川 十级伤残 工伤待遇",
-    "province": "四川省",
-    "city": "成都市",
-    "top_k": 5
-  },
-  "output": {
-    "documents": [
-      {
-        "title": "四川省工伤保险条例实施办法",
-        "content": "……",
-        "score": 0.82,
-        "province": "四川省",
-        "city": ""
-      }
-    ]
-  },
-  "success": true,
-  "latency_ms": 320,
-  "error": null
-}
-```
-
-### 9.5 上下文读写权限
-
-为了控制上下文污染，Agent 只能读取自己需要的字段：
-
-| Agent | 允许读取 | 允许写入 |
-|---|---|---|
-| `IntentRouterAgent` | `request`、`conversation` | `intent_result` |
-| `AgentOrchestrator` | `request`、`intent_result` | `agent_plan` |
-| `PolicyRAGAgent` | `request`、`intent_result`、`agent_plan` | `tool_results`、`agent_outputs` |
-| `DomainConsultationAgent` | `request`、`intent_result`、`agent_plan`、`tool_results` | `agent_outputs` |
-| `PaymentCalculationAgent` | `request`、`intent_result` | `tool_results`、`agent_outputs` |
-| `AnswerValidator` | `draft_final_answer`、`agent_outputs`、`tool_results`、`intent_result` | `verification_result` |
-| `PolicySafetyGuard` | `draft_final_answer`、`verification_result`、`request`、`intent_result` | `safety_result` |
-| `ResultAggregator` | 全部只读 | `draft_final_answer`、`final_answer` |
-
-## 10. 多模型适配设计
-
-### 10.1 为什么需要多模型
-
-不同 Agent 的任务复杂度不同：
-
-- 意图识别、追问生成：要求快、便宜、稳定。
-- 法规推理、冲突检查：要求强推理、可靠性高。
-- 待遇测算：核心是结构化计算，不应依赖大模型算数。
-- 隐患识别：需要多模态模型。
-- 评测 Judge：需要相对强且稳定的模型。
-
-### 10.2 ModelRouter
-
-设计一个统一 `ModelRouter`，根据 Agent 类型和任务复杂度选择模型。
-
-```text
-Agent 请求模型
-  ↓
-ModelRouter
-  ├── intent_fast_model
-  ├── domain_reasoning_model
-  ├── verifier_reasoning_model
-  └── judge_model
-  ↓
-Agno Model Provider
-```
-
-### 10.3 模型配置示例
-
-```yaml
-models:
-  intent_fast:
-    provider: openai_compatible
-    model: qwen-turbo
-    temperature: 0
-
-  domain_reasoning:
-    provider: openai_compatible
-    model: deepseek-r1
-    temperature: 0.2
-
-  verifier:
-    provider: openai_compatible
-    model: qwen-max
-    temperature: 0
-
-  judge:
-    provider: openai_compatible
-    model: gpt-4.1
-    temperature: 0
-
-```
-
-多模态模型不进入 MVP 配置。语音和图片能力属于 P1 输入通道，等文本链路稳定后再加入。
-
-### 10.4 模型选择策略
-
-| 场景 | 策略 |
-|---|---|
-| 简单分类 | 轻量模型 |
-| 法规推理 | 强推理模型 |
-| 结构化计算 | 工具计算，模型只解释 |
-| 多模态识别 | 多模态模型 |
-| 低置信度 | 升级到强模型或追问 |
-| Agent 结果冲突 | Verifier 使用强模型复核 |
-
-## 11. 记忆系统设计
-
-第一版 CLI 也要保留记忆接口，但可以轻实现。
-
-| 记忆类型 | 内容 | 第一版实现 |
-|---|---|---|
-| 工作记忆 | 当前请求的意图、槽位、工具结果 | 内存对象 |
-| 会话记忆 | 多轮对话摘要、地区、历史问题 | SQLite / JSONL |
-| 用户画像 | 常用地区、常问业务类型 | P1 |
-| Badcase 记忆 | 失败问题、失败原因、修正答案 | JSONL |
-
-### 11.1 上下文管理设计
-
-MVP 引入轻量 `ContextManager`，参考 Pico 的分段上下文预算思想，但不做复杂长期记忆。它的职责是把当前轮 Agent 输入拆成可解释的上下文段，并在超预算时按优先级裁剪。
-
-上下文分段：
-
-| Section | 内容 | 裁剪优先级 |
-|---|---|---|
-| `system_prefix` | Agent 身份、输出协议、安全边界、工具说明 | 最后裁剪 |
-| `active_slots` | 当前会话已确认的地区、事故场景、伤残等级、工资等槽位 | 尽量保留 |
-| `rag_evidence` | 本轮检索到的法规、地方政策、办事指南 | 尽量保留 |
-| `recent_turns` | 最近 3-5 轮对话摘要 | 可压缩 |
-| `working_memory` | 上轮结论、待追问字段、工具失败摘要 | 可压缩 |
-| `current_query` | 用户当前问题 | 不裁剪 |
-
-默认裁剪顺序：
-
-```text
-recent_turns -> working_memory -> rag_evidence 摘要化 -> active_slots 摘要化 -> system_prefix
-```
-
-`current_query` 不允许裁剪。每次构建上下文都要写入 metadata：
-
-```json
-{
-  "prompt_chars": 8420,
-  "sections": {
-    "system_prefix": 1200,
-    "active_slots": 900,
-    "rag_evidence": 4200,
-    "recent_turns": 1400,
-    "working_memory": 500,
-    "current_query": 220
-  },
-  "trimmed_sections": ["recent_turns"],
-  "current_query_preserved": true
-}
-```
-
-### 11.2 Prompt 管理设计
-
-MVP 不允许把提示词硬编码在 Agent 类里。提示词由 `PromptManager` 管模板和版本，由 `ContextManager` 管上下文分段和预算，由 `ModelRouter` 选择模型。
-
-```text
-Agent
-  ↓
-PromptRequest
-  ↓
-PromptManager 选择模板和版本
-  ↓
-ContextManager 注入上下文和裁剪 metadata
-  ↓
-ModelRouter 选择模型
-  ↓
-ModelClient 调用模型
-```
-
-#### 11.2.1 Prompt 分层
-
-| 组件 | 职责 |
-|---|---|
-| `PromptManager` | 管理 prompt 模板、版本、变量、输出 schema、变更说明 |
-| `ContextManager` | 注入当前问题、槽位、RAG 证据、最近对话、工作记忆，并处理预算裁剪 |
-| `ModelRouter` | 根据 Agent、任务复杂度、prompt 的 `model_profile` 选择模型 |
-| `TraceRecorder` | 记录本轮使用的 `prompt_id`、`prompt_version`、模型和 token / 字符统计 |
-
-#### 11.2.2 Prompt 目录约定
-
-后续实现时，prompt 建议按 Agent 和业务 task_type 管理：
-
-```text
-prompts/
-  intent_router/
-    v1.yaml
-  domain_consultation/
-    base.yaml
-    work_injury_recognition.yaml
-    labor_capacity.yaml
-    insurance_participation.yaml
-  policy_rag/
-    v1.yaml
-  payment_calculation/
-    v1.yaml
-  answer_validator/
-    v1.yaml
-  safety_guard/
-    v1.yaml
-```
-
-#### 11.2.3 Prompt 模板元信息
-
-每个 prompt 文件必须包含元信息，便于版本治理和 badcase 回放：
-
-```yaml
-id: domain_consultation.work_injury_recognition
-version: v1
-agent: DomainConsultationAgent
-task_type: work_injury_recognition
-model_profile: domain_reasoning
-output_schema: AgentMessage
-failure_policy:
-  missing_evidence: cannot_answer
-  missing_required_slot: ask_clarification
-  tool_failed: return_error_reason
-variables:
-  - current_query
-  - active_slots
-  - rag_evidence
-  - conversation_summary
-  - safety_rules
-input_sections:
-  - role_task
-  - rules
-  - input_schema
-  - context
-  - rag_evidence
-  - output_schema
-  - failure_policy
-change_note: MVP 初始版本
-template: |
-  你是工伤政策咨询助手...
-```
-
-#### 11.2.4 Prompt 固定分区
-
-MVP prompt 不是一段长文本，而是受工程治理的模型输入协议。每个业务 prompt 默认按以下分区组织：
-
-```text
-[Role / Task]
-[Rules]
-[Input Schema]
-[Context]
-[RAG Evidence / Tool Results]
-[Output Schema]
-[Failure Policy]
-```
-
-| 分区 | 作用 |
-|---|---|
-| `Role / Task` | 明确当前 Agent 的任务目标和可验收输出 |
-| `Rules` | 写明不能编造、不能越权、必须基于证据等硬约束 |
-| `Input Schema` | 说明输入字段含义、枚举范围和缺失值处理 |
-| `Context` | 注入 active slots、recent turns、working memory |
-| `RAG Evidence / Tool Results` | 注入法规证据和工具结果，并与用户输入明确分隔 |
-| `Output Schema` | 要求输出 `AgentMessage` 或指定 JSON schema |
-| `Failure Policy` | 定义证据不足、字段缺失、工具失败、请求越权时怎么返回 |
-
-Prompt 必须分离规则、数据、示例和输出格式，避免模型把用户原文、法规证据和系统规则混在一起。
-
-#### 11.2.5 Prompt 选择规则
-
-| 场景 | Prompt |
-|---|---|
-| 意图识别和槽位抽取 | `intent_router/v1.yaml` |
-| 工伤认定咨询 | `domain_consultation/work_injury_recognition.yaml` |
-| 劳动能力鉴定咨询 | `domain_consultation/labor_capacity.yaml` |
-| 参保认定咨询 | `domain_consultation/insurance_participation.yaml` |
-| 待遇测算解释 | `payment_calculation/v1.yaml` |
-| 引用依据整理 | `policy_rag/v1.yaml` |
-| 答案校验 | `answer_validator/v1.yaml` |
-| 安全守卫 | `safety_guard/v1.yaml` |
-
-Prompt 选择由 `AgentOrchestrator` 根据 `agent_name + task_type` 发起，`PromptManager` 负责解析和校验，不允许 Agent 内部拼接完整 prompt。
-
-#### 11.2.6 Prompt 模式取舍
-
-MVP 采用以下 prompt 模式：
-
-| 模式 | 适用 Agent / 模块 | MVP 使用方式 |
-|---|---|---|
-| 抽取型模板 | `IntentRouterAgent` | 抽取 intent、task_type、slots、missing_slots、confidence，缺失字段返回 null |
-| 证据问答模板 | `DomainConsultationAgent`、`PolicyRAGAgent` | 只能依据 `rag_evidence` 回答，证据不足返回 `cannot_answer` 或保守回答 |
-| 工具调用模板 | `PaymentCalculationAgent` | 禁止自行心算待遇金额，必须基于 `PaymentCalculationTool` 结果解释 |
-| 评审 / 打分模板 | `AnswerValidator`、eval judge | 按 rubric 输出结构化评分和失败原因 |
-| 安全守卫模板 | `PolicySafetyGuard` | 检查绝对化承诺、替代经办判断、无依据金额等风险 |
-
-MVP 不采用：
-
-| 模式 | 不采用原因 |
-|---|---|
-| 大量显式 Chain-of-thought | 增加成本和延迟，也不需要暴露内部推理；MVP 只要求输出依据、自检结果和结构化字段 |
-| 每个 Agent 都做复杂 Critique-Revise | 会显著增加模型调用次数；只在最终校验和安全守卫中做轻量检查 |
-| 大量 few-shot | 容易挤占 RAG 证据和当前问题空间；只放少量高价值边界示例 |
-| 把业务规则全部写进 prompt | 地区过滤、待遇计算、schema 校验、安全禁词等硬规则必须在代码或工具层 |
-
-#### 11.2.7 Prompt 版本与回滚
-
-Prompt 是可测试、可回滚的工程资产。每次 prompt 变更必须记录：
-
-| 字段 | 说明 |
-|---|---|
-| `prompt_id` | 稳定标识，例如 `domain_consultation.work_injury_recognition` |
-| `version` | 版本号，例如 `v1`、`v2` |
-| `change_note` | 变更原因，例如修复某类 badcase |
-| `affected_task_type` | 影响的业务类型 |
-| `expected_metric_change` | 期望改善的指标 |
-| `rollback_to` | 可回滚版本 |
-
-Prompt 迭代流程：
-
-```text
-发现 badcase
-  ↓
-定位 prompt / context / tool / rule 哪一层问题
-  ↓
-修改 prompt 并升级版本
-  ↓
-运行固定 eval_cases
-  ↓
-指标通过则启用新版本
-  ↓
-指标下降则回滚
-```
-
-#### 11.2.8 Prompt Trace
-
-每次模型调用必须记录 prompt 元信息：
-
-```json
-{
-  "event_type": "model_called",
-  "agent_name": "DomainConsultationAgent",
-  "model": "deepseek-r1",
-  "prompt_id": "domain_consultation.work_injury_recognition",
-  "prompt_version": "v1",
-  "model_profile": "domain_reasoning",
-  "input_sections": [
-    "role_task",
-    "rules",
-    "active_slots",
-    "rag_evidence",
-    "output_schema"
-  ],
-  "trimmed_sections": ["recent_turns"],
-  "output_schema_valid": true,
-  "input_tokens": 3200,
-  "output_tokens": 900
-}
-```
-
-这样 badcase 复盘时可以追问：
-
-- 哪个 Agent 回答错了。
-- 使用了哪个 prompt 版本。
-- 注入了哪些槽位和 RAG 证据。
-- 当时选择了哪个模型。
-- 修改 prompt 后评测指标是否变好。
-
-## 12. 工具设计
-
-工具治理目标是让模型不能直接触碰业务工具。Agent 只能产生结构化 `ToolCallRequest`，由 `ToolExecutor` 完成注册校验、参数校验、风险控制、执行、错误归一和 trace 记录。
-
-### 12.1 Tool 清单
-
-| Tool | 职责 | 来源 |
-|---|---|---|
-| `PolicyRAGTool` | 检索法规、地方政策、办事指南 | 原 RAG 模块 |
-| `PaymentCalculationTool` | 工伤待遇测算 | 原待遇测算服务 |
-| `RegionPolicyFilterTool` | 根据省市过滤政策 | 原 RAG 地区过滤逻辑 |
-| `CitationFormatterTool` | 格式化引用依据 | 新增 |
-| `TraceTool` | 写入调用链 trace | 新增 |
-| `BadcaseTool` | 记录失败案例 | 新增 |
-
-`HazardImageTool`、`SpeechRecognitionTool`、`WebSearchTool` 不进入 MVP Tool 清单。它们属于 P1 / P2 输入通道或外部增强能力，避免第一版 CLI 变成多模态平台。
-
-### 12.2 Tool 注册元信息
-
-每个工具都必须在 `ToolRegistry` 中注册元信息：
-
-```yaml
-name: PolicyRAGTool
-description: 检索工伤法规、地方政策、办事指南
-risk_level: read_only
-timeout_ms: 3000
-allowed_callers:
-  - PolicyRAGAgent
-  - DomainConsultationAgent
-input_schema:
-  query: string
-  province: string
-  city: string
-  top_k: integer
-output_schema:
-  documents: array
-  citations: array
-```
-
-风险等级：
-
-| risk_level | 说明 | MVP 处理 |
-|---|---|---|
-| `read_only` | 只读检索，例如 RAG、地区过滤 | 允许调用，必须记录 trace |
-| `calculation` | 纯计算，例如待遇测算 | 允许调用，必须记录输入假设 |
-| `write_local` | 写入本地 trace、badcase、report | 只允许系统组件调用 |
-| `external_side_effect` | 会影响外部系统 | MVP 不允许 |
-
-### 12.3 Tool 调用规范
-
-所有工具必须通过 `ToolExecutor` 调用，Agent 不允许直接调用底层 RAG、测算或存储函数。
-
-```text
-Agent
-  ↓
-ToolCallRequest
-  ↓
-ToolExecutor
-  ├── 工具是否注册
-  ├── Agent 是否允许调用
-  ├── 参数 schema 校验
-  ├── 风险等级检查
-  ├── 超时控制
-  ├── 重复调用拦截
-  ├── 执行工具
-  ├── 错误码归一
-  └── 写入 trace
-  ↓
-ToolCallResult
-```
-
-每次工具调用必须记录：
-
-- tool_name
-- input
-- output
-- latency_ms
-- success
-- error_message
-- related_agent
-- request_id
-
-`ToolExecutor` 统一处理：
-
-| 能力 | 说明 |
-|---|---|
-| 工具注册校验 | 只允许调用已注册工具 |
-| 参数 schema 校验 | 省市、伤残等级、工资、top_k 等参数必须符合结构 |
-| 超时控制 | 防止 RAG、模型或外部接口阻塞 CLI |
-| 重复调用拦截 | 同一轮中连续相同工具调用需要记录并限制 |
-| 错误码归一 | 将底层异常转成 `tool_error_code` |
-| fallback 标记 | 工具失败后写入 `fallback_used` 和 `fallback_reason` |
-| trace 事件 | 每次调用写入 `tool_called` / `tool_finished` / `tool_failed` |
-
-工具调用返回结构必须包含：
-
-```json
-{
-  "tool_call_id": "tool_001",
-  "tool_name": "PolicyRAGTool",
-  "called_by": "PolicyRAGAgent",
-  "tool_status": "success",
-  "tool_error_code": null,
-  "latency_ms": 320,
-  "input": {
-    "query": "上下班途中交通事故 工伤认定",
-    "province": "四川省",
-    "city": "成都市",
-    "top_k": 5
-  },
-  "output": {
-    "documents": [],
-    "citations": []
-  },
-  "fallback_used": false
-}
-```
-
-## 13. 结果聚合与校验设计
-
-多 Agent 输出不能直接拼接，必须通过聚合和校验。
-
-### 13.1 聚合流程
-
-```text
-AgentOutputs
-  ↓
-去重
-  ↓
-按业务结构组织
-  ↓
-引用依据检查
-  ↓
-地区一致性检查
-  ↓
-冲突检测
-  ↓
-PolicySafetyGuard 政务安全检查
-  ↓
-敏感提示和免责声明
-  ↓
-FinalAnswer
-```
-
-### 13.2 输出结构
-
-```text
-1. 简短结论
-2. 判断依据
-3. 适用条件
-4. 办事材料或下一步建议
-5. 风险提示
-6. 引用来源
-```
-
-### 13.3 `PolicySafetyGuard` 规则
-
-`PolicySafetyGuard` 是 MVP 必需的输出治理函数，不作为独立 Agent。它的目标是让政务咨询回答保持“可解释、可追溯、不过度承诺”。
-
-| 规则 | 检查内容 | 处理方式 |
-|---|---|---|
-| 禁止绝对化结论 | “一定能认定”“肯定赔付”“保证通过”等 | 改写为条件化表达 |
-| 必须提示经办口径 | 涉及认定、鉴定、待遇核定 | 增加“最终以经办机构核定为准” |
-| 引用依据必需 | 政策咨询类回答没有 citations | 标记为候选 badcase，返回保守回答 |
-| 地区一致性 | 用户指定地区与引用政策地区不一致 | 降低置信度，提示需要核对当地政策 |
-| 医疗/等级边界 | 直接判断伤残等级或替代医学鉴定 | 改为建议走劳动能力鉴定流程 |
-| 金额测算边界 | 待遇测算缺少关键字段却输出精确金额 | 改为区间估算或追问缺失字段 |
-
-Guard 输出写入 `safety_result`：
-
-```json
-{
-  "passed": false,
-  "risk_level": "medium",
-  "reasons": ["missing_citation", "absolute_commitment"],
-  "rewrite_required": true,
-  "suggested_warning": "以上仅供办事咨询参考，最终以当地经办机构核定为准。"
-}
-```
-
-## 14. 交互式 CLI 版本设计
-
-### 14.1 CLI 交互模式
-
-MVP 的核心入口是交互式启动，而不是一次性命令。用户运行：
-
-```bash
-python -m ananhu_agent
-```
-
-进入交互式 CLI：
-
-```text
-安安虎工伤智能助手 Agno MVP
-当前模式：交互式咨询
-输入 /help 查看命令，输入 /exit 退出。
-
->
-```
-
-支持内置命令：
-
-| 命令 | 说明 |
-|---|---|
-| `/help` | 查看可用命令 |
-| `/new` | 开启新会话 |
-| `/context` | 查看当前会话上下文摘要 |
-| `/trace` | 查看最近一次请求的 trace |
-| `/badcase` | 将最近一次回答标记为 badcase |
-| `/feedback good` | 标记最近一次回答有效 |
-| `/feedback bad` | 标记最近一次回答无效，并进入 badcase 收集流程 |
-| `/eval <dataset>` | 运行离线评测 |
-| `/exit` | 退出 CLI |
-
-仍保留非交互式命令，便于自动化测试：
-
-```bash
-python -m ananhu_agent ask "上班路上交通事故算工伤吗？" --province 四川省 --city 成都市
-python -m ananhu_agent eval --dataset eval_cases.jsonl
-python -m ananhu_agent trace show <request_id>
-```
-
-### 14.2 交互式会话流程
-
-```text
-启动 CLI
-  ↓
-创建 session_id
-  ↓
-用户输入问题
-  ↓
-AgentOrchestrator 处理
-  ↓
-展示意图、路由、工具调用摘要、最终回答
-  ↓
-等待用户下一步输入
-  ├── 输入新问题：继续当前会话
-  ├── /feedback good：记录正反馈
-  ├── /feedback bad：进入 badcase 收集
-  ├── /trace：查看 trace
-  └── /exit：退出
-```
-
-### 14.3 CLI 输出示例
-
-```text
-> 上班路上发生交通事故，能认定工伤吗？
-
-[Intent]
-- intent: work_injury_recognition
-- confidence: 0.91
-- route: DomainConsultationAgent + PolicyRAGAgent
-
-[Tools]
-- PolicyRAGTool: success, top_k=5
-
-[Answer]
-简短结论：
-如果是在合理上下班路线和合理时间内发生非本人主要责任的交通事故，通常具备认定工伤的条件。
-
-判断依据：
-……
-
-下一步建议：
-……
-
-[Trace]
-request_id: req_20260708_xxx
-latency: 4.2s
-```
-
-### 14.4 badcase 交互式收集流程
-
-当用户输入 `/badcase` 或 `/feedback bad` 时，CLI 不只记录「差评」，还要引导用户补充结构化信息：
-
-```text
-你要把最近一次回答标记为 badcase。
-
-请选择问题类型：
-1. 意图识别错误
-2. 法规检索不准
-3. 回答有幻觉
-4. 地区政策不匹配
-5. 工具调用失败
-6. 回答不完整
-7. 其他
-
-请输入编号：
-```
-
-继续收集：
-
-```text
-请补充你认为正确的答案或修正方向（可跳过）：
-请补充备注（可跳过）：
-是否加入回归评测集？[y/N]
-```
-
-系统写入 `badcases.jsonl`，并关联最近一次 `request_id`。
-
-## 15. 数据模型设计
-
-第一版不必引入复杂数据库，可以 SQLite + JSONL 起步。
-
-MVP 采用三类运行证据：
-
-| 类型 | 作用 | 形式 |
-|---|---|---|
-| `task_states` | 当前轮运行快照，回答“这轮跑到哪一步” | SQLite 表或 JSON |
-| `agent_traces` | 逐事件时间线，回答“中间发生了什么” | SQLite 表或 JSONL |
-| `run_reports` | 运行摘要，回答“最后拿什么做统计” | SQLite 表或 JSON |
-
-### 15.1 `task_states`
-
-| 字段 | 类型 | 说明 |
-|---|---|---|
-| id | string | request_id |
-| session_id | string | 会话 ID |
-| turn_id | int | 当前轮次 |
-| user_query | text | 用户输入 |
-| status | string | running / success / failed / clarified |
-| current_phase | string | intent / route / tool / aggregate / validate / final |
-| raw_intent | string | LLM 原始意图 |
-| revised_intent | string | 规则修正后的意图 |
-| active_slots | json | 当前有效槽位 |
-| missing_slots | json | 缺失槽位 |
-| route_agents | json | 本轮计划调用的 Agent |
-| prompt_refs | json | 本轮计划使用的 prompt id/version |
-| tool_steps | int | 已执行工具次数 |
-| model_attempts | int | 模型调用或重试次数 |
-| fallback_used | bool | 是否触发降级 |
-| error_message | text | 失败摘要 |
-| created_at | datetime | 创建时间 |
-| updated_at | datetime | 更新时间 |
-
-### 15.2 `agent_traces`
-
-| 字段 | 类型 | 说明 |
-|---|---|---|
-| id | string | trace event ID |
-| request_id | string | 关联 `task_states.id` |
-| session_id | string | 会话 ID |
-| event_type | string | intent_recognized / tool_called / answer_validated 等 |
-| phase | string | intent / route / tool / aggregate / validate / final |
-| payload | json | 事件输入输出 |
-| latency_ms | int | 当前事件耗时 |
-| created_at | datetime | 创建时间 |
-
-事件 payload 中至少保留以下聚合字段，便于查询：
-
-| 字段 | 类型 | 说明 |
-|---|---|---|
-| user_query | text | 用户输入 |
-| province | string | 省份 |
-| city | string | 城市 |
-| intent | string | 识别意图 |
-| raw_intent | string | LLM 原始意图 |
-| revised_intent | string | 规则修正后的意图 |
-| confidence | float | 置信度 |
-| active_slots | json | 合并后的业务槽位 |
-| missing_slots | json | 缺失槽位 |
-| route_agents | json | 被调用 Agent |
-| prompt_refs | json | 实际使用的 prompt id/version |
-| input_sections | json | 本次 prompt 注入的上下文分区 |
-| output_schema_valid | bool | 模型输出是否符合 schema |
-| tool_calls | json | 工具调用记录 |
-| draft_answer | text | 安全检查前的答案草稿 |
-| verification_result | json | 引用、地区、冲突等校验结果 |
-| safety_result | json | `PolicySafetyGuard` 检查结果 |
-| final_answer | text | 最终回答 |
-| fallback_used | bool | 是否触发降级 |
-| fallback_reason | string | 降级原因 |
-| latency_ms | int | 总耗时 |
-| status | string | success / failed / clarified |
-| created_at | datetime | 创建时间 |
-
-### 15.3 `run_reports`
-
-| 字段 | 类型 | 说明 |
-|---|---|---|
-| id | string | request_id |
-| session_id | string | 会话 ID |
-| final_status | string | success / failed / clarified |
-| final_intent | string | 最终意图 |
-| route_agents | json | 实际调用 Agent |
-| tool_count | int | 工具调用次数 |
-| model_attempts | int | 模型调用或重试次数 |
-| prompt_refs | json | 本轮使用的 prompt id/version 列表 |
-| prompt_metadata | json | ContextManager 输出的上下文分段和裁剪信息 |
-| output_schema_valid_rate | float | 本轮模型输出 schema 合法率 |
-| token_usage | json | token 或字符统计 |
-| latency_ms | int | 总耗时 |
-| fallback_used | bool | 是否触发降级 |
-| safety_result | json | 安全检查摘要 |
-| badcase_candidate | bool | 是否候选 badcase |
-| created_at | datetime | 创建时间 |
-
-### 15.4 `badcases`
-
-| 字段 | 类型 | 说明 |
-|---|---|---|
-| id | string | badcase ID |
-| request_id | string | 关联 trace |
-| query | text | 原始问题 |
-| predicted_intent | string | 预测意图 |
-| issue_type | string | intent_error / rag_miss / hallucination / tool_error |
-| expected_answer | text | 人工修正答案 |
-| fixed | bool | 是否已修复 |
-| created_at | datetime | 创建时间 |
-
-建议增加字段：
-
-| 字段 | 类型 | 说明 |
-|---|---|---|
-| session_id | string | 会话 ID |
-| turn_id | int | 当前轮次 |
-| agent_route | json | 实际调用的 Agent |
-| tool_calls | json | 工具调用快照 |
-| actual_answer | text | 系统原始回答 |
-| correction_note | text | 用户补充的修正方向 |
-| added_to_eval | bool | 是否加入回归评测集 |
-
-### 15.5 `eval_cases`
-
-| 字段 | 类型 | 说明 |
-|---|---|---|
-| id | string | 用例 ID |
-| query | text | 测试问题 |
-| province | string | 省份 |
-| city | string | 城市 |
-| expected_intent | string | 期望意图 |
-| expected_keywords | json | 期望命中关键词 |
-| expected_citations | json | 期望法规来源 |
-| difficulty | string | easy / medium / hard |
-
-## 16. badcase 收集与回流设计
-
-### 16.1 badcase 来源
-
-badcase 不只来自用户差评。MVP 阶段设计 4 个来源：
-
-| 来源 | 触发方式 | 说明 |
-|---|---|---|
-| 用户主动标记 | CLI `/badcase` | 用户认为最近一次回答有问题 |
-| 负反馈 | CLI `/feedback bad` | 用户快速差评后进入结构化收集 |
-| 系统自动标记 | 低置信度、工具失败、无引用依据 | 即使用户不反馈，也记录可疑案例 |
-| 评测失败 | `eval` runner 指标不达标 | 自动写入回归 badcase |
-
-### 16.2 自动 badcase 判定规则
-
-满足任一条件，系统应自动记录为候选 badcase：
-
-- `intent_result.confidence < 0.6`
-- `PolicyRAGTool` 无检索结果。
-- `AnswerValidator` 判定缺少法规依据。
-- 用户问题包含明确地区，但最终答案未体现地区。
-- 任一 P0 工具调用失败。
-- 最终答案为空、过短或只给泛化建议。
-- LLM-as-Judge 分数低于阈值。
-
-### 16.3 badcase 生命周期
-
-```text
-候选 badcase
-  ↓
-人工或用户补充修正方向
-  ↓
-加入 badcases.jsonl
-  ↓
-必要时转成 eval_cases.jsonl
-  ↓
-修复 Agent / Prompt / Tool / RAG 数据
-  ↓
-运行回归评测
-  ↓
-标记 fixed=true
-```
-
-### 16.4 badcase JSONL 示例
-
-```json
-{
-  "id": "bad_20260708_0001",
-  "request_id": "req_20260708_0001",
-  "session_id": "sess_001",
-  "turn_id": 3,
-  "query": "我在丹东上班受伤，待遇怎么算？",
-  "predicted_intent": "payment_calculation",
-  "issue_type": "region_policy_mismatch",
-  "agent_route": ["PaymentCalculationAgent", "PolicyRAGAgent"],
-  "tool_calls": ["tool_call_001", "tool_call_002"],
-  "actual_answer": "按照四川省标准……",
-  "expected_answer": "应优先匹配辽宁丹东或辽宁省政策。",
-  "correction_note": "地区槽位被错误继承为四川省。",
-  "added_to_eval": true,
-  "fixed": false,
-  "created_at": "2026-07-08T22:00:00+08:00"
-}
-```
-
-## 17. 评测体系设计
-
-### 17.1 第一版评测指标
-
-| 指标 | 说明 |
-|---|---|
-| Intent Accuracy | 意图识别准确率 |
-| Slot Accuracy | 地区、伤残等级、事故类型等槽位抽取准确率 |
-| RAG Hit Rate | 期望法规是否进入 TopK |
-| Citation Accuracy | 引用依据是否正确 |
-| Tool Success Rate | 工具调用成功率 |
-| Answer Pass Rate | LLM-as-Judge 或人工判定通过率 |
-| Latency P50 / P95 | 响应耗时 |
-| Format Valid Rate | Agent 输出是否符合 schema |
-| Cannot Answer Correctness | 证据不足时是否正确拒答或保守回答 |
-| Unsafe Expression Rate | 是否出现绝对化承诺、替代经办判断等高风险表达 |
-| Prompt Token Cost | 不同 prompt 版本的 token / 字符成本 |
-
-### 17.2 Prompt 评测指标
-
-Prompt 不是靠感觉修改，必须进入 eval-driven iteration。MVP 对 prompt 至少评估：
-
-| 指标 | 说明 |
-|---|---|
-| `format_valid_rate` | JSON / AgentMessage schema 合法率 |
-| `missing_slot_accuracy` | 缺失槽位识别是否正确 |
-| `citation_grounded_rate` | 回答是否基于 RAG evidence |
-| `cannot_answer_correctness` | 证据不足时是否正确拒答或保守回答 |
-| `tool_call_correctness` | 是否在该调用工具时调用工具，不虚构工具结果 |
-| `unsafe_expression_rate` | 是否出现绝对化、越权、无依据金额等表达 |
-| `prompt_token_cost` | 当前 prompt 版本的平均 token / 字符成本 |
-| `prompt_latency` | 当前 prompt 版本的平均模型耗时 |
-
-Prompt 回归评测流程：
-
-```text
-修改 prompt
-  ↓
-运行 eval_cases
-  ↓
-对比 prompt_version 前后指标
-  ↓
-通过：启用新版本并记录 change_note
-  ↓
-不通过：回滚到上一版本
-```
-
-### 17.3 最小评测集
-
-第一版至少准备 30 条：
-
-- 工伤认定：10 条。
-- 劳动能力鉴定：8 条。
-- 待遇测算：8 条。
-- 复合问题：4 条。
-
-## 18. 技术栈
-
-| 层级 | 技术 | 选择理由 |
-|---|---|---|
-| Agent 框架 | Agno | 支持 Agent、Team、Workflow、Tools、Memory、Storage，适合多 Agent 系统 |
-| CLI | Typer 或 argparse | 快速实现无前端交互 |
-| 配置 | Pydantic Settings + YAML | 管理多模型、多环境配置 |
-| LLM Provider | OpenAI-compatible、DashScope、DeepSeek 等 | 适配不同 Agent 的模型需求 |
-| 异步策略 | async I/O 可用，不做后台任务架构 | 模型、RAG、存储可异步调用，但 CLI MVP 保持单轮同步主流程 |
-| RAG | Milvus / Chroma（二选一） | 复用原项目 Milvus 经验；本地 MVP 可先用 Chroma 降低成本 |
-| Embedding | DashScope Embedding | 复用原项目经验 |
-| Reranker | BGE Reranker | 复用原项目经验 |
-| 存储 | SQLite + JSONL | CLI MVP 简单可靠 |
-| 日志 | loguru / structlog | 结构化日志 |
-| 评测 | pytest + JSONL + LLM-as-Judge | 支持离线回归 |
-| 包管理 | uv 或 Poetry | Python 项目依赖管理 |
-
-## 19. 风险与取舍
-
-### 19.1 风险
-
-- Agno 框架能力足够，但团队需要熟悉它的 Agent、Team、Workflow、Storage 和 Tool 设计方式。
-- 如果一开始就做 Web API、前端、语音、图片，会导致第一阶段失控。
-- 多模型会增加配置复杂度，需要统一 ModelRouter。
-- 评测集如果不补，项目仍然难以证明效果。
-- 如果过早引入复杂异步调度、并行 Agent 或后台任务，会增加 trace 乱序、状态合并和 badcase 复现难度。
-- 如果把业务规则、工具边界和安全治理都塞进 prompt，会导致 prompt 变长、职责混乱、badcase 难定位。
-
-### 19.2 取舍
-
-- 第一版优先 CLI，不做前端。
-- 第一版优先文本咨询，不做语音和图片。
-- 第一版优先 SQLite / JSONL，不上复杂数据库。
-- 第一版保留 Milvus 方案，但允许本地 MVP 用 Chroma 降低启动成本。
-- 第一版重点证明 Agent 闭环，而不是复刻线上所有能力。
-- 第一版允许 async I/O，但不做复杂异步任务平台；流式输出只作为后续体验增强，不作为 MVP 核心目标。
-- 第一版参考 Pico 的 Harness 思路，但不接入代码仓库工具、delegate、MCP / Skill 和完整 checkpoint / resume。
-- 第一版把 prompt 作为工程资产治理：模板版本化、上下文分区、输出 schema、失败策略和评测回归必须具备；地区过滤、待遇计算、安全硬规则仍放在代码或工具层。
-
-## 20. 参考资料
-
-- Agno 官方文档：https://docs.agno.com/
-- Agno Agent 文档：https://docs.agno.com/concepts/agents
-- Agno Teams 文档：https://docs.agno.com/concepts/teams
-- Agno Models 文档：https://docs.agno.com/concepts/models
-- Agno Tools 文档：https://docs.agno.com/concepts/tools
-- Agno Storage 文档：https://docs.agno.com/concepts/storage
-- Agno Metrics 文档：https://docs.agno.com/concepts/metrics
-- 原项目：`ananhu_common-main`
-- 参考标准：`面试官认可的多agent项目.md`
-- 参考项目：`饮食推荐Agent/Diet-Agent[1]`
-- 参考项目：`EchoMind面试型多agent项目`
-- 参考项目：`pico/pico.md`
+| LangGraph 类型泄漏 | 依赖规则、适配器边界和导入检查 |
+| Native 与 LangGraph 双状态机 | Native 降为 `WorkflowRuntime` 实现，不在图节点中完整调用旧 orchestrator |
+| 节点重试重复调用 | 稳定 call key、幂等等级和持久化执行记录 |
+| checkpoint 冒充业务状态 | 明确 checkpoint/session/case/trace 生命周期和权威关系 |
+| 多 Agent 过度拆分 | 用独立目标、上下文、权限和评测价值作为拆分门槛 |
+| 过期政策或测算被复用 | 版本、有效期、事实变更触发失效 |
+| fake 指标被误报为业务效果 | 离线 contract/eval 与真实模型/RAG smoke 分开报告 |
+
+## 17. MVP 验收边界
+
+当前 MVP 验收包括：
+
+- `uv run pytest -v` 通过。
+- CLI 咨询、会话、反馈和 eval 可运行。
+- 工具治理、Prompt、上下文、安全、trace、badcase 和分层指标有测试。
+- 当前离线 Native Runtime 行为可复现。
+
+LangGraph阶段额外要求：
+
+- Native 与 LangGraph Runtime 通过同一 contract tests。
+- LangGraph 公共边界不泄漏框架类型。
+- 状态增量、停止原因、能力调用和 trace 语义一致。
+- checkpoint 未启用时不得宣称支持跨进程恢复。
+
+真实业务验收还需要真实模型、受治理政策语料、检索评测和专家标注，不属于当前离线 harness 已完成事实。
