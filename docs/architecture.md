@@ -5,17 +5,18 @@
 ## 文档状态
 
 - 当前阶段：四 Agent Native Runtime 离线闭环已实现，正在进行框架中立化和 LangGraph 运行时演进。
+- 当前架构版本：v0.2，完整快照见 `architecture/versions/v0.2-framework-neutral-baseline.md`。
 - 当前运行时：`AgentOrchestrator` 驱动的 Native Runtime。
 - 目标运行时：LangGraph 作为默认、可替换的工作流运行时。
 - 核心原则：领域、应用、Agent、Capability、Trace 和 Eval 协议不依赖 LangGraph。
 - 外部接口：当前只有 CLI；没有 HTTP API、WebSocket 或前端。
-- 架构基线：`TECH_ARCHITECTURE_MVP.md`。
+- 架构版本入口：`TECH_ARCHITECTURE_MVP.md`。
 
 ## 事实源优先级
 
 1. 对应 `docs/architecture/` 分册中的当前规则。
 2. `docs/architecture/99-changelog.md` 中较新的架构决策。
-3. `TECH_ARCHITECTURE_MVP.md` 的整体基线。
+3. `TECH_ARCHITECTURE_MVP.md` 指向的当前只读版本正文。
 4. 已完成任务计划只作为实现历史，不覆盖当前架构事实。
 
 ## 阅读顺序
@@ -30,6 +31,8 @@
 | 6 | `05-data-observability.md` | Trace、Usage、Badcase 和 Eval |
 | 7 | `10-evolution-rules.md` | 架构演进与同步规则 |
 | 8 | `99-changelog.md` | 架构变更记录 |
+
+完整历史版本统一保存在 `docs/architecture/versions/`，当前主题分册与当前版本正文必须保持一致。
 
 ## 核心原则
 

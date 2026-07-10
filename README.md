@@ -90,7 +90,8 @@ tests/
 | 文档 | 说明 |
 |---|---|
 | `AGENTS.md` | 开发约束、分支流程和文档同步纪律 |
-| `TECH_ARCHITECTURE_MVP.md` | 当前 MVP 技术架构基线 |
+| `TECH_ARCHITECTURE_MVP.md` | 技术架构版本入口和当前版本索引 |
+| `docs/architecture/versions/` | 已发布的只读完整架构版本正文 |
 | `docs/architecture.md` | 架构事实源入口和阅读顺序 |
 | `docs/architecture/00-overview.md` | 定位、范围和分层 |
 | `docs/architecture/01-business-flow.md` | 业务阶段和数据流 |

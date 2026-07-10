@@ -1,7 +1,8 @@
 # 项目规范
 
 > 单一事实来源：
-> - MVP 技术架构基线：`TECH_ARCHITECTURE_MVP.md`
+> - 技术架构版本入口：`TECH_ARCHITECTURE_MVP.md`
+> - 当前完整版本：由版本入口指向 `docs/architecture/versions/` 中的只读正文
 > - 技术架构入口：`docs/architecture.md`
 > - API 契约入口：`docs/api-contracts.md`
 > - 后端开发规范：`docs/backend-conventions.md`
@@ -70,12 +71,13 @@
 
 ## 架构文档版本化流程
 
-- `docs/architecture.md` 始终作为当前有效架构入口，只维护当前版本号、当前文档链接、阅读顺序和版本索引，不承载完整历史正文。
+- `TECH_ARCHITECTURE_MVP.md` 是技术架构版本入口，维护当前版本指向、版本索引和对应计划，不再直接承载完整架构正文。
+- `docs/architecture.md` 是当前主题化架构入口，维护当前版本号、分册阅读顺序和事实源优先级，不承载完整历史正文。
 - 每次架构版本升级或新增影响系统边界的功能前，先读取当前版本文档，以它为基线生成新版本，不允许直接覆盖旧版本文件。
 - 版本文档统一放在 `docs/architecture/versions/`，命名格式为 `v<版本号>-<主题>.md`，例如 `v0.3-langgraph-runtime.md`、`v0.4-production-rag.md`。
 - 新版本文档必须包含：版本信息、基线版本、变更原因、完整架构、相对上一版本的差异、兼容性与迁移策略、任务计划入口、验收标准和已知限制。
 - 新增功能如果改变工作流、状态协议、Agent/Capability 边界、数据模型、外部接口、部署方式、安全规则或观测评测口径，必须升级架构版本；仅修正错别字、失效链接或不改变语义的表达可以直接修订当前入口文档。
-- 生成新版本后，同一变更必须更新 `docs/architecture.md` 的当前版本指向和版本索引，并在 `docs/architecture/99-changelog.md` 记录版本、日期、变更摘要和迁移影响。
+- 生成新版本后，同一变更必须更新 `TECH_ARCHITECTURE_MVP.md` 的当前版本指向和版本索引、`docs/architecture.md` 的当前版本信息，并在 `docs/architecture/99-changelog.md` 记录版本、日期、变更摘要和迁移影响。
 - 对应开发任务计划也必须新建版本化文件，不覆盖上一版本计划；计划中要明确基于哪个架构版本以及依赖的上一任务状态。
 - 旧版本只能增加“已废弃 / 已归档 / 被哪个版本替代”的元信息，不得修改其原始架构正文。
 - Agent 开始架构或大功能任务前，必须先确认当前架构版本、目标版本和新文档路径；未完成版本化文档时不得直接进入实现。
