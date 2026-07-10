@@ -72,7 +72,7 @@
 
 **文件：** 上述架构文档、`pyproject.toml`、`uv.lock`
 
-- [ ] **步骤 1：基于 v0.6 创建完整 v0.7 快照**
+- [x] **步骤 1：基于 v0.6 创建完整 v0.7 快照**
 
 复制 `docs/architecture/versions/v0.6-model-catalog.md` 为
 `docs/architecture/versions/v0.7-textual-chat-tui.md`，将版本信息改为：
@@ -88,11 +88,11 @@
 正文必须包含：单栏 TUI、RunProgressEvent、public/transient 投影、sequence/gap、取消屏障、reasoning
 非持久化、Usage reported、other 无工具路径、旧 chat 能力迁移、兼容策略和限制。
 
-- [ ] **步骤 2：同步架构入口与分册**
+- [x] **步骤 2：同步架构入口与分册**
 
 更新入口为 v0.7；在 02/03/04/05 和 changelog 中分别维护所有权。不得修改 v0.6 正文。
 
-- [ ] **步骤 3：增加 Textual 依赖**
+- [x] **步骤 3：增加 Textual 依赖**
 
 运行：
 
@@ -111,7 +111,7 @@ ananhu_agent = ["prompts/templates/*.yaml", "cli/tui/*.tcss"]
 
 预期：Textual 和 pytest-asyncio 已锁定，TCSS 被 wheel 包含；不直接新增 Rich 依赖。
 
-- [ ] **步骤 4：验证架构与依赖**
+- [x] **步骤 4：验证架构与依赖**
 
 ```bash
 uv run python -c "import textual; print(textual.__version__)"
@@ -122,7 +122,7 @@ rg -n "v0.7|RunProgressEvent|reasoning_content|Textual" \
 
 预期：命令退出 0；入口只指向 v0.7；v0.6 文件无 diff。
 
-- [ ] **步骤 5：Commit**
+- [x] **步骤 5：Commit**
 
 ```bash
 git add pyproject.toml uv.lock TECH_ARCHITECTURE_MVP.md docs/architecture.md docs/architecture/02-agent-runtime.md docs/architecture/03-prompt-context.md docs/architecture/04-tools-models.md docs/architecture/05-data-observability.md docs/architecture/99-changelog.md docs/architecture/versions/v0.7-textual-chat-tui.md
