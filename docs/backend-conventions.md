@@ -49,7 +49,7 @@ ananhu_agent/
 ## Runtime 迁移规则
 
 - 当前 `AgentOrchestrator` 视为 Native Runtime，不再作为永久唯一状态推进方。
-- 当前运行时仍使用共享 `AgentContext` 和 `AgentMessage`；任务 26-29 完成后迁移到 `WorkflowState` 和 `StatePatch`。
+- 当前运行时仍使用共享 `AgentContext` 和 `AgentMessage`；任务 26 已新增 `WorkflowState` 显式映射，任务 27-29 完成后再迁移到 `StatePatch` 和 `WorkflowRuntime`。
 - 目标状态转换和 reducer 使用普通 Python 纯函数，可脱离 LangGraph 测试。
 - 目标节点返回 `StatePatch`，不得原地修改共享状态。
 - 不允许把完整 Native orchestrator 包在单个 LangGraph 节点中。

@@ -37,7 +37,7 @@ created_at
 producer
 ```
 
-当前对象字段以 `ananhu_agent/schemas.py` 为准。任务 26-31 将逐步增加 `case_id`、`message_id`、`schema_version`、`runtime_name`、`runtime_version`、`node_id`、`attempt` 和 `logical_call_id`；迁移完成后 Prompt、模型、能力、知识语料和公式版本必须可关联。
+当前已在 `ananhu_agent/workflow/contracts.py` 为 `RunRequest`、`WorkflowState` 和 `WorkflowResult` 增加 `schema_version`、`run_id`、`request_id`、`session_id`、`case_id` 和 `message_id`。旧 JSONL 运行证据字段仍以 `ananhu_agent/schemas.py` 为准；任务 27-31 将继续增加 `runtime_name`、`runtime_version`、`node_id`、`attempt` 和 `logical_call_id`，迁移完成后 Prompt、模型、能力、知识语料和公式版本必须可关联。
 
 ## TraceEvent
 
