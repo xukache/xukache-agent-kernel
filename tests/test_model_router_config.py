@@ -1,3 +1,5 @@
+from pathlib import Path
+
 import pytest
 
 from ananhu_agent.config.settings import RuntimeSettings
@@ -58,3 +60,60 @@ def test_model_router_rejects_real_provider_without_secret():
         router.gateway_for("intent_fast")
 
     assert captured.value.code is ModelErrorCode.CONFIGURATION
+
+
+def test_model_router_builds_openai_gateway_from_catalog(
+    tmp_path: Path, monkeypatch: pytest.MonkeyPatch
+) -> None:
+    catalog_path = tmp_path / "models.yaml"
+    catalog_path.write_text(
+        """
+providers:
+  deepseek:
+    protocol: openai_compatible
+    base_url: https://api.deepseek.com/v1
+    api_key_env: DEEPSEEK_API_KEY
+profiles:
+  intent_fast:
+    provider: deepseek
+    model: deepseek-chat
+    temperature: 0
+    timeout_seconds: 20
+""",
+        encoding="utf-8",
+    )
+    monkeypatch.setenv("DEEPSEEK_API_KEY", "secret")
+
+    router = ModelRouter(RuntimeSettings(model_catalog=catalog_path))
+
+    assert isinstance(router.gateway_for("intent_fast"), OpenAICompatibleModelGateway)
+    assert router.get_profile("intent_fast")["provider"] == "deepseek"
+
+
+def test_model_router_rejects_catalog_provider_without_secret(
+    tmp_path: Path, monkeypatch: pytest.MonkeyPatch
+) -> None:
+    monkeypatch.delenv("DEEPSEEK_API_KEY", raising=False)
+    catalog_path = tmp_path / "models.yaml"
+    catalog_path.write_text(
+        """
+providers:
+  deepseek:
+    protocol: openai_compatible
+    base_url: https://api.deepseek.com/v1
+    api_key_env: DEEPSEEK_API_KEY
+profiles:
+  intent_fast:
+    provider: deepseek
+    model: deepseek-chat
+""",
+        encoding="utf-8",
+    )
+
+    router = ModelRouter(RuntimeSettings(model_catalog=catalog_path))
+
+    with pytest.raises(ModelGatewayError) as captured:
+        router.gateway_for("intent_fast")
+
+    assert captured.value.code is ModelErrorCode.CONFIGURATION
+    assert captured.value.provider == "deepseek"
