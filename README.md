@@ -1,6 +1,6 @@
 # 安安虎工伤智能助手 Agent Harness
 
-安安虎工伤智能助手是面向工伤认定、劳动能力鉴定、待遇辅助测算和政策咨询的 Python 后端 Agent Harness。项目当前以 CLI 作为开发和验收入口，默认运行时为 `NativeWorkflowRuntime`，通过框架中立 `WorkflowRuntime` 端口调用。
+安安虎工伤智能助手是面向工伤认定、劳动能力鉴定、待遇辅助测算和政策咨询的 Python 后端 Agent Harness。项目当前以 CLI 作为开发和验收入口，默认运行时为 `LangGraphWorkflowRuntime`，通过框架中立 `WorkflowRuntime` 端口调用。
 
 当前代码已经具备离线可回归闭环：CLI、MVP Agent、Prompt/上下文管理、CapabilityGateway、fixture 政策检索、确定性待遇测算、JSONL trace、badcase 和 eval。LangGraph 尚未接入；后续接入时只作为可替换运行时，不拥有业务状态、能力治理、Prompt、trace 或 eval 协议。
 
@@ -55,7 +55,8 @@ ananhu_agent/
   orchestrator/    # 聚合、规则、安全校验和 badcase 规则
   prompts/         # 版本化 Prompt
   runtime.py       # 默认 Runtime 组合根
-  runtimes/native/ # 当前默认 Native Runtime
+  runtimes/native/ # 显式回归 Native Runtime
+  runtimes/langgraph/ # 当前默认 LangGraph Runtime
   storage/         # JSONL 存储和运行证据
   tools/           # ToolRegistry、ToolExecutor 和业务工具
   workflow/        # RunRequest、WorkflowState、StatePatch、Reducer、WorkflowResult

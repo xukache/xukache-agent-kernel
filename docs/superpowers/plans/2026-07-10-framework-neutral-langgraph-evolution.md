@@ -45,7 +45,7 @@
 - [x] 任务 27：定义 StatePatch、Reducer、调用身份和 Trace 协议
 - [x] 任务 28：建立 CapabilityGateway 端口和 ToolExecutor 适配
 - [x] 任务 29：阶段化 Native Runtime 并建立 Runtime Contract
-- [ ] 任务 30：接入最小串行 LangGraph Runtime
+- [x] 任务 30：接入最小串行 LangGraph Runtime
 - [ ] 任务 31：双运行时差分验收
 - [ ] 任务 32：接入真实 ModelGateway
 - [ ] 任务 33：建立真实 KnowledgeGateway 与政策基线
@@ -182,7 +182,7 @@ uv run pytest -v
 
 **验收标准：** `ask()` 不再原地修改大状态对象；阶段可独立测试；CLI/Eval 不依赖具体 runtime；无 LangGraph 依赖。
 
-### - [ ] 任务 30：接入最小串行 LangGraph Runtime
+### - [x] 任务 30：接入最小串行 LangGraph Runtime
 
 **目标：** 只映射已经稳定的项目阶段和协议，并将 LangGraph 设为默认可配置运行时。
 
@@ -205,6 +205,8 @@ uv run pytest -v
 uv run pytest tests/runtime_contracts -v
 uv run pytest tests/test_runtime_selection.py -v
 ```
+
+**事实源状态：** 已新增最小串行 `LangGraphWorkflowRuntime`，图节点只返回项目 `StatePatch` 并由独立节点调用项目 reducer；默认运行时已切换为 LangGraph，保留 `runtime=native` 和 `ANANHU_RUNTIME=native` 显式回归选项；两种运行时使用同一 contract suite。
 
 **验收标准：** 默认选择 LangGraph；Native 可切换；两个实现通过单 runtime contract；项目公共模块没有 LangGraph 导入。
 

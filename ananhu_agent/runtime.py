@@ -32,8 +32,8 @@ def create_default_runtime(
 ) -> WorkflowRuntime:
     """创建默认 WorkflowRuntime。
 
-    任务 29 阶段默认仍是 Native Runtime；后续任务 30 会在同一组合根中接入
-    LangGraph Runtime，但 CLI/Eval 不需要改变依赖方向。
+    默认装配 LangGraph Runtime，也可通过 RuntimeSettings 显式选择 Native；
+    CLI/Eval 始终只依赖框架中立端口。
     """
 
     settings = settings or RuntimeSettings(runtime_dir=base_path)
@@ -42,7 +42,7 @@ def create_default_runtime(
     registry = _default_tool_registry()
     tool_executor = ToolExecutor(registry, trace_recorder)
     capability_gateway = ToolExecutorCapabilityGateway(tool_executor)
-    return NativeWorkflowRuntime(
+    runtime_kwargs = dict(
         intent_agent=IntentRouterAgent(
             model_router.client_for("intent_fast"),
             ContextManager(),
@@ -59,6 +59,12 @@ def create_default_runtime(
         badcase_store=BadcaseStore(base_path / "badcases.jsonl"),
         model_router=model_router,
     )
+    if settings.runtime == "native":
+        return NativeWorkflowRuntime(**runtime_kwargs)
+
+    from ananhu_agent.runtimes.langgraph.runtime import LangGraphWorkflowRuntime
+
+    return LangGraphWorkflowRuntime(**runtime_kwargs)
 
 
 def _default_tool_registry() -> ToolRegistry:

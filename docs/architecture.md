@@ -4,10 +4,10 @@
 
 ## 文档状态
 
-- 当前阶段：NativeWorkflowRuntime 离线闭环已实现，正在准备 LangGraph 运行时接入。
-- 当前架构版本：v0.2，完整快照见 `architecture/versions/v0.2-framework-neutral-baseline.md`。
-- 当前运行时：`NativeWorkflowRuntime`，通过 `WorkflowRuntime` 端口调用。
-- 目标运行时：LangGraph 作为默认、可替换的工作流运行时。
+- 当前阶段：最小串行 LangGraph 运行时已接入，Native Runtime 保留用于回归。
+- 当前架构版本：v0.3，完整快照见 `architecture/versions/v0.3-langgraph-runtime.md`。
+- 当前运行时：默认 `LangGraphWorkflowRuntime`，通过 `WorkflowRuntime` 端口调用；可显式选择 `NativeWorkflowRuntime`。
+- 演进方向：在框架中立协议下逐步扩展真实模型、知识和差分验收。
 - 核心原则：领域、应用、Agent、Capability、Trace 和 Eval 协议不依赖 LangGraph。
 - 外部接口：当前只有 CLI；没有 HTTP API、WebSocket 或前端。
 - 架构版本入口：`TECH_ARCHITECTURE_MVP.md`。

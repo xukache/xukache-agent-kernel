@@ -2,7 +2,7 @@
 
 ## 项目形态
 
-本项目是 Python 3.11 后端 Agent Harness，当前以 CLI 为入口。Native Runtime 已实现，LangGraph 将在框架中立协议完成后作为默认可替换运行时接入。
+本项目是 Python 3.11 后端 Agent Harness，当前以 CLI 为入口。LangGraph 是默认可替换运行时，Native Runtime 保留用于显式回归。
 
 ## 环境管理
 
@@ -30,8 +30,8 @@ ananhu_agent/
   application/          # 用例、阶段服务、状态转换、响应组装
   ports/                # Runtime、Model、Knowledge、Capability、Storage 端口
   runtimes/
-    native/             # 当前默认 Native Runtime
-    langgraph/          # LangGraph 专有图、node 和 mapper
+    native/             # 显式回归 Native Runtime
+    langgraph/          # 当前默认的 LangGraph 专有图、node 和 mapper
   infrastructure/       # 模型、检索、存储、观测适配
   interfaces/           # CLI 和未来外部入口
 ```
@@ -44,11 +44,11 @@ ananhu_agent/
 - `application` 只依赖 domain 和 ports。
 - runtime 与 infrastructure 实现 ports，不能反向成为业务层依赖。
 - LangGraph 类型只允许出现在 `runtimes/langgraph/` 和组合根。
-- 当前 CLI 和 EvalRunner 依赖 `WorkflowRuntime` 端口，由组合根 `create_default_runtime()` 默认装配 Native Runtime，不直接实例化具体图节点。
+- 当前 CLI 和 EvalRunner 依赖 `WorkflowRuntime` 端口，由组合根 `create_default_runtime()` 默认装配 LangGraph Runtime，不直接实例化具体图节点。
 
 ## Runtime 迁移规则
 
-- 当前 `NativeWorkflowRuntime` 通过 `WorkflowRuntime.invoke()` 提供默认运行时；不得新增旧 orchestrator 兼容入口。
+- `LangGraphWorkflowRuntime` 通过 `WorkflowRuntime.invoke()` 提供默认运行时；`RuntimeSettings(runtime="native")` 仅用于显式回归，不得新增旧 orchestrator 兼容入口。
 - Native Runtime 阶段服务必须以 `WorkflowState` 为输入、以 `StatePatch` 为输出，并经纯 Python reducer 合并。
 - 状态转换和 reducer 使用普通 Python 纯函数，可脱离 LangGraph 测试。
 - 目标节点返回 `StatePatch`，不得原地修改共享状态。

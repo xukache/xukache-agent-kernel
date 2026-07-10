@@ -3,6 +3,9 @@ from __future__ import annotations
 import inspect
 import asyncio
 
+import pytest
+
+from ananhu_agent.config.settings import RuntimeSettings
 from ananhu_agent.runtime import create_default_runtime
 from ananhu_agent.capabilities.contracts import (
     CapabilityError,
@@ -32,8 +35,16 @@ def _request(query: str, *, run_id: str = "run_contract_1") -> RunRequest:
     )
 
 
-def test_native_runtime_invokes_framework_neutral_port_and_returns_result(tmp_path):
-    runtime = create_default_runtime(tmp_path)
+def _runtime(tmp_path, runtime_name: str):
+    return create_default_runtime(
+        tmp_path,
+        RuntimeSettings(runtime_dir=tmp_path, runtime=runtime_name),
+    )
+
+
+@pytest.mark.parametrize("runtime_name", ["native", "langgraph"])
+def test_runtime_invokes_framework_neutral_port_and_returns_result(tmp_path, runtime_name):
+    runtime = _runtime(tmp_path, runtime_name)
 
     assert isinstance(runtime, WorkflowRuntime)
     assert inspect.iscoroutinefunction(runtime.invoke)
@@ -49,14 +60,15 @@ def test_native_runtime_invokes_framework_neutral_port_and_returns_result(tmp_pa
     assert result.final_state.capability_call_count == 2
 
 
-def test_native_runtime_records_runtime_trace_identity(tmp_path):
-    runtime = create_default_runtime(tmp_path)
+@pytest.mark.parametrize("runtime_name", ["native", "langgraph"])
+def test_runtime_records_runtime_trace_identity(tmp_path, runtime_name):
+    runtime = _runtime(tmp_path, runtime_name)
 
     asyncio.run(runtime.invoke(_request("四川十级工伤，月工资6000，大概能赔多少钱？")))
 
     events = runtime.trace_recorder.read_all()
     assert events
-    assert {event["runtime_name"] for event in events} == {"native"}
+    assert {event["runtime_name"] for event in events} == {runtime_name}
     assert all(event["node_id"] for event in events)
     capability_events = [event for event in events if event["event_type"] == "tool_called"]
     assert capability_events
@@ -64,8 +76,9 @@ def test_native_runtime_records_runtime_trace_identity(tmp_path):
     assert all(event["attempt"] == 1 for event in capability_events)
 
 
-def test_native_runtime_surfaces_clarification_stop_reason(tmp_path):
-    runtime = create_default_runtime(tmp_path)
+@pytest.mark.parametrize("runtime_name", ["native", "langgraph"])
+def test_runtime_surfaces_clarification_stop_reason(tmp_path, runtime_name):
+    runtime = _runtime(tmp_path, runtime_name)
 
     result = asyncio.run(runtime.invoke(_request("这个能不能算？", run_id="run_clarify")))
 
@@ -74,8 +87,9 @@ def test_native_runtime_surfaces_clarification_stop_reason(tmp_path):
     assert result.clarification_question
 
 
-def test_native_runtime_surfaces_insufficient_evidence_stop_reason(tmp_path):
-    runtime = create_default_runtime(tmp_path)
+@pytest.mark.parametrize("runtime_name", ["native", "langgraph"])
+def test_runtime_surfaces_insufficient_evidence_stop_reason(tmp_path, runtime_name):
+    runtime = _runtime(tmp_path, runtime_name)
 
     result = asyncio.run(runtime.invoke(_request("辽宁特殊政策怎么赔？", run_id="run_no_evidence")))
 
@@ -83,8 +97,9 @@ def test_native_runtime_surfaces_insufficient_evidence_stop_reason(tmp_path):
     assert result.stop_reason is StopReason.INSUFFICIENT_EVIDENCE
 
 
-def test_native_runtime_surfaces_capability_failed_stop_reason(tmp_path):
-    runtime = create_default_runtime(tmp_path)
+@pytest.mark.parametrize("runtime_name", ["native", "langgraph"])
+def test_runtime_surfaces_capability_failed_stop_reason(tmp_path, runtime_name):
+    runtime = _runtime(tmp_path, runtime_name)
 
     async def fail_capability(request):
         return CapabilityResult(
@@ -123,7 +138,8 @@ def test_native_runtime_surfaces_capability_failed_stop_reason(tmp_path):
     assert result.stop_reason is StopReason.CAPABILITY_FAILED
 
 
-def test_native_runtime_surfaces_safety_blocked_stop_reason(tmp_path, monkeypatch):
+@pytest.mark.parametrize("runtime_name", ["native", "langgraph"])
+def test_runtime_surfaces_safety_blocked_stop_reason(tmp_path, monkeypatch, runtime_name):
     from ananhu_agent.runtimes.native import stages
 
     class BlockingSafetyGuard:
@@ -131,7 +147,7 @@ def test_native_runtime_surfaces_safety_blocked_stop_reason(tmp_path, monkeypatc
             return SafetyResult(passed=False, warnings=["absolute_commitment"])
 
     monkeypatch.setattr(stages, "PolicySafetyGuard", BlockingSafetyGuard)
-    runtime = create_default_runtime(tmp_path)
+    runtime = _runtime(tmp_path, runtime_name)
 
     result = asyncio.run(runtime.invoke(_request("四川十级工伤，月工资6000，大概能赔多少钱？", run_id="run_safe")))
 

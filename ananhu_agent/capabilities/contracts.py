@@ -56,6 +56,8 @@ class CapabilityRequest(BaseModel):
     node_id: str = Field(description="发起调用的业务节点或阶段服务。")
     logical_call_id: str = Field(description="逻辑调用 ID，重试时保持不变。")
     attempt: int = Field(default=1, ge=1, description="物理尝试次数，从 1 开始。")
+    runtime_name: str = Field(default="native", description="发起调用的项目运行时名称，用于 trace 归属。")
+    runtime_version: str = Field(default="workflow.v1", description="发起调用的运行时版本。")
 
 
 class CapabilityResult(BaseModel):

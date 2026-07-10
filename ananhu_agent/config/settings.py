@@ -1,7 +1,7 @@
 from __future__ import annotations
 
 from pathlib import Path
-from typing import Any
+from typing import Any, Literal
 
 from pydantic import Field
 from pydantic_settings import BaseSettings, SettingsConfigDict
@@ -15,6 +15,7 @@ class RuntimeSettings(BaseSettings):
     """
 
     runtime_dir: Path = Path(".ananhu-runtime")
+    runtime: Literal["native", "langgraph"] = "langgraph"
     prompt_template_dir: Path = Path("ananhu_agent/prompts/templates")
     models: dict[str, dict[str, Any]] = Field(
         default_factory=lambda: {

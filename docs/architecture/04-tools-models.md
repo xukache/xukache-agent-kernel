@@ -54,6 +54,8 @@ output
 capability_name
 caller
 node_id
+runtime_name
+runtime_version
 logical_call_id
 attempt
 policy
@@ -71,7 +73,7 @@ tool_call_result
 - `deterministic`：计算类，相同输入和版本返回相同结果。
 - `side_effecting`：未来写操作，必须持久化幂等记录并限制重放。
 
-框架节点重试不能自行决定是否重复执行业务能力。
+框架节点重试不能自行决定是否重复执行业务能力。`CapabilityRequest` 同时携带项目运行时名称和版本，适配器仅将其写入 ToolExecutor trace，不把框架类型传入能力协议。
 
 ## ModelGateway
 
