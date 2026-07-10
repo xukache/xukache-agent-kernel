@@ -88,6 +88,7 @@
 | P4  | 实现 ToolRegistry、ToolExecutor 和 MVP 工具 | P2、P3    | RAG、测算、引用工具均经 executor 调用并写 trace  |
 | P5  | 实现 4 个 Agent 与 Orchestrator 垂直链路      | P2、P3、P4 | CLI 可回答工伤认定、劳动能力鉴定、待遇测算            |
 | P6  | 实现 eval、badcase 和文档同步                 | P5       | `/eval` 产出 metrics，失败样例写 badcase   |
+| P7  | 真实 Agno / LLM / RAG MVP 垂直切片           | P5、P6    | 真实模型、真实政策数据和 Agno SDK 链路可冒烟         |
 
 
 依赖规则：
@@ -96,6 +97,7 @@
 - P4 不依赖 P5，因为工具治理必须先于 Agent 调用。
 - P5 不允许绕过 P4 直接调用工具函数。
 - P6 只依赖 P5 的完整单轮链路，不反向影响前面协议。
+- P7 不替换前面 fake harness，而是在同一协议下新增真实 smoke 路径；fake 测试继续作为离线回归基线。
 
 ## 3. 任务清单
 
@@ -3761,6 +3763,633 @@ git commit -m "feat(agno): add runtime adapter boundary"
 - 文档明确当前 MVP 与真实 Agno runtime 的边界。
 - 不破坏当前 CLI / eval / trace 闭环。
 
+### 真实 MVP 阶段原则：从 mock 闭环升级为可暴露真实问题的垂直切片
+
+当前任务 1-24 已经证明工程协议和离线 harness 可运行，但尚未证明真实业务链路可用。后续任务仍属于 MVP 阶段，目标不是继续堆外围能力，而是按第一性原理验证真实闭环：
+
+1. **真实运行时先于复杂功能**：先安装并导入 Agno SDK，确认项目依赖和 Python 3.11 兼容。
+2. **真实模型先从最小风险层接入**：先让 `IntentRouterAgent` 支持真实 LLM profile，暴露 JSON 解析、槽位抽取、模型异常和 trace 问题。
+3. **真实知识源先于复杂 RAG**：先用 20-50 条真实法规 / 办事指南构建本地政策语料，保证引用、地区、来源可追踪。
+4. **工具治理不能被框架绕过**：Agno Tool / Agent 接入必须仍经过 `ToolExecutor` 或等价 adapter，不能让模型直接调用底层函数。
+5. **真实 smoke eval 是 MVP 验收门槛**：必须有一组独立于 mock fixture 的真实 smoke cases，并将失败写入 badcase。
+6. **fake harness 继续保留**：fake model 和 fixture RAG 仍用于无 key、无网络的快速回归；真实 smoke 用显式环境变量开启。
+
+外部依据：
+
+- Agno 官方文档提供 `Agent`、`AgentOS`、OpenAI 模型类、函数工具和 AgentOS 服务方式；后续任务实现时必须以官方文档和本地安装结果为准。
+- 当前项目仍遵守 `uv` 依赖管理纪律；安装 Agno 时使用 `uv add`，不把 `pip install` 写入项目主路径命令。
+
+### 任务 25：安装 Agno SDK 并建立真实依赖冒烟测试
+
+**目标：** 让项目真实安装 Agno SDK，而不再只有本地兼容 adapter。
+
+**涉及模块：** `pyproject.toml`、`uv.lock`、`agno_adapters`。
+
+**前置依赖：** 任务 24。
+
+**文件：**
+
+- 修改：`pyproject.toml`
+- 修改：`uv.lock`
+- 创建：`tests/test_agno_sdk_installation.py`
+- 修改：`docs/backend-conventions.md`
+
+- [ ] **步骤 1：编写失败测试**
+
+创建 `tests/test_agno_sdk_installation.py`：
+
+```python
+def test_agno_sdk_imports():
+    from agno.agent import Agent
+    from agno.os import AgentOS
+
+    assert Agent is not None
+    assert AgentOS is not None
+```
+
+- [ ] **步骤 2：运行测试验证失败**
+
+运行：
+
+```bash
+uv run pytest tests/test_agno_sdk_installation.py -v
+```
+
+预期：FAIL，报错包含 `ModuleNotFoundError: No module named 'agno'`。
+
+- [ ] **步骤 3：安装 Agno 依赖**
+
+运行：
+
+```bash
+uv add "agno[os]" openai
+```
+
+要求：
+
+- `pyproject.toml` 出现 `agno` 和 `openai` 依赖。
+- `uv.lock` 更新。
+- 不新增 HTTP API 或前端，只安装 SDK / AgentOS 运行时依赖。
+
+- [ ] **步骤 4：运行测试验证通过**
+
+运行：
+
+```bash
+uv run pytest tests/test_agno_sdk_installation.py tests/test_agno_adapters.py -v
+```
+
+预期：全部通过。
+
+- [ ] **步骤 5：提交**
+
+```bash
+git add pyproject.toml uv.lock tests/test_agno_sdk_installation.py docs/backend-conventions.md
+git commit -m "build(agno): install agno sdk"
+```
+
+**验收标准：**
+
+- Agno SDK 可真实导入。
+- 项目依赖仍由 `uv` 管理。
+- 当前 fake harness 不受影响。
+
+### 任务 26：接入真实 LLM profile 的 IntentRouter 冒烟路径
+
+**目标：** 让 `IntentRouterAgent` 可通过 `ModelRouter` 切换 fake / real profile，并用真实模型跑 intent / slot 冒烟测试。
+
+**涉及模块：** `models`、`agents`、`config`、`trace`。
+
+**前置依赖：** 任务 23、任务 25。
+
+**文件：**
+
+- 创建：`ananhu_agent/models/agno_model_client.py`
+- 修改：`ananhu_agent/models/model_router.py`
+- 修改：`ananhu_agent/config/settings.py`
+- 修改：`ananhu_agent/agents/intent_router.py`
+- 创建：`tests/test_real_model_intent_smoke.py`
+- 修改：`docs/architecture/04-tools-models.md`
+
+- [ ] **步骤 1：编写失败测试**
+
+创建 `tests/test_real_model_intent_smoke.py`：
+
+```python
+import os
+
+import pytest
+
+from ananhu_agent.config.settings import RuntimeSettings
+from ananhu_agent.models.model_router import ModelRouter
+
+
+@pytest.mark.skipif(
+    os.getenv("ANANHU_REAL_MODEL_SMOKE") != "1",
+    reason="real model smoke is opt-in",
+)
+def test_real_model_intent_profile_extracts_payment_slots():
+    settings = RuntimeSettings(
+        models={
+            "intent_fast": {
+                "provider": "agno_openai",
+                "model": os.getenv("ANANHU_REAL_MODEL_ID", "gpt-4o-mini"),
+                "temperature": 0,
+            }
+        }
+    )
+    client = ModelRouter(settings).client_for("intent_fast")
+
+    result = client.classify_and_extract("四川十级工伤，月工资6000，大概能赔多少钱？")
+
+    assert result["intent"] == "payment_calculation"
+    assert result["slots"]["province"] == "四川省"
+    assert result["slots"]["disability_grade"] == "十级"
+    assert result["slots"]["monthly_wage"] == 6000
+```
+
+- [ ] **步骤 2：运行测试验证跳过和真实失败边界**
+
+无真实 key 时运行：
+
+```bash
+uv run pytest tests/test_real_model_intent_smoke.py -v
+```
+
+预期：SKIPPED。
+
+开启真实 smoke 后运行：
+
+```bash
+ANANHU_REAL_MODEL_SMOKE=1 uv run pytest tests/test_real_model_intent_smoke.py -v
+```
+
+预期：若未配置 `OPENAI_API_KEY` 或兼容 key，FAIL，错误能定位到模型配置或鉴权。
+
+- [ ] **步骤 3：实现 Agno 模型客户端**
+
+实现要求：
+
+- `AgnoModelClient.classify_and_extract(query: str) -> dict` 复用当前 `FakeModelClient` 的返回结构。
+- Prompt 明确要求只输出 JSON，字段包括 `intent`、`confidence`、`slots`、`is_composite`、`missing_slots`。
+- JSON 解析失败返回结构化异常，不能吞掉原始模型错误。
+- `ModelRouter.client_for()` 支持 `provider == "agno_openai"`，其余未知 provider 抛出可读错误。
+- `model_called` trace 继续记录 `model_profile`、`model_config`、错误码和 latency。
+
+- [ ] **步骤 4：运行测试验证通过**
+
+无真实 key 的基础回归：
+
+```bash
+uv run pytest tests/test_model_router_config.py tests/test_intent_router_agent.py -v
+```
+
+有真实 key 的冒烟：
+
+```bash
+ANANHU_REAL_MODEL_SMOKE=1 uv run pytest tests/test_real_model_intent_smoke.py -v
+```
+
+预期：真实 smoke 通过；如果失败，必须写明是模型输出、JSON 解析、槽位抽取还是鉴权问题。
+
+- [ ] **步骤 5：提交**
+
+```bash
+git add ananhu_agent/models ananhu_agent/config/settings.py ananhu_agent/agents/intent_router.py tests/test_real_model_intent_smoke.py docs/architecture/04-tools-models.md
+git commit -m "feat(models): add real agno intent smoke"
+```
+
+**验收标准：**
+
+- fake profile 继续无 key 通过。
+- real profile 能真实调用 LLM 完成 intent / slot 冒烟。
+- 失败能通过测试输出和 trace 定位层级。
+
+### 任务 27：建立真实政策语料库和语料质量测试
+
+**目标：** 用真实法规、地方政策和办事指南替代“只靠 fixture 模拟”的政策依据层。
+
+**涉及模块：** `data/policies`、`tools`、`evaluation`。
+
+**前置依赖：** 任务 22。
+
+**文件：**
+
+- 创建：`data/policies/real_mvp_policies.jsonl`
+- 创建：`tests/test_real_policy_corpus.py`
+- 修改：`docs/architecture/04-tools-models.md`
+- 修改：`docs/architecture/05-data-observability.md`
+
+- [ ] **步骤 1：编写失败测试**
+
+创建 `tests/test_real_policy_corpus.py`：
+
+```python
+import json
+from pathlib import Path
+
+
+def test_real_policy_corpus_has_minimum_verified_sources():
+    rows = [
+        json.loads(line)
+        for line in Path("data/policies/real_mvp_policies.jsonl").read_text(encoding="utf-8").splitlines()
+        if line.strip()
+    ]
+
+    assert len(rows) >= 20
+    assert all(row["title"] for row in rows)
+    assert all(row["source_url"] for row in rows)
+    assert all(row["source_type"] in {"national_regulation", "local_policy", "service_guide"} for row in rows)
+    assert any(row["province"] == "四川省" for row in rows)
+    assert any(row["source_type"] == "service_guide" for row in rows)
+```
+
+- [ ] **步骤 2：运行测试验证失败**
+
+运行：
+
+```bash
+uv run pytest tests/test_real_policy_corpus.py -v
+```
+
+预期：FAIL，当前文件不存在。
+
+- [ ] **步骤 3：补充真实政策语料**
+
+要求每条 JSONL 至少包含：
+
+- `id`
+- `title`
+- `article`
+- `province`
+- `city`
+- `source_type`
+- `source_url`
+- `effective_status`
+- `keywords`
+- `content`
+- `collected_at`
+
+最低覆盖：
+
+- 全国《工伤保险条例》核心条款。
+- 工伤认定上下班途中交通事故相关条款。
+- 劳动能力鉴定材料 / 流程办事指南。
+- 四川省工伤待遇相关政策。
+- 至少 20 条，优先覆盖当前 30 条 eval case。
+
+- [ ] **步骤 4：运行测试验证通过**
+
+运行：
+
+```bash
+uv run pytest tests/test_real_policy_corpus.py -v
+```
+
+预期：通过。
+
+- [ ] **步骤 5：提交**
+
+```bash
+git add data/policies/real_mvp_policies.jsonl tests/test_real_policy_corpus.py docs/architecture/04-tools-models.md docs/architecture/05-data-observability.md
+git commit -m "data(policy): add real mvp policy corpus"
+```
+
+**验收标准：**
+
+- 真实语料不少于 20 条。
+- 每条来源可追溯。
+- 后续 RAG 失败时能区分“没有数据”和“检索没命中”。
+
+### 任务 28：实现真实政策检索工具并保留 fixture fallback
+
+**目标：** 让 `PolicyRAGTool` 可选择真实语料库检索，暴露召回、地区过滤和引用准确性问题。
+
+**涉及模块：** `tools`、`config`、`orchestrator`。
+
+**前置依赖：** 任务 27。
+
+**文件：**
+
+- 创建：`ananhu_agent/tools/real_policy_search.py`
+- 修改：`ananhu_agent/tools/policy_rag.py`
+- 修改：`ananhu_agent/config/settings.py`
+- 修改：`ananhu_agent/orchestrator/orchestrator.py`
+- 创建：`tests/test_real_policy_search.py`
+
+- [ ] **步骤 1：编写失败测试**
+
+创建 `tests/test_real_policy_search.py`：
+
+```python
+from ananhu_agent.tools.real_policy_search import search_real_policy
+
+
+def test_real_policy_search_returns_traceable_citations():
+    result = search_real_policy(
+        {
+            "query": "上下班途中交通事故非本人主要责任能不能认定工伤？",
+            "province": None,
+            "city": None,
+            "top_k": 3,
+            "corpus_path": "data/policies/real_mvp_policies.jsonl",
+        }
+    )
+
+    assert result["documents"]
+    first = result["documents"][0]
+    assert first["citation"]["title"]
+    assert first["citation"]["source_url"]
+```
+
+- [ ] **步骤 2：运行测试验证失败**
+
+运行：
+
+```bash
+uv run pytest tests/test_real_policy_search.py -v
+```
+
+预期：FAIL，当前 `real_policy_search` 不存在。
+
+- [ ] **步骤 3：实现真实语料检索**
+
+要求：
+
+- 先用确定性关键词 / 简单中文分词评分实现，不急于引入向量库。
+- `province` 不为空时优先返回本省和全国来源。
+- 输出继续保持 `{"documents": [...]}`，每个 document 包含 `id`、`content`、`citation`。
+- `citation` 必须包含 `title`、`article`、`source_url`、`effective_status`。
+- 空召回时返回空 `documents`，不编造依据。
+
+- [ ] **步骤 4：运行测试验证通过**
+
+运行：
+
+```bash
+uv run pytest tests/test_real_policy_search.py tests/test_mvp_tools.py -v
+```
+
+预期：全部通过。
+
+- [ ] **步骤 5：提交**
+
+```bash
+git add ananhu_agent/tools/real_policy_search.py ananhu_agent/tools/policy_rag.py ananhu_agent/config/settings.py ananhu_agent/orchestrator/orchestrator.py tests/test_real_policy_search.py
+git commit -m "feat(rag): add real policy corpus search"
+```
+
+**验收标准：**
+
+- `PolicyRAGTool` 可通过配置选择 fixture 或 real corpus。
+- 引用来源可追踪。
+- 地区过滤和空召回不会破坏当前 CLI。
+
+### 任务 29：接入 Agno Tool 真实函数调用冒烟
+
+**目标：** 验证 Agno Agent 能看到并调用经过治理包装的政策检索 / 待遇测算工具，而不是只在本地 adapter 层转发。
+
+**涉及模块：** `agno_adapters`、`tools`、`orchestrator`、`trace`。
+
+**前置依赖：** 任务 25、任务 28。
+
+**文件：**
+
+- 修改：`ananhu_agent/agno_adapters/tool_adapter.py`
+- 创建：`ananhu_agent/agno_adapters/agent_factory.py`
+- 创建：`tests/test_agno_tool_smoke.py`
+- 修改：`docs/architecture/02-agent-runtime.md`
+
+- [ ] **步骤 1：编写失败测试**
+
+创建 `tests/test_agno_tool_smoke.py`：
+
+```python
+from ananhu_agent.agno_adapters.agent_factory import build_tool_smoke_agent
+
+
+def test_agno_tool_smoke_agent_can_call_wrapped_payment_tool():
+    agent = build_tool_smoke_agent()
+
+    result = agent.run("四川十级工伤，月工资6000，调用工具测算一次性伤残补助金")
+    content = getattr(result, "content", str(result))
+
+    assert "42000" in content
+    assert "一次性伤残补助金" in content
+```
+
+- [ ] **步骤 2：运行测试验证失败**
+
+运行：
+
+```bash
+uv run pytest tests/test_agno_tool_smoke.py -v
+```
+
+预期：FAIL，当前没有 `agent_factory`。
+
+- [ ] **步骤 3：实现 Agno tool smoke agent**
+
+要求：
+
+- 使用 Agno `Agent` 构建一个只用于本地 smoke 的 Agent。
+- Tool 函数内部仍调用 `ToolExecutor.execute()`，不能直接调用 `calculate_payment()`。
+- 测试默认使用 fake / deterministic model 或 Agno 支持的无外部 key路径；如 Agno 版本必须调用真实模型，则测试改为 `ANANHU_REAL_AGNO_TOOL_SMOKE=1` opt-in。
+- trace 中必须出现 `tool_called` 和 `tool_finished`。
+
+- [ ] **步骤 4：运行测试验证通过**
+
+运行：
+
+```bash
+uv run pytest tests/test_agno_tool_smoke.py tests/test_tool_executor.py -v
+```
+
+预期：全部通过；如果真实模型必需，则无 key 时 SKIPPED，有 key 时通过。
+
+- [ ] **步骤 5：提交**
+
+```bash
+git add ananhu_agent/agno_adapters tests/test_agno_tool_smoke.py docs/architecture/02-agent-runtime.md
+git commit -m "feat(agno): add tool calling smoke path"
+```
+
+**验收标准：**
+
+- Agno Agent 能真实触发被治理工具。
+- ToolExecutor 仍是工具调用唯一执行边界。
+- smoke 失败能定位为 Agno 调用、模型输出或工具治理问题。
+
+### 任务 30：新增真实 smoke eval 数据集和 CLI 运行模式
+
+**目标：** 用真实模型和真实政策检索跑最小端到端 eval，不再只看 mock 指标。
+
+**涉及模块：** `cli`、`evaluation`、`config`、`data/eval`。
+
+**前置依赖：** 任务 26、任务 28。
+
+**文件：**
+
+- 创建：`data/eval/real_smoke_cases.jsonl`
+- 修改：`ananhu_agent/cli/main.py`
+- 修改：`ananhu_agent/evaluation/runner.py`
+- 创建：`tests/test_real_smoke_eval_dataset.py`
+- 修改：`docs/backend-conventions.md`
+
+- [ ] **步骤 1：编写失败测试**
+
+创建 `tests/test_real_smoke_eval_dataset.py`：
+
+```python
+import json
+from pathlib import Path
+
+
+def test_real_smoke_eval_cases_are_small_and_layered():
+    rows = [
+        json.loads(line)
+        for line in Path("data/eval/real_smoke_cases.jsonl").read_text(encoding="utf-8").splitlines()
+        if line.strip()
+    ]
+
+    assert 6 <= len(rows) <= 10
+    assert all(row["expected_intent"] for row in rows)
+    assert all(row["expect_contains"] for row in rows)
+    assert any(row["category"] == "payment_calculation" for row in rows)
+    assert any(row["category"] == "work_injury_recognition" for row in rows)
+    assert any(row["category"] == "labor_capacity" for row in rows)
+```
+
+- [ ] **步骤 2：运行测试验证失败**
+
+运行：
+
+```bash
+uv run pytest tests/test_real_smoke_eval_dataset.py -v
+```
+
+预期：FAIL，当前真实 smoke eval 文件不存在。
+
+- [ ] **步骤 3：实现真实 smoke eval 模式**
+
+要求：
+
+- `data/eval/real_smoke_cases.jsonl` 包含 6-10 条真实场景。
+- CLI 支持显式模式，例如：
+
+```bash
+uv run ananhu-agent eval data/eval/real_smoke_cases.jsonl --runtime real
+```
+
+- `--runtime fake` 保持默认，兼容当前无 key 回归。
+- `--runtime real` 使用真实 LLM profile 和真实政策语料。
+- 真实 eval 失败时继续写 `badcases.jsonl`，并在 metrics 中保留分层指标。
+
+- [ ] **步骤 4：运行测试验证通过**
+
+无真实 key 回归：
+
+```bash
+uv run pytest tests/test_real_smoke_eval_dataset.py tests/test_cli_eval.py -v
+```
+
+有真实 key 的 smoke：
+
+```bash
+ANANHU_REAL_MODEL_SMOKE=1 uv run ananhu-agent eval data/eval/real_smoke_cases.jsonl --runtime real
+```
+
+预期：CLI 产出 metrics；如失败，badcase 中能看到失败层级。
+
+- [ ] **步骤 5：提交**
+
+```bash
+git add data/eval/real_smoke_cases.jsonl ananhu_agent/cli/main.py ananhu_agent/evaluation/runner.py tests/test_real_smoke_eval_dataset.py docs/backend-conventions.md
+git commit -m "feat(eval): add real smoke runtime"
+```
+
+**验收标准：**
+
+- fake eval 和 real smoke eval 明确分离。
+- real smoke eval 能真实跑通至少 6 条 case。
+- 失败不再被 mock 掩盖，必须进入 badcase。
+
+### 任务 31：收紧 MVP 验收标准和真实接入文档
+
+**目标：** 把“mock harness 已完成”和“真实 MVP 可用”区分写清楚，避免后续误判项目成熟度。
+
+**涉及模块：** `docs`、`README`。
+
+**前置依赖：** 任务 25-30。
+
+**文件：**
+
+- 修改：`README.md`
+- 修改：`docs/architecture.md`
+- 修改：`docs/architecture/02-agent-runtime.md`
+- 修改：`docs/architecture/04-tools-models.md`
+- 修改：`docs/architecture/05-data-observability.md`
+- 修改：`docs/architecture/99-changelog.md`
+
+- [ ] **步骤 1：编写失败检查**
+
+运行：
+
+```bash
+rg -n "mock harness|fake harness|real smoke|Agno-compatible|真实 MVP|真实模型" README.md docs
+```
+
+预期：能发现当前文档没有统一说明真实 MVP 验收边界。
+
+- [ ] **步骤 2：更新文档**
+
+要求写清：
+
+- 当前离线测试闭环验证的是协议和工程骨架。
+- 真实 MVP 验收必须额外跑真实 Agno / LLM / RAG smoke。
+- 没有真实 key 时，项目只能声明“offline harness passed”，不能声明“业务链路可用”。
+- 真实 smoke 的最小命令包括：
+
+```bash
+uv sync --extra dev
+uv run pytest -v
+ANANHU_REAL_MODEL_SMOKE=1 uv run pytest tests/test_real_model_intent_smoke.py -v
+ANANHU_REAL_MODEL_SMOKE=1 uv run ananhu-agent eval data/eval/real_smoke_cases.jsonl --runtime real
+```
+
+- [ ] **步骤 3：运行文档检查**
+
+运行：
+
+```bash
+rg -n "offline harness passed|real smoke|--runtime real|真实 MVP" README.md docs
+```
+
+预期：能命中 README 和架构文档中的真实验收说明。
+
+- [ ] **步骤 4：运行全量验证**
+
+运行：
+
+```bash
+uv run pytest -v
+```
+
+预期：全部通过。
+
+- [ ] **步骤 5：提交**
+
+```bash
+git add README.md docs/architecture.md docs/architecture/02-agent-runtime.md docs/architecture/04-tools-models.md docs/architecture/05-data-observability.md docs/architecture/99-changelog.md
+git commit -m "docs: define real mvp acceptance boundary"
+```
+
+**验收标准：**
+
+- 文档不再把 mock 闭环称为业务可用 MVP。
+- README 给出 offline 和 real smoke 两套命令。
+- 架构文档明确真实接入失败时如何通过 trace / badcase 定位。
+
 ## 4. 对抗性审查清单
 
 执行本计划前，必须使用子 agent 或 reviewer 按以下问题审查：
@@ -3775,6 +4404,9 @@ git commit -m "feat(agno): add runtime adapter boundary"
 8. 是否误加非目标：HTTP API、WebSocket、前端、语音、图片、MCP。
 9. 是否把 Agno-compatible harness 误写成已完成真实 Agno Team / Workflow 接入。
 10. 是否遗漏工具治理：`tool_called`、超时、输出 schema、重复调用和 fallback reason。
+11. 是否仍然只验证 fake model / fixture RAG，却把结果描述成真实业务链路可用。
+12. 是否真实模型 smoke、真实政策语料、真实 RAG 和 Agno Tool 调用各有独立失败定位方式。
+13. 是否所有真实 smoke 都是显式 opt-in，避免无 key 环境破坏基础 CI。
 
 审查通过条件：
 
@@ -3782,6 +4414,7 @@ git commit -m "feat(agno): add runtime adapter boundary"
 - 每个任务的验证命令能在该任务完成后独立运行。
 - 依赖图无循环，无“前面依赖后面”的情况。
 - P0 垂直闭环可通过 `uv run ananhu-agent chat`、`uv run ananhu-agent ask` 和 `uv run ananhu-agent eval` 观察。
+- P7 真实垂直闭环可通过 `ANANHU_REAL_MODEL_SMOKE=1 uv run ananhu-agent eval data/eval/real_smoke_cases.jsonl --runtime real` 观察。
 
 ## 5. 总体验收
 
@@ -3802,6 +4435,13 @@ git commit -m "feat(agno): add runtime adapter boundary"
 - eval 失败和运行时自动判定失败时 `.ananhu-runtime/badcases.jsonl` 有结构化记录。
 - 模型 profile 通过配置和 `ModelRouter` 选择，trace 能记录 `model_profile`。
 - Agno 适配边界有代码和文档说明，不把当前 harness 误标为完整 Agno Team / Workflow 实现。
+- Agno SDK 已真实安装并可导入，依赖通过 `uv` 管理。
+- 真实模型 profile 可通过显式环境变量开启 smoke，fake profile 仍可离线回归。
+- 真实政策语料不少于 20 条，来源 URL、有效状态、地区和 source_type 可追踪。
+- `PolicyRAGTool` 可配置使用真实政策语料，引用中包含可追溯来源。
+- Agno Tool smoke 能证明 Agno Agent 可触发经过 `ToolExecutor` 治理的工具调用。
+- `uv run ananhu-agent eval data/eval/real_smoke_cases.jsonl --runtime real` 能产出真实 smoke metrics；失败样例写入 badcase。
+- README 和架构文档明确区分 `offline harness passed` 与“真实 MVP smoke passed”。
 - 没有新增 HTTP API、WebSocket、前端、语音、图片、MCP 能力。
 
 ## 6. 执行方式
