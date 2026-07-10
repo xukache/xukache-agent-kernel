@@ -1,118 +1,89 @@
 # 安安虎工伤智能助手 Agent Harness
 
-安安虎工伤智能助手是面向工伤认定、劳动能力鉴定、待遇辅助测算和政策咨询的后端 Agent 系统。项目当前以 CLI 作为开发和验收入口，已经具备可离线回归的四 Agent MVP、工具治理、Prompt/上下文管理、JSONL 运行证据、badcase 和 eval 闭环。
+安安虎工伤智能助手是面向工伤认定、劳动能力鉴定、待遇辅助测算和政策咨询的 Python 后端 Agent Harness。项目当前以 CLI 作为开发和验收入口，默认运行时为 `NativeWorkflowRuntime`，通过框架中立 `WorkflowRuntime` 端口调用。
 
-下一阶段采用 **LangGraph 默认运行时 + 框架中立业务内核**：LangGraph负责工作流调度，项目自己掌握领域状态、Agent/Tool 协议、检索证据、Prompt、trace、usage 和评测，避免更换编排框架时业务不可用。
+当前代码已经具备离线可回归闭环：CLI、MVP Agent、Prompt/上下文管理、CapabilityGateway、fixture 政策检索、确定性待遇测算、JSONL trace、badcase 和 eval。LangGraph 尚未接入；后续接入时只作为可替换运行时，不拥有业务状态、能力治理、Prompt、trace 或 eval 协议。
 
 ## 当前状态
 
-- Python 3.11 + `uv` 工程已初始化。
-- Python 发行包名为 `ananhu-agent`，CLI 命令为 `ananhu-agent`。
-- CLI `ask`、`chat`、`eval` 和反馈相关命令已实现。
-- 当前默认运行时是 `NativeWorkflowRuntime`，通过框架中立 `WorkflowRuntime` 端口调用。
-- 当前四个 Agent 是 MVP 实现现状，不是永久模块边界。
-- 当前模型和政策检索以确定性 fake/fixture 为主，验证的是协议和离线工程闭环，不代表真实模型与真实政策语料已经完成生产验收。
-- 已新增框架中立 `RunRequest`、`WorkflowState`、`WorkflowResult`、`WorkflowPhase`、`RunStatus`、`StopReason` 和 `WorkflowRuntime` 协议；LangGraph 尚未接入。
-
-## 当前 Native MVP 链路
-
-```text
-请求
-  -> 意图与槽位抽取
-  -> 规则修正和缺失槽位判断
-  -> 四 Agent 串行路由
-  -> fixture 政策检索 / 确定性待遇测算
-  -> 引用、结果和安全校验
-  -> CLI 答复
-  -> Trace / TaskState / RunReport / Badcase / Eval
-```
-
-当前稳定业务阶段、状态增量、reducer、trace 调用身份、CapabilityGateway 和默认 `WorkflowRuntime` / `NativeWorkflowRuntime` 链路已经落地。证据校验、Usage 和 LangGraph Runtime 仍属于后续演进范围，当前代码尚未具备全部目标协议。
-
-## 架构原则
-
-1. 业务流程由稳定阶段定义，不按 Agent 名称机械建图。
-2. LangGraph 负责调度，项目 reducer/transition policy 负责业务状态合并语义。
-3. Agent 无状态，只返回项目定义的结构化结果或状态增量。
-4. 当前外部能力经过 `CapabilityGateway` 端口和 `ToolExecutor` 适配器处理注册、schema、调用方、超时、logical_call_id 去重和 trace；真实脱敏、jurisdiction 和 usage 仍需后续补齐。
-5. 案件事实、知识证据、会话记忆和 checkpoint 分离管理。
-6. Prompt、上下文、模型、知识库和工具均版本化并进入运行证据。
-7. 项目 trace 是审计和评测事实源，框架观测只能作为补充。
-8. Native Runtime 与 LangGraph Runtime 必须通过同一套 contract tests 和 eval 数据。
-
-## LangGraph 边界
-
-LangGraph可以负责节点连接、条件路由、中断恢复、节点重试和必要的有限并行，但不能拥有以下语义：
-
-- 工伤案件事实、地市权限和政策适用性。
-- Agent、Tool、Prompt、Evidence 和 Response 公共协议。
-- session/case/run ID 规则。
-- trace、usage、badcase 和 eval schema。
-- 业务错误码、停止原因和工具幂等策略。
-
-详细边界见 `docs/architecture/02-agent-runtime.md`。
+- Python 版本：3.11。
+- 环境和命令管理：`uv`。
+- Python 发行包名：`ananhu-agent`。
+- CLI 命令：`ananhu-agent`。
+- 当前外部入口：CLI；没有 HTTP API、WebSocket 或前端。
+- 当前模型和政策检索以 fake/fixture 为主，用于验证协议和离线工程闭环，不代表真实模型和真实政策语料的生产验收。
 
 ## 快速开始
 
 ```bash
 uv python pin 3.11
 uv sync --extra dev
-uv run pytest -v
 uv run ananhu-agent version
 uv run ananhu-agent ask "四川十级工伤，月工资6000，大概能赔多少钱？"
 uv run ananhu-agent eval data/eval/eval_cases.jsonl
+uv run pytest -v
 ```
+
+## 常用命令
+
+```bash
+# 单轮咨询
+uv run ananhu-agent ask "四川十级工伤，月工资6000，大概能赔多少钱？"
+
+# 交互式会话
+uv run ananhu-agent chat
+
+# 运行评测
+uv run ananhu-agent eval data/eval/eval_cases.jsonl
+
+# 查看版本
+uv run ananhu-agent version
+```
+
+运行证据默认写入 `.ananhu-runtime/`，包括 trace、运行报告和 badcase 记录。
 
 ## 项目结构
 
 ```text
 ananhu_agent/
-  agents/              # 当前 MVP Agent 实现
-  capabilities/        # 框架中立能力请求、结果、策略和 ToolExecutor 适配器
-  orchestrator/        # 聚合、规则、安全校验和 badcase 规则
-  runtime.py           # 默认 Runtime 组合根
-  runtimes/            # Native Runtime；LangGraph Runtime 后续加入
-  workflow/            # 框架中立请求、状态、状态增量、reducer 和停止原因协议
-  context/             # 上下文构建和槽位规则
-  prompts/             # 版本化 Prompt
-  tools/               # ToolRegistry、ToolExecutor 和业务能力
-  models/              # 模型 profile、路由和测试替身
-  storage/             # session、trace、report、badcase 存储
-  evaluation/          # eval runner 和分层指标
+  agents/          # 当前 MVP Agent 实现
+  capabilities/    # CapabilityRequest / CapabilityResult / CapabilityGateway
+  cli/             # Typer CLI 入口
+  context/         # 上下文构建和槽位规则
+  evaluation/      # eval runner 和指标
+  models/          # 模型 profile、路由和 fake model
+  orchestrator/    # 聚合、规则、安全校验和 badcase 规则
+  prompts/         # 版本化 Prompt
+  runtime.py       # 默认 Runtime 组合根
+  runtimes/native/ # 当前默认 Native Runtime
+  storage/         # JSONL 存储和运行证据
+  tools/           # ToolRegistry、ToolExecutor 和业务工具
+  workflow/        # RunRequest、WorkflowState、StatePatch、Reducer、WorkflowResult
+data/
+  eval/            # 离线评测用例
 docs/
-  architecture.md
-  architecture/
-  api-contracts.md       # 当前外部 API 状态和启用条件
-  backend-conventions.md # Python 后端规范
+  architecture.md  # 架构事实源入口
 tests/
 ```
 
-目标结构将增量演进为 `domain/`、`application/`、`ports/`、`runtimes/native/`、`runtimes/langgraph/` 和 `infrastructure/`，不会一次性整体搬迁。
-
-## 文档索引
+## 文档入口
 
 | 文档 | 说明 |
 |---|---|
 | `AGENTS.md` | 开发约束、分支流程和文档同步纪律 |
-| `TECH_ARCHITECTURE_MVP.md` | 技术架构版本入口和当前版本索引 |
-| `docs/architecture/versions/` | 已发布的只读完整架构版本正文 |
-| `docs/architecture.md` | 架构事实源入口和阅读顺序 |
-| `docs/architecture/00-overview.md` | 定位、范围和分层 |
-| `docs/architecture/01-business-flow.md` | 业务阶段和数据流 |
-| `docs/architecture/02-agent-runtime.md` | Native/LangGraph 运行时、状态和恢复边界 |
-| `docs/architecture/03-prompt-context.md` | Prompt、上下文和记忆治理 |
-| `docs/architecture/04-tools-models.md` | 能力执行、模型和知识检索治理 |
-| `docs/architecture/05-data-observability.md` | Trace、Usage、Badcase 和 Eval |
-| `docs/architecture/10-evolution-rules.md` | 架构演进约束 |
-| `docs/backend-conventions.md` | Python 后端规范 |
+| `TECH_ARCHITECTURE_MVP.md` | 技术架构版本入口 |
+| `docs/architecture.md` | 当前架构事实源入口 |
+| `docs/backend-conventions.md` | 后端开发规范 |
 | `docs/api-contracts.md` | 当前外部 API 状态和启用条件 |
+
+详细架构以 `docs/architecture.md` 及其分册为准，README 只保留项目入口信息。
 
 ## 当前非目标
 
-- 当前不实现 HTTP API、WebSocket、前端或小程序。
-- 不为了多 Agent 展示继续拆分专项 Agent。
-- 不在框架中立协议完成前接入 LangGraph checkpoint 和复杂并行图。
-- 不将 fake model、fixture RAG 的通过率描述为真实业务效果。
+- 不提供 HTTP API、WebSocket、SSE、前端或小程序入口。
+- 不把当前四个 Agent 固化为永久架构边界。
+- 不把 LangGraph 类型引入 domain、application、Agent、Capability、Prompt、Trace 或 Eval 公共协议。
+- 不把 fake model、fixture RAG 的通过率描述为真实业务效果。
 
 ## 免责声明
 
