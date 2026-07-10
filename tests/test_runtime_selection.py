@@ -2,6 +2,7 @@ from __future__ import annotations
 
 from ananhu_agent.config.settings import RuntimeSettings
 from ananhu_agent.infrastructure.models.fake import FakeModelGateway
+from ananhu_agent.models.observable_gateway import ObservableModelGateway
 from ananhu_agent.runtime import create_default_runtime
 from ananhu_agent.runtimes.langgraph.runtime import LangGraphWorkflowRuntime
 from ananhu_agent.runtimes.native.runtime import NativeWorkflowRuntime
@@ -40,5 +41,7 @@ def test_both_runtime_compositions_use_project_model_gateway(tmp_path):
         RuntimeSettings(runtime="langgraph", runtime_dir=tmp_path / "langgraph"),
     )
 
-    assert isinstance(native.intent_agent.model_gateway, FakeModelGateway)
-    assert isinstance(langgraph.intent_agent.model_gateway, FakeModelGateway)
+    assert isinstance(native.intent_agent.model_gateway, ObservableModelGateway)
+    assert isinstance(langgraph.intent_agent.model_gateway, ObservableModelGateway)
+    assert isinstance(native.intent_agent.model_gateway.inner, FakeModelGateway)
+    assert isinstance(langgraph.intent_agent.model_gateway.inner, FakeModelGateway)

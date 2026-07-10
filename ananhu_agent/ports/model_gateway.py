@@ -24,6 +24,7 @@ class ModelRequest(BaseModel):
     schema_version: str = "model-request.v1"
     run_id: str
     request_id: str
+    session_id: str
     node_id: str
     logical_call_id: str
     attempt: int = Field(default=1, ge=1)
@@ -44,6 +45,7 @@ class ModelUsage(BaseModel):
     estimated_cost: float | None = None
     currency: str | None = None
     usage_source: str
+    reported: bool = False
 
 
 class ModelResult(BaseModel):
@@ -59,6 +61,7 @@ class ModelResult(BaseModel):
     usage: ModelUsage
     latency_ms: int = 0
     attempt: int = 1
+    reasoning_content: str | None = Field(default=None, exclude=True, repr=False)
 
 
 class ModelGatewayError(Exception):

@@ -38,6 +38,7 @@ class IntentRouterAgent:
         model_result = await self.model_gateway.generate_structured(ModelRequest(
             run_id=run_id or ctx.request.request_id,
             request_id=ctx.request.request_id,
+            session_id=ctx.request.session_id,
             node_id=node_id,
             logical_call_id=logical_call_id or f"{ctx.request.request_id}:{node_id}:model",
             profile=rendered.metadata["model_profile"],

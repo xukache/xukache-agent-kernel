@@ -96,6 +96,8 @@ class OpenAICompatibleModelGateway:
             raise _http_error(response.status_code)
 
         payload = _response_payload(response)
+        choice = payload["choices"][0]
+        message = choice.get("message") or {}
         output = _structured_output(payload)
         _validate_structured_output(output, request.output_schema)
         usage = _usage_from_payload(
@@ -104,7 +106,6 @@ class OpenAICompatibleModelGateway:
             output_cost_per_million=self._output_cost_per_million,
             currency=self._currency,
         )
-        choice = payload["choices"][0]
         return ModelResult(
             output=output,
             provider=self.provider,
@@ -115,6 +116,7 @@ class OpenAICompatibleModelGateway:
             usage=usage,
             latency_ms=max(0, int((monotonic() - started_at) * 1000)),
             attempt=request.attempt,
+            reasoning_content=_reasoning_from_message(message),
         )
 
 
@@ -183,6 +185,29 @@ def _structured_output(payload: dict[str, Any]) -> dict[str, Any]:
     return output
 
 
+def _reasoning_from_message(message: Any) -> str | None:
+    """解析 provider 显式 reasoning；空值归一为 None，非字符串拒绝。"""
+
+    if not isinstance(message, dict):
+        raise ModelGatewayError(
+            ModelErrorCode.RESPONSE_FORMAT,
+            "模型响应 message 必须是对象",
+            provider=OpenAICompatibleModelGateway.provider,
+            retryable=False,
+        )
+    raw = message.get("reasoning_content")
+    if raw is None or raw == "":
+        return None
+    if not isinstance(raw, str):
+        raise ModelGatewayError(
+            ModelErrorCode.RESPONSE_FORMAT,
+            "模型 reasoning_content 必须是字符串",
+            provider=OpenAICompatibleModelGateway.provider,
+            retryable=False,
+        )
+    return raw
+
+
 def _validate_structured_output(output: dict[str, Any], schema: dict[str, Any]) -> None:
     try:
         Draft202012Validator.check_schema(schema)
@@ -213,6 +238,9 @@ def _usage_from_payload(
     try:
         if not isinstance(raw, dict):
             raise TypeError("usage must be an object")
+        provider_keys = {"prompt_tokens", "completion_tokens", "total_tokens"}
+        if not provider_keys.intersection(raw):
+            raise TypeError("usage token fields missing")
         input_tokens = int(raw.get("prompt_tokens") or 0)
         output_tokens = int(raw.get("completion_tokens") or 0)
         total_tokens = int(raw.get("total_tokens") or input_tokens + output_tokens)
@@ -220,13 +248,8 @@ def _usage_from_payload(
         if not isinstance(details, dict):
             raise TypeError("prompt_tokens_details must be an object")
         cache_tokens = int(details.get("cached_tokens") or 0)
-    except (TypeError, ValueError) as exc:
-        raise ModelGatewayError(
-            ModelErrorCode.RESPONSE_FORMAT,
-            "模型 usage 字段格式非法",
-            provider=OpenAICompatibleModelGateway.provider,
-            retryable=False,
-        ) from exc
+    except (TypeError, ValueError):
+        return ModelUsage(usage_source="provider_unreported", reported=False)
     estimated_cost = None
     if input_cost_per_million is not None and output_cost_per_million is not None:
         estimated_cost = round(
@@ -242,4 +265,5 @@ def _usage_from_payload(
         estimated_cost=estimated_cost,
         currency=currency if estimated_cost is not None else None,
         usage_source="provider",
+        reported=True,
     )
