@@ -44,7 +44,7 @@ def create_default_runtime(
     capability_gateway = ToolExecutorCapabilityGateway(tool_executor)
     runtime_kwargs = dict(
         intent_agent=IntentRouterAgent(
-            model_router.client_for("intent_fast"),
+            model_router.gateway_for("intent_fast"),
             ContextManager(),
             PromptManager(settings.prompt_template_dir),
         ),

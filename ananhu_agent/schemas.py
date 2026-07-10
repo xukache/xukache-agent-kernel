@@ -254,6 +254,7 @@ class TraceEvent(BaseModel):
     """单个请求运行时间线中的追加式事件。"""
 
     id: str
+    run_id: str | None = None
     request_id: str
     session_id: str
     event_type: str
@@ -275,6 +276,7 @@ class TraceEvent(BaseModel):
         event_type: str,
         phase: str,
         payload: dict[str, Any],
+        run_id: str | None = None,
         latency_ms: int | None = None,
         runtime_name: str | None = None,
         runtime_version: str | None = None,
@@ -285,6 +287,7 @@ class TraceEvent(BaseModel):
         """创建带有事件 ID、运行时身份和标准时间戳的 trace 事件。"""
         return cls(
             id=f"trace_{uuid4().hex[:12]}",
+            run_id=run_id,
             request_id=request_id,
             session_id=session_id,
             event_type=event_type,

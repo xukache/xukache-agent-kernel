@@ -23,6 +23,21 @@ uv run ananhu-agent eval data/eval/eval_cases.jsonl
 uv run ananhu-agent eval data/eval/eval_cases.jsonl --runtime both
 ```
 
+真实模型只通过显式环境配置启用：
+
+```bash
+export ANANHU_MODEL_API_KEY="..."
+export ANANHU_MODEL_BASE_URL="https://provider.example/v1"
+export ANANHU_MODELS='{"intent_fast":{"provider":"openai_compatible","model":"provider-model","temperature":0,"timeout_seconds":30}}'
+uv run ananhu-agent ask "工伤认定需要哪些条件？"
+
+ANANHU_REAL_MODEL_SMOKE=1 ANANHU_REAL_MODEL="provider-model" \
+  uv run pytest tests/test_model_gateway_contract.py -v
+```
+
+API key 不得写入 `ANANHU_MODELS`、代码、trace 或测试 fixture。未设置
+`ANANHU_REAL_MODEL_SMOKE=1` 时真实 smoke 必须 skip。
+
 ## 目标模块边界
 
 ```text
@@ -71,6 +86,13 @@ ananhu_agent/
 - 能力声明输入输出 schema、版本、风险、权限、超时、重试和幂等等级。
 - 结果使用结构化 `CapabilityResult`，关键字段不得只存在于自然语言文本。
 - 框架 tool adapter 只能转发到执行网关，不能绕过治理。
+
+## Model 规则
+
+- Agent 只依赖 async `ModelGateway`，不得导入 provider SDK 或直接创建 HTTP 客户端。
+- Fake 与 OpenAI-compatible adapter 实现同一 `ModelRequest/ModelResult` contract。
+- profile 只包含非敏感路由参数；API key 使用 `SecretStr` 配置并与 trace 隔离。
+- 模型错误归一为项目错误码；模型调用与 usage 写入项目 trace 和 RunReport。
 
 ## Prompt 与 Context 规则
 

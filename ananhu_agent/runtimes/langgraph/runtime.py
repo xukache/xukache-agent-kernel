@@ -14,6 +14,7 @@ from ananhu_agent.orchestrator.badcase_rules import detect_badcase_issues
 from ananhu_agent.runtimes.native.runtime import (
     _context_from_request,
     _initial_state,
+    _model_usage_summary,
     _run_stage,
 )
 from ananhu_agent.runtimes.native.stages import NativeStageServices
@@ -170,7 +171,7 @@ class LangGraphWorkflowRuntime(WorkflowRuntime):
             model_attempts=1 if prompt_ref else 0, prompt_refs=prompt_refs,
             prompt_metadata={message.data["prompt_ref"]: message.data["prompt_metadata"] for message in ctx.agent_outputs if "prompt_ref" in message.data},
             output_schema_valid_rate=1.0 if ctx.verification_result and ctx.verification_result.passed else 0.0,
-            token_usage={}, latency_ms=0, fallback_used=fallback_used,
+            token_usage=_model_usage_summary(ctx), latency_ms=0, fallback_used=fallback_used,
             safety_result=ctx.safety_result.model_dump() if ctx.safety_result else {},
             badcase_candidate=bool(badcase_issues),
         ))
