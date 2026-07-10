@@ -13,7 +13,7 @@
 | 模型调用 | `ModelRouter` + Fake Model | `ModelGateway` / `ModelRegistry` |
 | 未来语音/多模态 | 未实现 | `CapabilityGateway` 下的适配器 |
 
-Agent 不直接调用这些实现，只产生项目 `CapabilityRequest`。任务 28 已新增 `ananhu_agent/capabilities/`，当前通过 `ToolExecutorCapabilityGateway` 适配现有 `ToolExecutor`。
+Agent 不直接调用这些实现，只产生项目 `CapabilityRequest`。当前能力协议位于 `ananhu_agent/capabilities/`，通过 `ToolExecutorCapabilityGateway` 适配现有 `ToolExecutor`。
 
 ## CapabilityRegistry
 
@@ -29,7 +29,7 @@ Agent 不直接调用这些实现，只产生项目 `CapabilityRequest`。任务
 
 ## CapabilityGateway
 
-任务 28 后，`CapabilityGateway` 是 Runtime/阶段服务依赖的能力端口，`ToolExecutorCapabilityGateway` 包装现有 `ToolExecutor` 并保留原有治理行为。当前链路：
+`CapabilityGateway` 是 Runtime/阶段服务依赖的能力端口，`ToolExecutorCapabilityGateway` 包装现有 `ToolExecutor` 并保留原有治理行为。当前链路：
 
 ```text
 解析 CapabilityRequest
@@ -65,7 +65,7 @@ tool_call_result
 
 ## 幂等与重试
 
-逻辑调用键由 `run_id + node_id + logical_call_id + capability_version` 构成，`attempt` 单独记录。任务 28 的 MVP 适配器以 `logical_call_id` 复用同一进程内历史结果，避免同一逻辑调用被 ToolExecutor 判为不可解释的重复执行。能力声明：
+逻辑调用键由 `run_id + node_id + logical_call_id + capability_version` 构成，`attempt` 单独记录。当前 MVP 适配器以 `logical_call_id` 复用同一进程内历史结果，避免同一逻辑调用被 ToolExecutor 判为不可解释的重复执行。能力声明：
 
 - `read_only_repeatable`：检索类，可在版本一致时重试。
 - `deterministic`：计算类，相同输入和版本返回相同结果。
@@ -80,7 +80,7 @@ tool_call_result
 - 模型不得决定可信 jurisdiction、权限或政策有效性。
 - Fake Model 是 contract test 替身；真实模型实验单独启用和报告。
 
-`ModelRouter` 后续演进为 `ModelGateway/ModelRegistry` 时应保留当前 profile 配置和 trace 兼容性。
+`ModelRouter` 后续演进为 `ModelGateway/ModelRegistry` 时应保留当前 profile 配置和 trace 字段连续性。
 
 ## KnowledgeGateway
 

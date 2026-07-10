@@ -1,6 +1,7 @@
 from __future__ import annotations
 
 import json
+import asyncio
 from time import perf_counter
 from pathlib import Path
 from typing import Any
@@ -13,15 +14,16 @@ from ananhu_agent.evaluation.metrics import (
     score_slots,
     score_tool_success,
 )
-from ananhu_agent.orchestrator.orchestrator import AgentOrchestrator
 from ananhu_agent.storage.jsonl_store import JsonlStore
+from ananhu_agent.schemas import now_cn
+from ananhu_agent.workflow.contracts import RunRequest, WorkflowRuntime
 
 
 class EvalRunner:
     """本地评测执行器，负责回放 case、汇总指标并沉淀 badcase。"""
 
-    def __init__(self, orchestrator: AgentOrchestrator, output_dir: Path) -> None:
-        self.orchestrator = orchestrator
+    def __init__(self, runtime: WorkflowRuntime, output_dir: Path) -> None:
+        self.runtime = runtime
         self.output_dir = output_dir
 
     def run(self, cases_path: Path) -> dict[str, Any]:
@@ -47,27 +49,41 @@ class EvalRunner:
 
         for index, case in enumerate(rows, start=1):
             started_at = perf_counter()
-            ctx = self.orchestrator.ask("eval", index, case["query"])
+            result = asyncio.run(
+                self.runtime.invoke(
+                    RunRequest(
+                        run_id=f"run_eval_{index}",
+                        request_id=f"req_eval_{index}",
+                        session_id="eval",
+                        turn_id=index,
+                        user_query=case["query"],
+                        created_at=now_cn(),
+                    )
+                )
+            )
+            state = result.final_state
+            if state is None:
+                raise RuntimeError("WorkflowRuntime result missing final_state for eval")
             latency_values.append((perf_counter() - started_at) * 1000)
 
             if "expected_intent" in case:
                 intent_total += 1
-                intent_passed += int(score_intent(ctx, case["expected_intent"]))
+                intent_passed += int(score_intent(state, case["expected_intent"]))
 
             if "expected_slots" in case:
                 slot_total += 1
-                slot_passed += int(score_slots(ctx, case["expected_slots"]))
+                slot_passed += int(score_slots(state, case["expected_slots"]))
 
             if "expected_citations" in case:
                 citation_total += 1
-                citation_passed += int(score_citations(ctx, case["expected_citations"]))
+                citation_passed += int(score_citations(state, case["expected_citations"]))
 
-            if ctx.tool_results:
+            if state.capability_results:
                 tool_total += 1
-                tool_passed += int(score_tool_success(ctx))
+                tool_passed += int(score_tool_success(state))
 
-            unsafe_total += int(not score_safety(ctx))
-            ok = score_case(ctx.final_answer or "", case["expect_contains"])
+            unsafe_total += int(not score_safety(state))
+            ok = score_case(result.final_answer or "", case["expect_contains"])
             if ok:
                 passed += 1
                 continue
@@ -76,7 +92,7 @@ class EvalRunner:
                 {
                     "case_id": case["id"],
                     "query": case["query"],
-                    "answer": ctx.final_answer,
+                    "answer": result.final_answer,
                     "issue_type": "eval_failed",
                     "expected_answer": case["expect_contains"],
                 }

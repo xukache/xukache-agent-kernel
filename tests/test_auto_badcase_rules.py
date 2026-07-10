@@ -1,27 +1,41 @@
+import asyncio
+
 from ananhu_agent.orchestrator.badcase_rules import detect_badcase_issues
-from ananhu_agent.orchestrator.orchestrator import create_default_orchestrator
-from ananhu_agent.schemas import AgentContext, IntentResult, SafetyResult, VerificationResult
+from ananhu_agent.runtime import create_default_runtime
+from ananhu_agent.storage.runtime_stores import ReportStore
+from ananhu_agent.workflow.contracts import RunRequest, WorkflowState
 
 
 def test_detects_missing_citation_and_low_confidence():
-    ctx = AgentContext.new_for_query("sess_1", 1, "这个能不能算？")
-    ctx.intent_result = IntentResult(intent="other", confidence=0.4, missing_slots=["province"])
-    ctx.verification_result = VerificationResult(passed=False, issues=["missing_citation"])
-    ctx.safety_result = SafetyResult(passed=True)
+    state = WorkflowState(
+        run_id="run_1",
+        request_id="req_1",
+        session_id="sess_1",
+        intent_result={"intent": "other", "confidence": 0.4, "missing_slots": ["province"]},
+        verification_result={"passed": False, "issues": ["missing_citation"]},
+        safety_result={"passed": True, "warnings": []},
+    )
 
-    issues = detect_badcase_issues(ctx)
+    issues = detect_badcase_issues(state)
 
     assert "low_intent_confidence" in issues
     assert "missing_citation" in issues
 
 
-def test_orchestrator_records_automatic_badcase_candidates(tmp_path):
-    orchestrator = create_default_orchestrator(tmp_path)
+def test_native_runtime_records_automatic_badcase_candidates(tmp_path):
+    runtime = create_default_runtime(tmp_path)
 
-    orchestrator.ask("sess_1", 1, "这个能不能算？")
+    asyncio.run(runtime.invoke(RunRequest(
+        run_id="run_badcase",
+        request_id="req_badcase",
+        session_id="sess_1",
+        turn_id=1,
+        user_query="这个能不能算？",
+        created_at="2026-07-10T00:00:00+08:00",
+    )))
 
     badcases = (tmp_path / "badcases.jsonl").read_text(encoding="utf-8")
-    assert "rag_no_result" in badcases
-    assert "missing_citation" in badcases
-    report = orchestrator.report_store.read_all()[0]
+    assert "low_intent_confidence" in badcases
+    assert "empty_answer" in badcases
+    report = ReportStore(tmp_path / "run_reports.jsonl").read_all()[0]
     assert report["badcase_candidate"] is True

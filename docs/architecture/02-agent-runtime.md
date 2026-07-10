@@ -8,11 +8,11 @@
 
 ```text
 WorkflowRuntime
-  +-- NativeWorkflowRuntime      当前 AgentOrchestrator 的演进形态
+  +-- NativeWorkflowRuntime      当前默认运行时
   +-- LangGraphWorkflowRuntime   协议稳定后的默认运行时
 ```
 
-当前 `AgentOrchestrator` 是已实现的 Native Runtime。它不再被定义为永久唯一状态推进方，也不能在未来作为一个 LangGraph 节点完整包裹执行，否则会形成两套状态机。
+当前 `NativeWorkflowRuntime` 是默认运行时，使用项目 reducer 串行推进阶段。CLI、Eval 和后续外部入口只依赖 `WorkflowRuntime` 端口。
 
 ## 运行时所有权
 
@@ -38,16 +38,17 @@ StopReason       框架无关停止语义
 - 案件事实、意图结果、执行计划、能力结果和证据。
 - 答复草稿、验证结果和安全结果。
 
-禁止直接将当前共享可变 `AgentContext` 注册为 LangGraph State。迁移阶段由 adapter 在旧协议和新协议间显式映射。
+禁止将运行时内部临时上下文注册为 LangGraph State。LangGraph 只能通过 adapter 投影项目 `WorkflowState`。
 
-任务 26 已在 `ananhu_agent/workflow/contracts.py` 落地首版框架中立协议：
+`ananhu_agent/workflow/contracts.py` 已落地首版框架中立协议：
 
 - `RunRequest`：承载 `request_id`、`run_id`、`session_id`、`case_id`、`message_id`、可信 jurisdiction 和不可变用户输入。
-- `WorkflowState`：承载单次 run 的可序列化业务状态投影，并提供旧 `AgentContext` 显式映射。
+- `WorkflowState`：承载单次 run 的可序列化业务状态投影。
 - `WorkflowResult`：承载完成、追问、证据不足、能力失败和安全拦截等停止结果。
 - `WorkflowPhase`、`RunStatus`、`StopReason`：冻结 Native 与后续 LangGraph Runtime 共享的阶段、状态和停止语义。
+- `WorkflowRuntime.invoke()`：async 运行时端口，CLI、EvalRunner 和后续入口通过该端口调用运行时。
 
-任务 26 只定义协议和旧上下文映射，不改变 CLI/Native MVP 行为。任务 27 已冻结 `StatePatch`、reducer、调用身份和 trace runtime 字段。
+默认组合根为 `create_default_runtime()`，当前装配 `NativeWorkflowRuntime`；LangGraph Runtime 将在同一端口下接入。
 
 ## StatePatch 与 Reducer
 
@@ -121,15 +122,25 @@ understand
 
 不要把四个 Agent 机械变成四个节点。Agent 是能力组织方式，节点是状态转换阶段。
 
+## Native Runtime 阶段服务
+
+`ananhu_agent/runtimes/native/` 已落地首版阶段化实现：
+
+- 阶段服务读取 `WorkflowState`，返回 `StatePatch`。
+- Native Runtime 通过 `reduce_workflow_state()` 应用 patch，不让 CLI/Eval 原地操作大状态对象。
+- `execute` 阶段把 Agent 生成的工具意图转换为 `CapabilityRequest`，统一经过 `CapabilityGateway`，不绕过 ToolExecutor 治理。
+- `TraceEvent` 统一写入 `runtime_name=native`、`node_id`、`logical_call_id` 和 `attempt`。
+- `WorkflowResult.final_state` 仅作为 Eval 和诊断使用的状态快照，CLI 对外仍只展示最终答复、追问或错误信息。
+
 ## Agent 当前协议与目标规则
 
-- 当前 Agent 无状态，读取 `AgentContext` 并返回 `AgentMessage` / `ToolCallRequest`；`AgentOrchestrator` 负责合并状态。
-- 任务 26-29 完成后，阶段服务和 Agent 改为返回 `StatePatch` / `CapabilityRequest`，不直接写 session、case 或 WorkflowState。
+- 当前 Agent 无状态，读取运行时内部上下文并返回 `AgentMessage` / `ToolCallRequest`；Native 阶段服务负责转换为 `StatePatch` 和 `CapabilityRequest`。
+- Native 阶段服务返回 `StatePatch`，并将工具调用转换为 `CapabilityRequest`；Agent 不直接写 session、case 或 WorkflowState。
 - 当前和目标输入输出均使用项目 Pydantic/domain model，不使用框架 message。
 - Agent 不能持有底层能力实现，也不能自行选择未经授权的 jurisdiction 或知识库。
 - 新增 Agent 必须证明独立目标、上下文、权限或专项评测价值。
 
-当前四 Agent 继续作为 Native MVP 的兼容实现。后续允许将 `PolicyRAGAgent`、`PaymentCalculationAgent` 收敛为应用服务或 Capability，但必须通过行为回归后再删除。
+当前四 Agent 是 Native MVP 的内部实现。后续允许将 `PolicyRAGAgent`、`PaymentCalculationAgent` 收敛为应用服务或 Capability，但必须通过行为回归后再删除。
 
 ## 重试与幂等
 
@@ -158,7 +169,7 @@ checkpoint 必须带状态 schema、runtime、Prompt、Tool Registry、知识语
 - application service、模型、检索和能力执行采用 async 边界。
 - `WorkflowRuntime` 未来可同时提供 `invoke()` 和项目定义的 `stream()` 事件。
 - 当前 CLI 可以消费最终结果；未来外部流式协议不能直接暴露 LangGraph 事件。
-- 首个 LangGraph 任务不启用复杂并行、后台队列或多路事件流。
+- 首个 LangGraph 实现不启用复杂并行、后台队列或多路事件流。
 
 ## Contract Tests
 

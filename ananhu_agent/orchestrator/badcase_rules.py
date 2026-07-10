@@ -1,40 +1,48 @@
 from __future__ import annotations
 
-from ananhu_agent.schemas import AgentContext
+from ananhu_agent.workflow.contracts import WorkflowState
 
 LOW_INTENT_CONFIDENCE_THRESHOLD = 0.5
 
 
-def detect_badcase_issues(ctx: AgentContext) -> list[str]:
+def detect_badcase_issues(state: WorkflowState) -> list[str]:
     """基于单轮运行结果识别系统自动 badcase 候选原因。"""
     issues: list[str] = []
 
-    if ctx.intent_result and ctx.intent_result.confidence < LOW_INTENT_CONFIDENCE_THRESHOLD:
+    if (
+        state.intent_result
+        and state.intent_result.get("confidence", 1.0) < LOW_INTENT_CONFIDENCE_THRESHOLD
+    ):
         issues.append("low_intent_confidence")
 
-    if _policy_rag_returned_no_result(ctx):
+    if _policy_rag_returned_no_result(state):
         issues.append("rag_no_result")
 
-    if ctx.verification_result:
-        for issue in ctx.verification_result.issues:
+    if state.verification_result:
+        for issue in state.verification_result.get("issues", []):
             if issue == "missing_citation":
                 issues.append("missing_citation")
 
-    if any(result.tool_status == "failed" for result in ctx.tool_results):
+    if any(result.get("tool_status") == "failed" for result in state.capability_results):
         issues.append("tool_failed")
 
-    if ctx.safety_result and not ctx.safety_result.passed:
+    if state.safety_result and not state.safety_result.get("passed", True):
         issues.append("unsafe_answer")
 
-    if not (ctx.final_answer or "").strip():
+    if not (state.final_answer or "").strip():
         issues.append("empty_answer")
 
     return _dedupe_preserve_order(issues)
 
 
-def _policy_rag_returned_no_result(ctx: AgentContext) -> bool:
-    rag_results = [result for result in ctx.tool_results if result.tool_name == "PolicyRAGTool"]
-    return any(result.tool_status == "success" and not result.output.get("documents") for result in rag_results)
+def _policy_rag_returned_no_result(state: WorkflowState) -> bool:
+    rag_results = [
+        result for result in state.capability_results if result.get("tool_name") == "PolicyRAGTool"
+    ]
+    return any(
+        result.get("tool_status") == "success" and not result.get("output", {}).get("documents")
+        for result in rag_results
+    )
 
 
 def _dedupe_preserve_order(values: list[str]) -> list[str]:

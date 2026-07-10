@@ -37,7 +37,7 @@ created_at
 producer
 ```
 
-当前已在 `ananhu_agent/workflow/contracts.py` 为 `RunRequest`、`WorkflowState` 和 `WorkflowResult` 增加 `schema_version`、`run_id`、`request_id`、`session_id`、`case_id` 和 `message_id`。任务 27 已为 `TraceEvent` 增加可选 `runtime_name`、`runtime_version`、`node_id`、`attempt` 和 `logical_call_id`，并保持旧 JSONL 事件兼容；任务 28-31 将继续把这些字段接入能力、运行时和 usage 链路，迁移完成后 Prompt、模型、能力、知识语料和公式版本必须可关联。
+当前已在 `ananhu_agent/workflow/contracts.py` 为 `RunRequest`、`WorkflowState` 和 `WorkflowResult` 增加 `schema_version`、`run_id`、`request_id`、`session_id`、`case_id` 和 `message_id`。`TraceEvent` 已包含可选 `runtime_name`、`runtime_version`、`node_id`、`attempt` 和 `logical_call_id`；当前 Runtime 与 Capability 链路按项目 trace schema 写入这些字段。后续 usage、Prompt、模型、知识语料和公式版本必须继续与同一运行证据关联。
 
 ## TraceEvent
 
@@ -63,7 +63,7 @@ run_failed
 
 业务事件 schema 由项目维护。LangGraph/LangSmith 事件通过 mapper 关联到项目事件，不能直接进入 Eval 契约。
 
-任务 27 后，每条 trace 可携带：
+每条 trace 可携带：
 
 - `runtime_name`、`runtime_version`：区分 Native、LangGraph 等运行时实现和协议版本。
 - `node_id`：产生事件的业务节点或阶段服务。
