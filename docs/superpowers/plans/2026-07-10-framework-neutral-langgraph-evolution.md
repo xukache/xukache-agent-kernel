@@ -41,8 +41,8 @@
 - [x] 任务 23：实现模型配置和 ModelRouter profile
 - [x] 任务 24：实现历史 Agno-compatible 适配边界
 - [x] 任务 25：统一框架中立架构、版本文档和后续计划
-- [ ] 任务 26：锁定业务阶段并定义核心状态协议
-- [ ] 任务 27：定义 StatePatch、Reducer、调用身份和 Trace 协议
+- [x] 任务 26：锁定业务阶段并定义核心状态协议
+- [x] 任务 27：定义 StatePatch、Reducer、调用身份和 Trace 协议
 - [ ] 任务 28：建立 CapabilityGateway 端口和 ToolExecutor 适配
 - [ ] 任务 29：阶段化 Native Runtime 并建立 Runtime Contract
 - [ ] 任务 30：接入最小串行 LangGraph Runtime
@@ -99,7 +99,7 @@ uv run pytest -v
 
 **验收标准：** 旧扫描无有效命中；当前与目标运行时边界一致；旧 Agno 待办不存在；53 项现有测试通过。
 
-### - [ ] 任务 26：锁定业务阶段并定义核心状态协议
+### - [x] 任务 26：锁定业务阶段并定义核心状态协议
 
 **目标：** 先从当前行为提取稳定阶段，再定义不依赖框架的请求、状态和结果，避免枚举反向修改。
 
@@ -119,7 +119,7 @@ uv run pytest -v
 
 **验收标准：** 协议不导入任何 Agent 框架类型；阶段覆盖所有 characterization 场景；状态可序列化；现有 CLI 行为不变。
 
-### - [ ] 任务 27：定义 StatePatch、Reducer、调用身份和 Trace 协议
+### - [x] 任务 27：定义 StatePatch、Reducer、调用身份和 Trace 协议
 
 **目标：** 在引入运行时前冻结状态增量、重放、调用关联和运行证据语义。
 

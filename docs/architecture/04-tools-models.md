@@ -13,7 +13,7 @@
 | 模型调用 | `ModelRouter` + Fake Model | `ModelGateway` / `ModelRegistry` |
 | 未来语音/多模态 | 未实现 | `CapabilityGateway` 下的适配器 |
 
-Agent 不直接调用这些实现，只产生项目 `CapabilityRequest`。
+Agent 不直接调用这些实现，只产生项目 `CapabilityRequest`。任务 28 已新增 `ananhu_agent/capabilities/`，当前通过 `ToolExecutorCapabilityGateway` 适配现有 `ToolExecutor`。
 
 ## CapabilityRegistry
 
@@ -29,18 +29,17 @@ Agent 不直接调用这些实现，只产生项目 `CapabilityRequest`。
 
 ## CapabilityGateway
 
-现有 `ToolExecutor` 承担统一执行网关职责。目标链路：
+任务 28 后，`CapabilityGateway` 是 Runtime/阶段服务依赖的能力端口，`ToolExecutorCapabilityGateway` 包装现有 `ToolExecutor` 并保留原有治理行为。当前链路：
 
 ```text
 解析 CapabilityRequest
   -> 注册和 schema 校验
-  -> tenant / jurisdiction / permission 校验
+  -> caller permission 校验
   -> 稳定幂等键检查
-  -> timeout / retry / circuit policy
-  -> 执行 adapter
-  -> 输出 schema 和证据校验
-  -> 脱敏
-  -> trace + usage
+  -> ToolExecutor adapter
+  -> timeout
+  -> 输出 schema 校验
+  -> trace
 ```
 
 LangGraph ToolNode 或 Agent framework tool 不得绕过该网关。
@@ -51,21 +50,22 @@ LangGraph ToolNode 或 Agent framework tool 不得绕过该网关。
 
 ```text
 status
-data
-evidence
+output
 capability_name
-capability_version
-input_digest
-duration_ms
-retryable
-error_code
+caller
+node_id
+logical_call_id
+attempt
+policy
+error
+tool_call_result
 ```
 
 禁止仅返回一段自然语言文本并要求下游 Agent 二次解析关键计算字段。
 
 ## 幂等与重试
 
-逻辑调用键由 `run_id + node_id + logical_call_id + capability_version` 构成，`attempt` 单独记录。能力声明：
+逻辑调用键由 `run_id + node_id + logical_call_id + capability_version` 构成，`attempt` 单独记录。任务 28 的 MVP 适配器以 `logical_call_id` 复用同一进程内历史结果，避免同一逻辑调用被 ToolExecutor 判为不可解释的重复执行。能力声明：
 
 - `read_only_repeatable`：检索类，可在版本一致时重试。
 - `deterministic`：计算类，相同输入和版本返回相同结果。

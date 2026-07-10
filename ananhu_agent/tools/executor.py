@@ -26,34 +26,141 @@ class ToolExecutor:
         request_id: str,
         session_id: str,
         request: ToolCallRequest,
+        runtime_name: str | None = None,
+        runtime_version: str | None = None,
+        node_id: str | None = None,
+        logical_call_id: str | None = None,
+        attempt: int | None = None,
     ) -> ToolCallResult:
+        """执行一次工具调用。
+
+        参数:
+            request_id: 用户请求 ID。
+            session_id: 会话 ID。
+            request: Agent 或 CapabilityGateway 发出的工具调用请求。
+            runtime_name: 发起调用的运行时名称；旧调用可为空。
+            runtime_version: 运行时或能力协议版本；旧调用可为空。
+            node_id: 发起调用的业务节点；用于 trace 关联。
+            logical_call_id: 稳定逻辑调用 ID；重试时不变。
+            attempt: 物理尝试次数；重试时递增。
+
+        返回:
+            归一化 `ToolCallResult`，成功和失败都会写入项目 trace。
+        """
+
         started = perf_counter()
-        self._record_called(request_id, session_id, request)
+        self._record_called(
+            request_id,
+            session_id,
+            request,
+            runtime_name=runtime_name,
+            runtime_version=runtime_version,
+            node_id=node_id,
+            logical_call_id=logical_call_id,
+            attempt=attempt,
+        )
         definition = self.registry.get(request.tool_name)
         if definition is None:
-            return self._fail(request_id, session_id, request, "tool_not_registered", started)
+            return self._fail(
+                request_id,
+                session_id,
+                request,
+                "tool_not_registered",
+                started,
+                runtime_name,
+                runtime_version,
+                node_id,
+                logical_call_id,
+                attempt,
+            )
         if request.called_by not in definition.allowed_callers:
-            return self._fail(request_id, session_id, request, "caller_not_allowed", started)
+            return self._fail(
+                request_id,
+                session_id,
+                request,
+                "caller_not_allowed",
+                started,
+                runtime_name,
+                runtime_version,
+                node_id,
+                logical_call_id,
+                attempt,
+            )
 
         fingerprint = self._fingerprint(request_id, request)
         if fingerprint in self._call_fingerprints:
-            return self._fail(request_id, session_id, request, "duplicate_tool_call", started)
+            return self._fail(
+                request_id,
+                session_id,
+                request,
+                "duplicate_tool_call",
+                started,
+                runtime_name,
+                runtime_version,
+                node_id,
+                logical_call_id,
+                attempt,
+            )
         self._call_fingerprints.add(fingerprint)
 
         missing = [key for key in definition.required_input_keys if key not in request.input]
         if missing:
-            return self._fail(request_id, session_id, request, "invalid_input_schema", started)
+            return self._fail(
+                request_id,
+                session_id,
+                request,
+                "invalid_input_schema",
+                started,
+                runtime_name,
+                runtime_version,
+                node_id,
+                logical_call_id,
+                attempt,
+            )
 
         try:
             output = self._run_with_timeout(definition, request.input)
         except TimeoutError:
-            return self._fail(request_id, session_id, request, "tool_timeout", started)
+            return self._fail(
+                request_id,
+                session_id,
+                request,
+                "tool_timeout",
+                started,
+                runtime_name,
+                runtime_version,
+                node_id,
+                logical_call_id,
+                attempt,
+            )
         except Exception:
-            return self._fail(request_id, session_id, request, "tool_handler_error", started)
+            return self._fail(
+                request_id,
+                session_id,
+                request,
+                "tool_handler_error",
+                started,
+                runtime_name,
+                runtime_version,
+                node_id,
+                logical_call_id,
+                attempt,
+            )
 
         missing_output = [key for key in definition.output_required_keys if key not in output]
         if missing_output:
-            return self._fail(request_id, session_id, request, "tool_output_schema_invalid", started)
+            return self._fail(
+                request_id,
+                session_id,
+                request,
+                "tool_output_schema_invalid",
+                started,
+                runtime_name,
+                runtime_version,
+                node_id,
+                logical_call_id,
+                attempt,
+            )
 
         result = ToolCallResult(
             tool_call_id=request.tool_call_id,
@@ -67,7 +174,17 @@ class ToolExecutor:
             fallback_used=False,
             fallback_reason=None,
         )
-        self._record(request_id, session_id, "tool_finished", result)
+        self._record(
+            request_id,
+            session_id,
+            "tool_finished",
+            result,
+            runtime_name=runtime_name,
+            runtime_version=runtime_version,
+            node_id=node_id,
+            logical_call_id=logical_call_id,
+            attempt=attempt,
+        )
         return result
 
     @staticmethod
@@ -89,7 +206,14 @@ class ToolExecutor:
         request: ToolCallRequest,
         code: str,
         started: float,
+        runtime_name: str | None = None,
+        runtime_version: str | None = None,
+        node_id: str | None = None,
+        logical_call_id: str | None = None,
+        attempt: int | None = None,
     ) -> ToolCallResult:
+        """构造失败结果并写入 trace，保留调用身份字段。"""
+
         result = ToolCallResult(
             tool_call_id=request.tool_call_id,
             tool_name=request.tool_name,
@@ -102,7 +226,17 @@ class ToolExecutor:
             fallback_used=True,
             fallback_reason=code,
         )
-        self._record(request_id, session_id, "tool_failed", result)
+        self._record(
+            request_id,
+            session_id,
+            "tool_failed",
+            result,
+            runtime_name=runtime_name,
+            runtime_version=runtime_version,
+            node_id=node_id,
+            logical_call_id=logical_call_id,
+            attempt=attempt,
+        )
         return result
 
     def _record_called(
@@ -110,13 +244,25 @@ class ToolExecutor:
         request_id: str,
         session_id: str,
         request: ToolCallRequest,
+        runtime_name: str | None = None,
+        runtime_version: str | None = None,
+        node_id: str | None = None,
+        logical_call_id: str | None = None,
+        attempt: int | None = None,
     ) -> None:
+        """记录工具调用开始事件。"""
+
         self.trace_recorder.record(
             TraceEvent.new(
                 request_id=request_id,
                 session_id=session_id,
                 event_type="tool_called",
                 phase="tool",
+                runtime_name=runtime_name,
+                runtime_version=runtime_version,
+                node_id=node_id,
+                logical_call_id=logical_call_id,
+                attempt=attempt,
                 payload=request.model_dump(),
             )
         )
@@ -127,13 +273,25 @@ class ToolExecutor:
         session_id: str,
         event_type: str,
         result: ToolCallResult,
+        runtime_name: str | None = None,
+        runtime_version: str | None = None,
+        node_id: str | None = None,
+        logical_call_id: str | None = None,
+        attempt: int | None = None,
     ) -> None:
+        """记录工具调用完成或失败事件。"""
+
         self.trace_recorder.record(
             TraceEvent.new(
                 request_id=request_id,
                 session_id=session_id,
                 event_type=event_type,
                 phase="tool",
+                runtime_name=runtime_name,
+                runtime_version=runtime_version,
+                node_id=node_id,
+                logical_call_id=logical_call_id,
+                attempt=attempt,
                 payload=result.model_dump(),
                 latency_ms=result.latency_ms,
             )
@@ -141,6 +299,12 @@ class ToolExecutor:
 
     @staticmethod
     def _fingerprint(request_id: str, request: ToolCallRequest) -> str:
+        """生成旧 ToolExecutor 的重复调用指纹。
+
+        该指纹不包含 logical_call_id；任务 28 之后，逻辑重试应优先由
+        CapabilityGateway 复用结果，避免重复进入 ToolExecutor。
+        """
+
         return json.dumps(
             {
                 "request_id": request_id,
