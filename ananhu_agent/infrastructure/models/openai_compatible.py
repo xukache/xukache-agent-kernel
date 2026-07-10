@@ -64,7 +64,11 @@ class OpenAICompatibleModelGateway:
                     headers={"Authorization": f"Bearer {self._api_key}"},
                     json={
                         "model": self._model,
-                        "messages": [{"role": "user", "content": request.prompt}],
+                        # 部分 OpenAI-compatible provider 要求消息显式包含 JSON 关键字。
+                        "messages": [{
+                            "role": "user",
+                            "content": _json_prompt(request.prompt, request.output_schema),
+                        }],
                         "temperature": (
                             request.temperature
                             if request.temperature is not None
@@ -112,6 +116,14 @@ class OpenAICompatibleModelGateway:
             latency_ms=max(0, int((monotonic() - started_at) * 1000)),
             attempt=request.attempt,
         )
+
+
+def _json_prompt(prompt: str, output_schema: dict[str, Any]) -> str:
+    schema = json.dumps({"output_schema": output_schema}, ensure_ascii=False)
+    return (
+        f"{prompt}\n\n严格按照以下 JSON Schema 输出合法 JSON 对象，"
+        f"不要输出 Markdown 或额外说明：\n{schema}"
+    )
 
 
 def _http_error(status_code: int) -> ModelGatewayError:

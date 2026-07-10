@@ -98,6 +98,10 @@ API key 环境变量名；`profiles` 保存业务模型档位并引用 provider�
 输出/cache/total token 和可选费用估算。配置、鉴权、限流、超时、provider、响应格式和 schema
 错误使用项目错误码归一化。`ModelRouter` 只保留 profile registry/组合职责，不再向 Agent 暴露具体客户端。
 
+OpenAI-compatible `json_object` 调用由 Gateway 统一向消息附加英文 `JSON` 约束和项目
+`output_schema`，兼容要求消息显式包含 JSON 关键字的 provider；响应仍须由项目 JSON Schema
+校验，不能仅依赖模型遵循提示。
+
 ## KnowledgeGateway
 
 检索前必须使用可信元数据过滤：

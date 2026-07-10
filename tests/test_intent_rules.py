@@ -29,3 +29,10 @@ def test_current_region_overrides_history_region():
 
     assert merged["province"] == "辽宁省"
     assert metadata["region_overridden"] is True
+
+
+def test_merge_slots_normalizes_province_short_name():
+    merged, metadata = merge_slots(history={}, current={"province": "四川"})
+
+    assert merged["province"] == "四川省"
+    assert metadata["region_inherited"] is False
