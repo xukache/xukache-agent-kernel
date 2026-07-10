@@ -615,7 +615,7 @@ git commit -m "feat(flow): 增加 other 无工具回复与非空错误语义"
 
 **文件：** `presentation.py`、turn/run inspector widgets、styles、presentation tests
 
-- [ ] **步骤 1：编写展示失败测试**
+- [x] **步骤 1：编写展示失败测试**
 
 逐项函数：`test_expanding_one_tree_item_does_not_change_siblings`、
 `test_mouse_and_keyboard_toggle_the_same_item`、`test_raw_json_toggle_only_changes_selected_item`、
@@ -648,33 +648,33 @@ def test_long_json_is_truncated_with_original_length():
     assert view.original_chars > len(view.text)
 ```
 
-- [ ] **步骤 2：运行测试确认失败**
+- [x] **步骤 2：运行测试确认失败**
 
 ```bash
 uv run pytest tests/test_tui_presentation.py tests/test_tui_security.py -v
 ```
 
-- [ ] **步骤 3：实现集中 presentation**
+- [x] **步骤 3：实现集中 presentation**
 
 `presentation.py` 只含纯 Python/Pydantic 展示模型、递归脱敏、裁剪、Usage 格式化和 RunEventReducer；
 Textual widgets 不重复处理安全规则。
 
-- [ ] **步骤 4：实现单轮与检查器 Widget**
+- [x] **步骤 4：实现单轮与检查器 Widget**
 
 `TurnWidget` 按 user -> inspector -> assistant Markdown -> usage 排列。`RunInspector` 使用单个 Textual
 Tree，层级为 node/model/tool/input/output/reasoning；展开内容用 Syntax/ScrollableContainer，不为每种节点拆文件。
 
-- [ ] **步骤 5：实现 80 列 TCSS**
+- [x] **步骤 5：实现 80 列 TCSS**
 
 页面级 `overflow-x: hidden`；输入固定底部；JSON 区局部 `overflow-x: auto`；状态栏不覆盖输入。
 
-- [ ] **步骤 6：运行展示测试**
+- [x] **步骤 6：运行展示测试**
 
 ```bash
 uv run pytest tests/test_tui_presentation.py tests/test_tui_security.py -v
 ```
 
-- [ ] **步骤 7：Commit**
+- [x] **步骤 7：Commit**
 
 ```bash
 git add ananhu_agent/cli/tui/presentation.py ananhu_agent/cli/tui/widgets/turn.py ananhu_agent/cli/tui/widgets/run_inspector.py ananhu_agent/cli/tui/styles.tcss tests/test_tui_presentation.py tests/test_tui_security.py
