@@ -8,6 +8,8 @@ LABOR_CAPACITY_KEYWORDS = ("劳动能力鉴定", "伤残等级", "鉴定材料",
 
 LOW_CONFIDENCE_THRESHOLD = 0.6
 DEFAULT_CLARIFICATION = "请补充事故场景、发生时间、地区和责任划分。"
+GREETING_MESSAGE = "你好，我是安安虎工伤咨询助手。你可以咨询工伤认定、劳动能力鉴定和待遇测算问题。"
+OTHER_INTENT_MESSAGE = "我目前仅提供工伤咨询服务，请改写为工伤相关问题，例如工伤认定、劳动能力鉴定或待遇测算。"
 
 
 def revise_intent(user_query: str, result: IntentResult) -> IntentResult:
@@ -26,3 +28,11 @@ def revise_intent(user_query: str, result: IntentResult) -> IntentResult:
         data.ask_clarification = DEFAULT_CLARIFICATION
 
     return data
+
+
+def other_intent_message(user_query: str) -> str:
+    """为非领域输入提供确定性说明，不依赖检索或业务 Agent。"""
+
+    if user_query.strip() in {"你好", "您好", "嗨", "hello", "hi"}:
+        return GREETING_MESSAGE
+    return OTHER_INTENT_MESSAGE

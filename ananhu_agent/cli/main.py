@@ -9,6 +9,7 @@ import typer
 
 from ananhu_agent import __version__
 from ananhu_agent.config.settings import RuntimeSettings
+from ananhu_agent.cli.tui.presentation import visible_result_message
 from ananhu_agent.runtime import create_default_runtime
 from ananhu_agent.schemas import BadcaseRecord, now_cn
 from ananhu_agent.storage.runtime_stores import BadcaseStore, TraceRecorder
@@ -34,7 +35,7 @@ def ask(query: str) -> None:
     runtime_dir = Path(os.getenv("ANANHU_RUNTIME_DIR", ".ananhu-runtime"))
     runtime: WorkflowRuntime = create_default_runtime(runtime_dir)
     result = asyncio.run(runtime.invoke(_run_request("cli", 1, query)))
-    typer.echo(result.final_answer or result.clarification_question or result.error_message)
+    typer.echo(visible_result_message(result))
     typer.echo(f"Trace: {runtime_dir / 'traces.jsonl'}")
 
 
@@ -152,11 +153,7 @@ def chat() -> None:
         # 交互式会话由 CLI 维护轻量 session 和 turn；业务状态推进由 WorkflowRuntime 负责。
         turn_id += 1
         latest_result = asyncio.run(runtime.invoke(_run_request(session_id, turn_id, user_input)))
-        typer.echo(
-            latest_result.final_answer
-            or latest_result.clarification_question
-            or latest_result.error_message
-        )
+        typer.echo(visible_result_message(latest_result))
         typer.echo(f"Trace: {runtime_dir / 'traces.jsonl'}")
 
 
