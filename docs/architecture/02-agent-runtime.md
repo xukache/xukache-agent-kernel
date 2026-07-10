@@ -47,7 +47,7 @@ StopReason       框架无关停止语义
 - `WorkflowResult`：承载完成、追问、证据不足、能力失败和安全拦截等停止结果。
 - `WorkflowPhase`、`RunStatus`、`StopReason`：冻结 Native 与后续 LangGraph Runtime 共享的阶段、状态和停止语义。
 
-任务 26 只定义协议和旧上下文映射，不改变 CLI/Native MVP 行为；`StatePatch`、reducer、调用身份和 trace runtime 字段由任务 27 冻结。
+任务 26 只定义协议和旧上下文映射，不改变 CLI/Native MVP 行为。任务 27 已冻结 `StatePatch`、reducer、调用身份和 trace runtime 字段。
 
 ## StatePatch 与 Reducer
 
@@ -55,15 +55,34 @@ StopReason       框架无关停止语义
 
 ```text
 StatePatch
+  patch_id
+  run_id
+  source_phase
+  node_id
+  logical_call_id
+  attempt
   fact_updates
-  evidence_updates
-  capability_updates
-  response_update
+  intent_result
+  execution_plan
+  capability_results
+  evidence
+  draft_final_answer
+  verification_result
+  safety_result
+  final_answer
   next_phase
+  status
   stop_reason
 ```
 
-每个字段必须定义：唯一写入者或允许写入者、覆盖/追加/按 ID 合并规则、冲突处理、失效条件和重复执行语义。Reducer 作为普通 Python 纯函数实现并独立测试，不依赖 LangGraph reducer 类型。
+当前 reducer 已在 `ananhu_agent/workflow/reducer.py` 以普通 Python 纯函数实现并独立测试，不依赖 LangGraph reducer 类型。合并规则为：
+
+- `patch_id` 去重：重复 patch 不重复追加列表字段。
+- `phase` 校验：非法跳转返回结构化失败，不抛框架异常。
+- `fact_updates` 按字段覆盖写入 `case_facts`。
+- `intent_result`、`execution_plan`、答复、校验、安全和终止字段为显式覆盖。
+- `capability_results` 按 `tool_call_id` 合并。
+- `evidence` 按 `evidence_id` 合并。
 
 ## LangGraph 边界
 

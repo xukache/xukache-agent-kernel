@@ -150,6 +150,10 @@ class WorkflowState(BaseModel):
         description="运行级尝试次数；任务 27 会进一步区分 node/capability attempt。",
     )
     capability_call_count: int = Field(default=0, description="本次 run 已执行的能力调用数量。")
+    applied_patch_ids: list[str] = Field(
+        default_factory=list,
+        description="已经应用过的 StatePatch ID，用于重放和节点重试时去重。",
+    )
     case_facts: dict[str, Any] = Field(
         default_factory=dict,
         description="已确认或当前轮提取的案件事实投影，当前来自 active_slots。",
@@ -249,6 +253,43 @@ class WorkflowResult(BaseModel):
     clarification_question: str | None = Field(default=None, description="追问终止时返回的问题。")
     error_message: str | None = Field(default=None, description="结构化失败时的人类可读错误。")
     created_at: str = Field(default_factory=now_cn, description="结果生成时间。")
+
+
+class StatePatch(BaseModel):
+    """阶段服务返回的状态增量。
+
+    patch_id 用于幂等去重；node_id、logical_call_id 和 attempt 用于把一次逻辑调用、
+    节点执行和物理重试关联到 trace。Reducer 是唯一能把 patch 合并进 WorkflowState 的位置。
+    """
+
+    patch_id: str = Field(description="状态增量 ID；重复 patch 不得重复追加列表字段。")
+    run_id: str = Field(description="patch 所属 run，必须与 WorkflowState.run_id 一致。")
+    source_phase: WorkflowPhase = Field(description="产生 patch 时读取的源阶段。")
+    next_phase: WorkflowPhase | None = Field(default=None, description="应用成功后的目标阶段。")
+    node_id: str = Field(description="产生 patch 的业务节点或阶段服务 ID。")
+    logical_call_id: str = Field(description="逻辑调用 ID；同一逻辑重试时保持不变。")
+    attempt: int = Field(default=1, ge=1, description="物理尝试次数，从 1 开始递增。")
+    fact_updates: dict[str, Any] = Field(
+        default_factory=dict,
+        description="案件事实增量，按字段覆盖写入 WorkflowState.case_facts。",
+    )
+    intent_result: dict[str, Any] | None = Field(default=None, description="意图结果覆盖写入。")
+    execution_plan: dict[str, Any] | None = Field(default=None, description="执行计划覆盖写入。")
+    capability_results: list[dict[str, Any]] = Field(
+        default_factory=list,
+        description="能力结果列表，按 tool_call_id 业务 ID 合并。",
+    )
+    evidence: list[dict[str, Any]] = Field(
+        default_factory=list,
+        description="证据列表，按 evidence_id 业务 ID 合并。",
+    )
+    draft_final_answer: str | None = Field(default=None, description="答案草稿覆盖写入。")
+    verification_result: dict[str, Any] | None = Field(default=None, description="校验结果覆盖写入。")
+    safety_result: dict[str, Any] | None = Field(default=None, description="安全结果覆盖写入。")
+    final_answer: str | None = Field(default=None, description="最终答案覆盖写入。")
+    clarification_question: str | None = Field(default=None, description="追问文本覆盖写入。")
+    status: RunStatus | None = Field(default=None, description="运行状态覆盖写入。")
+    stop_reason: StopReason | None = Field(default=None, description="停止原因覆盖写入。")
 
 
 def _derive_runtime_position(
