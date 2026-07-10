@@ -40,6 +40,15 @@ StopReason       框架无关停止语义
 
 禁止直接将当前共享可变 `AgentContext` 注册为 LangGraph State。迁移阶段由 adapter 在旧协议和新协议间显式映射。
 
+任务 26 已在 `ananhu_agent/workflow/contracts.py` 落地首版框架中立协议：
+
+- `RunRequest`：承载 `request_id`、`run_id`、`session_id`、`case_id`、`message_id`、可信 jurisdiction 和不可变用户输入。
+- `WorkflowState`：承载单次 run 的可序列化业务状态投影，并提供旧 `AgentContext` 显式映射。
+- `WorkflowResult`：承载完成、追问、证据不足、能力失败和安全拦截等停止结果。
+- `WorkflowPhase`、`RunStatus`、`StopReason`：冻结 Native 与后续 LangGraph Runtime 共享的阶段、状态和停止语义。
+
+任务 26 只定义协议和旧上下文映射，不改变 CLI/Native MVP 行为；`StatePatch`、reducer、调用身份和 trace runtime 字段由任务 27 冻结。
+
 ## StatePatch 与 Reducer
 
 每个阶段返回自己拥有字段的增量，禁止原地修改共享列表或字典：
@@ -84,7 +93,7 @@ understand
   -> validate_facts
   -> clarify | resolve_jurisdiction
   -> plan
-  -> execute_capabilities
+  -> execute
   -> validate_evidence
   -> compose
   -> safety

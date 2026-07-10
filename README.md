@@ -11,7 +11,7 @@
 - 当前 `AgentOrchestrator` 是已实现的 Native Runtime，不是长期唯一调度器。
 - 当前四个 Agent 是 MVP 实现现状，不是永久模块边界。
 - 当前模型和政策检索以确定性 fake/fixture 为主，验证的是协议和离线工程闭环，不代表真实模型与真实政策语料已经完成生产验收。
-- LangGraph 尚未接入；必须先完成框架中立状态和运行时端口，再引入依赖。
+- 已新增框架中立 `RunRequest`、`WorkflowState`、`WorkflowResult`、`WorkflowPhase`、`RunStatus` 和 `StopReason` 协议；LangGraph 尚未接入，必须先完成 reducer、能力网关和运行时端口，再引入依赖。
 
 ## 当前 Native MVP 链路
 
@@ -26,7 +26,7 @@
   -> Trace / TaskState / RunReport / Badcase / Eval
 ```
 
-目标稳定业务阶段将在任务 26-31 中演进为案件事实、可信 jurisdiction、CapabilityGateway、证据校验、Usage 和双 Runtime 链路，当前代码尚未具备全部目标协议。
+目标稳定业务阶段已在任务 26 中锁定；任务 27-31 将继续演进状态增量、CapabilityGateway、证据校验、Usage 和双 Runtime 链路，当前代码尚未具备全部目标协议。
 
 ## 架构原则
 
@@ -68,6 +68,7 @@ uv run ananhu-agent eval data/eval/eval_cases.jsonl
 ananhu_agent/
   agents/              # 当前 MVP Agent 实现
   orchestrator/        # 当前 Native Runtime、聚合、规则和安全校验
+  workflow/            # 框架中立请求、状态、结果和停止原因协议
   context/             # 上下文构建和槽位规则
   prompts/             # 版本化 Prompt
   tools/               # ToolRegistry、ToolExecutor 和业务能力
