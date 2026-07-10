@@ -1,54 +1,59 @@
 # 技术架构总纲
 
-本文是安安虎工伤智能助手 Agno 多 Agent 重构版的技术架构入口。
-
-当前项目处于 MVP 架构基线阶段，尚未实现业务代码。`TECH_ARCHITECTURE_MVP.md` 是 MVP v0.1 原始设计快照；`docs/architecture/` 是后续实现和迭代时的长期维护事实源。
+本文是安安虎工伤智能助手 Agent Harness 的架构事实源入口。
 
 ## 文档状态
 
-- 当前阶段：无前端交互式 CLI MVP。
-- 当前实现：仅有架构文档，尚未创建 Python 包结构。
-- 环境管理：使用 `uv`，Python 版本固定为 3.11。
-- API 状态：当前不暴露 HTTP API，详见 `docs/api-contracts.md`。
-- 架构事实源优先级：
-  1. 当前代码决定实际表现。
-  2. `docs/architecture/` 决定长期维护架构事实。
-  3. `TECH_ARCHITECTURE_MVP.md` 保留为 MVP 原始设计快照。
-  4. API 契约以 `docs/api-contracts.md` 为入口。
+- 当前阶段：四 Agent Native Runtime 离线闭环已实现，正在进行框架中立化和 LangGraph 运行时演进。
+- 当前运行时：`AgentOrchestrator` 驱动的 Native Runtime。
+- 目标运行时：LangGraph 作为默认、可替换的工作流运行时。
+- 核心原则：领域、应用、Agent、Capability、Trace 和 Eval 协议不依赖 LangGraph。
+- 外部接口：当前只有 CLI；没有 HTTP API、WebSocket 或前端。
+- 架构基线：`TECH_ARCHITECTURE_MVP.md`。
+
+## 事实源优先级
+
+1. 对应 `docs/architecture/` 分册中的当前规则。
+2. `docs/architecture/99-changelog.md` 中较新的架构决策。
+3. `TECH_ARCHITECTURE_MVP.md` 的整体基线。
+4. 已完成任务计划只作为实现历史，不覆盖当前架构事实。
 
 ## 阅读顺序
 
-| 顺序 | 文档 | 目的 |
+| 顺序 | 文档 | 关注内容 |
 |---|---|---|
-| 1 | `docs/architecture/00-overview.md` | 理解项目定位、MVP 范围和非目标 |
-| 2 | `docs/architecture/01-business-flow.md` | 理解业务流程、数据流和 badcase 回流 |
-| 3 | `docs/architecture/02-agent-runtime.md` | 理解 Agent 编排、上下文协议和异步边界 |
-| 4 | `docs/architecture/03-prompt-context.md` | 理解 PromptManager、ContextManager、prompt 评测和回滚 |
-| 5 | `docs/architecture/04-tools-models.md` | 理解 ToolExecutor、ToolRegistry、ModelRouter 和多模型策略 |
-| 6 | `docs/architecture/05-data-observability.md` | 理解 TaskState、Trace、Report、Badcase 和 Eval |
-| 7 | `docs/architecture/10-evolution-rules.md` | 理解架构演进和 Agent 变更监控 |
-| 8 | `docs/architecture/99-changelog.md` | 查看架构变更记录 |
+| 1 | `00-overview.md` | 项目定位、分层、范围和非目标 |
+| 2 | `01-business-flow.md` | 稳定业务阶段和数据流 |
+| 3 | `02-agent-runtime.md` | 状态、运行时端口、LangGraph 边界和恢复 |
+| 4 | `03-prompt-context.md` | Prompt、上下文、案件事实和记忆 |
+| 5 | `04-tools-models.md` | 能力执行、模型、知识检索和幂等 |
+| 6 | `05-data-observability.md` | Trace、Usage、Badcase 和 Eval |
+| 7 | `10-evolution-rules.md` | 架构演进与同步规则 |
+| 8 | `99-changelog.md` | 架构变更记录 |
 
 ## 核心原则
 
-1. MVP 只保留 4 个核心 Agent，不按业务名词提前拆 Agent。
-2. Orchestrator 持有状态，Agent 无状态执行。
-3. 工具由 `ToolExecutor` 统一治理，模型不能直接触碰业务工具。
-4. Prompt 是工程资产，必须版本化、分区、可评测、可回滚。
-5. Trace、TaskState、Report 是系统证据链，不是附属日志。
-6. 当前只做 CLI，同步主流程；允许 async I/O，但不做复杂异步任务平台。
+1. LangGraph 是调度运行时，不是业务架构。
+2. 工作流按稳定业务阶段建模，不按 Agent 名称机械建图。
+3. 项目协议定义业务状态、状态增量、reducer、停止原因、错误码和运行证据。
+4. Agent 无状态，不直接修改共享状态、调用底层能力或拼接完整 Prompt。
+5. 当前四 Agent 是实现现状，不是永久架构约束。
+6. checkpoint、审计快照、session/case memory 和 trace 职责分离。
+7. Native 与 LangGraph Runtime 必须通过同一套 contract tests 和 eval 数据。
+8. 所有框架、模型、检索库和存储实现都通过端口隔离。
 
-## 不适用项
+## 当前不适用项
 
-- 当前无前端，不启用前端架构分册。
-- 当前无 HTTP API，不启用 API 领域契约分册。
-- 当前不接 MCP / Skill 平台化扩展。
-- 当前不接语音、图片、多模态输入。
-- 当前不做复杂 checkpoint / resume、后台任务、并行 Agent 仲裁。
+- 当前不启用 HTTP / WebSocket 领域契约分册。
+- 当前不建设前端规范。
+- 当前不启用复杂并行 Agent 仲裁、通用任务平台和多路流式协议。
+- 当前不宣称 fake model、fixture RAG 或未启用 checkpoint 的能力已经生产可用。
+
+这些是阶段边界，不是 Agent 内核的永久限制。
 
 ## 维护规则
 
-- 本文件只做索引和顶层原则，不放长篇模块细节。
-- 修改系统模块边界、Agent 清单、上下文协议、Prompt 管理、Tool 管理、数据模型、评测指标时，必须同步更新对应分册。
-- 架构级变更必须更新 `docs/architecture/99-changelog.md`。
-- Agent 变更监控统一写入 `docs/architecture/10-evolution-rules.md`，不创建 `docs/agent-monitoring.md`。
+- 模块边界、状态协议、运行时所有权、事件、权限或评测变化时，同步更新对应分册。
+- 架构级变化必须记录在 `99-changelog.md`。
+- API 状态变化先更新 `docs/api-contracts.md`。
+- 不在 README、AGENTS 和任务计划中重复维护详细架构；只写摘要并链接事实源。

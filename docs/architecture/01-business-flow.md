@@ -2,125 +2,92 @@
 
 ## 范围
 
-本文定义 MVP 阶段的业务流程、数据流、badcase 回流和评测闭环。
+本文定义与具体编排框架无关的稳定业务阶段。LangGraph 图和 Native Runtime 都必须实现这些语义。
 
-## 政府办事大厅咨询流程
-
-```text
-群众提出问题
-  ↓
-识别意图：工伤认定 / 劳动能力鉴定 / 参保认定 / 待遇测算 / 其他
-  ↓
-抽取地区、事故场景、伤情、材料状态、工资、伤残等级等槽位
-  ↓
-判断信息是否足够
-  ├── 不足：生成追问
-  └── 足够：进入对应 Agent 链路
-  ↓
-调用法规 RAG、待遇测算或地区过滤工具
-  ↓
-聚合结果，检查引用依据、地区一致性和安全表达
-  ↓
-返回结论、依据、适用条件、材料建议、风险提示
-```
-
-## 工伤认定咨询
-
-典型问题：
+## 主咨询流程
 
 ```text
-上班路上发生交通事故，能不能认定工伤？
+接收 RunRequest
+  -> 提取需求、复合意图和候选案件事实
+  -> 规则修正并合并事实来源
+  -> 检查冲突和必需事实
+  -> 需要补充信息则生成澄清问题并停止
+  -> 解析可信服务地市和知识范围
+  -> 生成能力执行计划
+  -> 政策检索 / 资源检索 / 待遇测算
+  -> 验证证据、地区、时效和计算输入
+  -> 组装结构化答复
+  -> 安全校验
+  -> 写入 trace、usage、report 和 badcase 判定
 ```
 
-MVP 流程：
+## 案件事实流
+
+每条事实必须记录：
+
+- 字段和值。
+- 来源：用户陈述、用户确认、材料抽取、工具结果或模型推断。
+- 确认状态：已确认、候选、冲突、待补充。
+- 有效期、版本和替代关系。
+
+模型抽取只产生候选事实。后续用户明确修正时，新事实替代旧事实，并使依赖旧事实的政策证据、执行计划和测算快照失效。
+
+## 地区与知识边界
+
+必须区分：
 
 ```text
-IntentRouterAgent
-  ↓
-DomainConsultationAgent(task_type=work_injury_recognition)
-  ↓
-PolicyRAGAgent / PolicyRAGTool
-  ↓
-AnswerValidator
-  ↓
-PolicySafetyGuard
-  ↓
-ResultAggregator
+service_jurisdiction   可信业务服务范围
+account_region         账户归属信息
+selected_region        用户明确选择
+mentioned_region       模型从文本提取
+location_region        定位推断
 ```
 
-## 劳动能力鉴定咨询
+只有可信业务规则允许的字段能决定知识库过滤和权限。`mentioned_region` 不能直接改变数据边界。
 
-典型问题：
+## 政策咨询流程
 
 ```text
-劳动能力鉴定需要准备哪些材料？
+确认问题和案件事实
+  -> 解析 jurisdiction / effective_at / audience
+  -> 检索前元数据过滤
+  -> 召回、融合、重排
+  -> 引用和适用性校验
+  -> 生成有依据的限定答复
 ```
 
-MVP 流程：
+没有充分证据时，系统必须追问、限定回答或明确无法确认，不能用模型常识补齐法规依据。
+
+## 待遇辅助测算流程
 
 ```text
-IntentRouterAgent
-  ↓
-DomainConsultationAgent(task_type=labor_capacity)
-  ↓
-PolicyRAGAgent / PolicyRAGTool
-  ↓
-输出材料清单、办理路径、注意事项
+识别测算项目
+  -> 校验地区、事故时间、工资、伤残等级等输入
+  -> 记录输入来源和不确定项
+  -> 选择公式及版本
+  -> 执行确定性计算
+  -> 输出计算快照、适用前提和风险提示
 ```
 
-## 待遇测算
+事实、地区、基数年份或公式版本变化时，旧测算结果必须失效。系统不得将辅助测算描述为最终赔付承诺。
 
-典型问题：
+## 复合需求流程
 
-```text
-四川 35 岁，伤残十级，大概能赔多少钱？
-```
-
-MVP 流程：
-
-```text
-IntentRouterAgent
-  ↓
-PaymentCalculationAgent
-  ↓
-PaymentCalculationTool
-  ↓
-PolicyRAGAgent 补充依据
-  ↓
-ResultAggregator 输出测算结果、假设条件和免责声明
-```
+复合需求先统一提取案件事实，再按依赖关系执行能力。只有不存在前置依赖且共享同一事实版本时才允许并行；结果汇合时必须验证证据和假设一致性。
 
 ## Badcase 回流
 
 ```text
-用户负反馈 / 系统自动标记 / eval 失败
-  ↓
-生成候选 badcase
-  ↓
-补充 issue_type、expected_answer、correction_note
-  ↓
-必要时转成 eval case
-  ↓
-修复 Prompt / Tool / RAG / Rule
-  ↓
-运行回归评测
-  ↓
-标记 fixed
+运行或 Eval 失败
+  -> 按路由 / 事实 / 地区 / 检索 / 工具 / 生成 / 安全分类
+  -> 保存最小必要、已脱敏证据
+  -> 补充专家期望或确定性 verifier
+  -> 加入回归集
+  -> 修改对应机制并升级版本
+  -> 运行专项评测和全量回归
 ```
 
 ## 评测数据流
 
-```text
-eval_cases.jsonl
-  ↓
-EvalRunner
-  ↓
-AgentOrchestrator
-  ↓
-answer + task_state + trace + report
-  ↓
-指标计算
-  ↓
-metrics.json / badcase.jsonl
-```
-
+评测任务先定义输入、可信事实、允许能力、步骤预算、期望证据、确定性断言和失败类别。Fake model 用于验证 harness 确定性；真实模型实验单独报告，不能混入同一通过率口径。

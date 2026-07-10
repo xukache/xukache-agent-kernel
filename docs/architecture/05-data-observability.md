@@ -1,170 +1,125 @@
-# 05. 数据模型与观测诊断
+# 05. 数据、观测与评测
 
 ## 范围
 
-本文定义 MVP 阶段的运行证据、Trace、Report、Badcase、Eval 数据结构和观测规则。
+本文定义项目自己的运行证据、用量、badcase 和 eval 契约。框架日志和 LangSmith 可以补充诊断，但不能成为唯一事实源。
 
-## 三类运行证据
+## 当前实现与目标对象
 
-| 类型 | 作用 |
+| 对象 | 状态 | 回答的问题 |
+|---|---|---|
+| `SessionState` | 当前已实现 | 连续对话记住了哪些槽位和轮次 |
+| `TaskState` | 当前已实现 | Native run 最终审计快照是什么 |
+| `TraceEvent` | 当前已实现 | 中间发生了什么 |
+| `RunReport` | 当前已实现 | 最终结果和基础指标是什么 |
+| `BadcaseRecord` | 当前已实现 | 哪些运行需要回归 |
+| `CaseRecord` | 目标 | 当前案件有哪些可信事实 |
+| `RunSnapshot` | 目标 | 这次运行当前到哪里 |
+| `CheckpointEnvelope` | 条件目标 | 运行时如何恢复 |
+| `UsageRecord` | 目标 | 消耗了哪些模型、token 和能力资源 |
+| `EvaluationArtifact` | 目标增强 | 如何复现完整评测上下文 |
+
+这些对象使用不同生命周期，不得用 trace 直接恢复，也不得用 checkpoint 替代审计。
+
+## 标识和版本
+
+目标运行对象至少包含：
+
+```text
+schema_version
+request_id
+run_id
+session_id
+case_id
+message_id
+correlation_id
+created_at
+producer
+```
+
+当前对象字段以 `ananhu_agent/schemas.py` 为准。任务 26-31 将逐步增加 `case_id`、`message_id`、`schema_version`、`runtime_name`、`runtime_version`、`node_id`、`attempt` 和 `logical_call_id`；迁移完成后 Prompt、模型、能力、知识语料和公式版本必须可关联。
+
+## TraceEvent
+
+当前事件覆盖请求、意图、工具、校验、安全和响应主链路。目标事件至少覆盖：
+
+```text
+request_received
+state_transitioned
+intent_recognized
+facts_merged
+clarification_requested
+jurisdiction_resolved
+context_built
+model_started / model_finished / model_failed
+capability_started / capability_finished / capability_failed
+evidence_validated
+answer_validated
+safety_checked
+checkpoint_saved / checkpoint_restored
+response_ready
+run_failed
+```
+
+业务事件 schema 由项目维护。LangGraph/LangSmith 事件通过 mapper 关联到项目事件，不能直接进入 Eval 契约。
+
+## 隐私与脱敏
+
+- trace、session 和 badcase 默认不保存不必要的完整查询和敏感材料原文。
+- 保存结构化摘要、hash、Evidence ID 和经过脱敏的最小诊断字段。
+- 每类数据定义访问范围、保留期限和删除策略。
+- 模型输入输出和附件处理记录 consent scope 与脱敏结果。
+
+## UsageRecord
+
+至少记录：
+
+- provider、model、model profile。
+- input/output/cache token 和估算费用。
+- Prompt 版本和上下文 section token。
+- capability 名称、版本、次数和耗时。
+- run、node、tenant 和业务标签。
+
+计费账本由项目维护，不依赖单一模型 SDK 或 LangSmith 聚合口径。
+
+## BadcaseRecord
+
+失败分类至少包含：
+
+```text
+routing_error
+fact_extraction_error
+fact_conflict_missed
+jurisdiction_error
+retrieval_miss
+stale_or_invalid_evidence
+citation_error
+calculation_error
+capability_error
+response_inconsistency
+safety_violation
+runtime_or_recovery_error
+```
+
+Badcase 保存最小必要输入、关键状态版本、实际/期望结果、失败阶段、修复说明和是否进入 eval。
+
+## Eval 分层
+
+| 机制 | 主要指标 |
 |---|---|
-| `task_states` | 当前轮运行快照，回答“这轮跑到哪一步” |
-| `agent_traces` | 逐事件时间线，回答“中间发生了什么” |
-| `run_reports` | 运行摘要，回答“最后拿什么做统计” |
+| 路由 | intent、复合需求、流程选择准确率 |
+| 案件事实 | 抽取、确认、冲突发现、过期复用率 |
+| RAG | 地区/时效过滤、Recall、MRR/NDCG、引用支持率 |
+| 测算 | 输入准确、公式版本、结果误差、缺失输入处理 |
+| 答复 | 事实一致性、不确定性披露、安全违规率 |
+| Context | token、关键证据保留率、裁剪原因 |
+| Runtime | phase、StopReason、重试、幂等、恢复成功率 |
+| 成本性能 | token、费用、P50/P95 延迟、能力调用数 |
 
-## task_states
+不得使用一个总体通过率证明所有机制有效。法规和测算优先使用确定性 verifier 或专家标注；LLM-as-Judge 仅作为辅助信号。
 
-核心字段：
+## 可复现性
 
-- `id`
-- `session_id`
-- `turn_id`
-- `user_query`
-- `status`
-- `current_phase`
-- `raw_intent`
-- `revised_intent`
-- `active_slots`
-- `missing_slots`
-- `route_agents`
-- `prompt_refs`
-- `tool_steps`
-- `model_attempts`
-- `fallback_used`
-- `error_message`
+每个 EvaluationArtifact 记录代码 commit、branch、数据集版本、fixture snapshot、模型配置、Prompt/Tool/语料版本、runtime 版本和每条 case 结果。Fake 与真实模型结果分开报告。
 
-## agent_traces
-
-每条 trace event 至少包含：
-
-- `id`
-- `request_id`
-- `session_id`
-- `event_type`
-- `phase`
-- `payload`
-- `latency_ms`
-- `created_at`
-
-关键事件类型：
-
-- `request_received`
-- `intent_recognized`
-- `intent_revised`
-- `slots_merged`
-- `prompt_built`
-- `model_called`
-- `tool_called`
-- `tool_finished`
-- `tool_failed`
-- `answer_validated`
-- `safety_checked`
-- `response_ready`
-- `request_failed`
-
-`model_called` 的 payload 至少记录：
-
-- `model_profile`
-- `model_config.provider`
-- `model_config.model`
-- `model_config.temperature`
-- `prompt_ref`
-
-## run_reports
-
-运行摘要字段：
-
-- `id`
-- `session_id`
-- `final_status`
-- `final_intent`
-- `route_agents`
-- `tool_count`
-- `model_attempts`
-- `prompt_refs`
-- `prompt_metadata`
-- `output_schema_valid_rate`
-- `token_usage`
-- `latency_ms`
-- `fallback_used`
-- `safety_result`
-- `badcase_candidate`
-
-## badcases
-
-结构化字段：
-
-- `id`
-- `request_id`
-- `session_id`
-- `turn_id`
-- `query`
-- `predicted_intent`
-- `issue_type`
-- `agent_route`
-- `tool_calls`
-- `actual_answer`
-- `expected_answer`
-- `correction_note`
-- `added_to_eval`
-- `fixed`
-- `created_at`
-
-badcase 来源：
-
-- 用户主动标记。
-- 用户负反馈。
-- 系统自动标记。
-- eval 失败。
-
-自动标记条件：
-
-- 意图置信度低。
-- RAG 无结果。
-- 答案无引用依据。
-- 地区政策不匹配。
-- 工具调用失败。
-- 输出 schema 不合法。
-- 安全守卫拦截。
-
-安全守卫 issue code：
-
-- `absolute_commitment`
-- `medical_grade_commitment`
-- `agency_decision_substitution`
-- `precise_amount_commitment`
-
-## eval_cases
-
-MVP 评测集至少覆盖：
-
-- 工伤认定。
-- 劳动能力鉴定。
-- 待遇测算。
-- 复合问题。
-- 证据不足和安全边界问题。
-
-## Eval 评测指标
-
-`EvalRunner` 输出总通过率和分层指标，便于定位失败发生在意图、槽位、引用、工具、安全还是性能层：
-
-- `total`、`passed`、`failed`：基于 `expect_contains` 的答案片段总分。
-- `intent_accuracy`：仅统计声明 `expected_intent` 的 case。
-- `slot_accuracy`：仅统计声明 `expected_slots` 的 case，按期望槽位是否全部进入 active slots 计分。
-- `citation_accuracy`：仅统计声明 `expected_citations` 的 case，按 RAG 返回引用标题是否命中期望来源计分。
-- `tool_success_rate`：统计实际发生工具调用的 case，要求本轮工具调用全部成功。
-- `unsafe_expression_rate`：统计未通过安全守卫的 case 占比。
-- `latency_ms_avg`：eval 单轮 `orchestrator.ask()` 平均耗时。
-
-## Prompt 评测
-
-Prompt 指标：
-
-- `format_valid_rate`
-- `missing_slot_accuracy`
-- `citation_grounded_rate`
-- `cannot_answer_correctness`
-- `tool_call_correctness`
-- `unsafe_expression_rate`
-- `prompt_token_cost`
-- `prompt_latency`
+Native 和 LangGraph Runtime 运行同一 contract/eval 集时，比较业务结果、关键状态、能力调用和项目 trace 语义，不要求框架内部事件逐字一致。

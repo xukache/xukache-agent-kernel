@@ -1,102 +1,96 @@
-# 03. Prompt 与上下文工程
+# 03. Prompt、上下文与记忆
 
 ## 范围
 
-本文定义 PromptManager、ContextManager、prompt 模板结构、版本治理、trace 和评测规则。
+本文定义框架中立的 Prompt、上下文预算、案件事实和记忆治理。LangGraph node 不得自行拼接 Prompt 或直接读取完整聊天历史。
 
 ## 核心原则
 
-- Prompt 不是一段文案，而是受工程治理的模型输入协议。
-- Prompt 不允许硬编码在 Agent 类里。
-- Prompt 模板由 `PromptManager` 管理。
-- 上下文分段、排序、裁剪由 `ContextManager` 管理。
-- Prompt 改动必须可评测、可回滚。
+- Prompt 是版本化模型输入协议，不是 Agent 类中的字符串。
+- 上下文是当前业务状态的受控投影，不是所有历史的拼接。
+- 记忆不是知识库，也不等于聊天记录。
+- 已确认案件事实不能被模型摘要静默覆盖。
+- 裁剪策略按证据等级和业务风险，而不是只按时间远近。
+
+## Prompt 分层
+
+| 层级 | 内容 | 变化频率 |
+|---|---|---|
+| 稳定段 | 职责、输出契约、安全规则、能力 schema | 低 |
+| 半稳定段 | jurisdiction、任务类型、Prompt/Tool/语料版本 | 中 |
+| 动态段 | 当前请求、案件事实、证据、能力结果、近期对话 | 高 |
+
+缓存键至少包含 `prompt_version`、`capability_registry_version`、`policy_corpus_version`、`jurisdiction` 和 `model_profile`。模型供应商缓存只用于性能优化。
 
 ## Prompt 固定分区
 
 ```text
 [Role / Task]
-[Rules]
+[Rules / Safety]
 [Input Schema]
-[Context]
-[RAG Evidence / Tool Results]
+[Confirmed Case Facts]
+[Candidate or Conflicting Facts]
+[Evidence / Capability Results]
+[Recent Relevant Conversation]
+[Current Request]
 [Output Schema]
 [Failure Policy]
 ```
 
-## Prompt 元信息
+## 案件事实
 
-每个 prompt 必须包含：
+每条 `CaseFact` 包含：
 
-```yaml
-id: domain_consultation.work_injury_recognition
-version: v1
-agent: DomainConsultationAgent
-task_type: work_injury_recognition
-model_profile: domain_reasoning
-output_schema: AgentMessage
-failure_policy:
-  missing_evidence: cannot_answer
-  missing_required_slot: ask_clarification
-  tool_failed: return_error_reason
-change_note: MVP 初始版本
+- `name`、`value` 和数据类型。
+- `source`、`source_ref`。
+- `confirmation_status` 和 `confidence`。
+- `valid_from`、`valid_to`、`supersedes`。
+
+模型抽取、材料 OCR 和工具结果使用不同来源类型。只有用户确认或可信系统规则可以把候选事实提升为已确认事实。
+
+## 记忆分层
+
+```text
+Case facts             跨会话业务事实
+Working memory         当前任务、待补充项、关键失败
+Conversation summary   连续对话辅助信息
+Evidence cache         带语料版本和有效期的检索结果
+Calculation snapshot   带输入和公式版本的计算结果
 ```
 
-## ContextManager 分段
+政策语料版本、jurisdiction、事故日期、关键事实或计算公式变化时，依赖项必须失效。会话摘要不能作为政策依据或用户确认事实。
 
-| Section | 内容 | 裁剪策略 |
+## ContextManager 预算
+
+| 等级 | 内容 | 策略 |
 |---|---|---|
-| `system_prefix` | Agent 身份、输出协议、安全边界、工具说明 | 最后裁剪 |
-| `active_slots` | 当前会话已确认的业务槽位 | 尽量保留 |
-| `rag_evidence` | 法规、地方政策、办事指南 | 尽量保留，可摘要 |
-| `recent_turns` | 最近几轮对话摘要 | 可压缩 |
-| `working_memory` | 上轮结论、待追问字段、工具失败摘要 | 可压缩 |
-| `current_query` | 用户当前问题 | 不裁剪 |
+| P0 | 当前请求、已确认关键事实、安全规则 | 不静默裁剪 |
+| P1 | 直接支撑结论的政策证据、计算输入 | 高保留，必要时结构化压缩 |
+| P2 | 待确认事实、近期相关对话 | 可摘要 |
+| P3 | 低相关证据、重复解释、原始长输出 | 优先删除 |
 
-## Prompt 模式取舍
+工具长输出应在进入上下文前结构化和裁剪，避免在最终 Prompt 阶段才粗暴截断。
 
-MVP 使用：
+每次构建输出 `ContextBuildReport`：
 
-- 抽取型模板。
-- 证据问答模板。
-- 工具调用模板。
-- 评审 / 打分模板。
-- 安全守卫模板。
-
-MVP 不使用：
-
-- 大量显式 Chain-of-thought。
-- 每个 Agent 都做复杂 Critique-Revise。
-- 大量 few-shot。
-- 把业务硬规则全部塞进 prompt。
+- 各 section 候选数、入选数和 token。
+- 裁剪顺序和原因。
+- 被淘汰 Evidence/Memory ID。
+- Prompt、模型、语料和能力版本。
 
 ## Prompt 版本与回滚
 
-Prompt 迭代流程：
-
 ```text
 发现 badcase
-  ↓
-定位 prompt / context / tool / rule 问题
-  ↓
-修改 prompt 并升级版本
-  ↓
-运行固定 eval_cases
-  ↓
-指标通过则启用
-  ↓
-指标下降则回滚
+  -> 定位事实 / context / retrieval / prompt / model / safety
+  -> 修改对应机制并升级版本
+  -> 运行机制专项 eval
+  -> 运行全量回归
+  -> 指标满足门槛后启用，否则回滚
 ```
 
-## Prompt Trace
+Prompt 修改不能用单一 LLM-as-Judge 分数验收。法规引用、测算和安全问题优先使用确定性断言或专家标注。
 
-每次模型调用必须记录：
+## Trace 要求
 
-- `prompt_id`
-- `prompt_version`
-- `model_profile`
-- `input_sections`
-- `trimmed_sections`
-- `output_schema_valid`
-- token / 字符统计
-
+每次模型调用记录：`prompt_id`、`prompt_version`、`model_profile`、输入 section、裁剪报告、关联 Evidence ID、schema 校验、token、延迟和错误。默认 trace 保存摘要、hash 和引用，不记录不必要的完整敏感原文。

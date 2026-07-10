@@ -1,5 +1,16 @@
 # 架构变更记录
 
+## 2026-07-10
+
+- 技术路线从 Agno-compatible harness 演进为“LangGraph 默认运行时 + 框架中立业务内核”。
+- 将现有 `AgentOrchestrator` 定位为 Native Runtime，不再作为永久唯一状态推进方。
+- 定义 `WorkflowRuntime`、`RunRequest`、`WorkflowState`、`StatePatch`、`WorkflowResult` 和项目 reducer 边界。
+- 明确 LangGraph 只负责调度、中断恢复和必要的有限并行，领域状态、Tool、Prompt、Trace、Usage、Badcase 和 Eval 协议由项目维护。
+- 将当前四 Agent 从永久约束调整为 MVP 实现现状；后续按独立目标、上下文、权限和评测价值决定保留或收敛。
+- 区分 Case、Session、RunSnapshot、Checkpoint、Trace 和 RunReport 的职责。
+- 增加能力幂等、可信 jurisdiction、知识元数据过滤、隐私脱敏和 Native/LangGraph contract tests 规则。
+- 更新 README、AGENTS、API 状态、后端规范和后续任务计划，旧 Agno 任务 25-31 不再执行。
+
 > 返回总纲：`../architecture.md`
 
 本文记录架构文档和重大设计决策变化。凡是影响系统模块边界、核心数据模型、运行时、消息 / 事件、状态机、Agent 编排、Prompt、Tool、模型策略或观测诊断的变更，都必须在此记录。
