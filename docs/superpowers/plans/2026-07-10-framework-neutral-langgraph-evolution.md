@@ -12,6 +12,47 @@
 
 ---
 
+## 任务状态看板
+
+> 本看板是当前任务完成状态的事实源。`[x]` 表示已经提交并合并到 `mvp`；`[ ]` 表示尚未完成。任务分支完成但尚未合并时不得提前勾选。
+
+- [x] 任务 1：初始化 Python 工程骨架
+- [x] 任务 2：定义运行时协议 schema
+- [x] 任务 3：实现 JSONL 证据存储
+- [x] 任务 4：实现槽位合并与路由修正规则
+- [x] 任务 5：实现 PromptManager 与 ContextManager
+- [x] 任务 6：实现 ToolRegistry、ToolExecutor 和工具 trace
+- [x] 任务 7：实现本地政策检索、待遇测算和引用格式化
+- [x] 任务 8：实现确定性模型路由和 IntentRouterAgent
+- [x] 任务 9：实现三个业务 Agent
+- [x] 任务 10：实现答案聚合、校验和安全守卫
+- [x] 任务 11：实现 AgentOrchestrator Native 主流程
+- [x] 任务 12：实现 CLI ask 与交互式入口
+- [x] 任务 13：实现 EvalRunner、metrics 和 badcase
+- [x] 任务 14：补全文档和架构变更记录
+- [x] 任务 15：实现交互式 CLI chat
+- [x] 任务 16：实现 SessionState 与多轮持久化
+- [x] 任务 17：实现 CLI trace、badcase 和 feedback
+- [x] 任务 18：实现自动 badcase 候选记录
+- [x] 任务 19：补齐 ToolExecutor 治理能力
+- [x] 任务 20：增强答案校验和安全守卫
+- [x] 任务 21：扩展 Eval 分层指标
+- [x] 任务 22：补齐 30 条以上 MVP Eval Cases
+- [x] 任务 23：实现模型配置和 ModelRouter profile
+- [x] 任务 24：实现历史 Agno-compatible 适配边界
+- [x] 任务 25：统一框架中立架构、版本文档和后续计划
+- [ ] 任务 26：锁定业务阶段并定义核心状态协议
+- [ ] 任务 27：定义 StatePatch、Reducer、调用身份和 Trace 协议
+- [ ] 任务 28：建立 CapabilityGateway 端口和 ToolExecutor 适配
+- [ ] 任务 29：阶段化 Native Runtime 并建立 Runtime Contract
+- [ ] 任务 30：接入最小串行 LangGraph Runtime
+- [ ] 任务 31：双运行时差分验收
+- [ ] 任务 32：接入真实 ModelGateway
+- [ ] 任务 33：建立真实 KnowledgeGateway 与政策基线
+- [ ] 任务 34：运行真实咨询 Smoke Eval
+
+状态维护规则：任务提交并合并到 `mvp` 后，在下一次文档同步中同时更新本看板、对应正文标题和架构 changelog。
+
 ## 0. 第一性原理
 
 稳定资产是案件事实、jurisdiction、证据、状态转换、能力治理、Prompt、Trace、Usage 和 Eval。LangGraph、模型供应商、向量库、checkpointer 和观测产品都是可替换实现。
@@ -37,7 +78,7 @@
 
 ## 2. 任务清单
 
-### 任务 25：统一 MVP 架构和计划事实源
+### - [x] 任务 25：统一 MVP 架构和计划事实源
 
 **目标：** 消除 Agno 主路线、未实现代码、四 Agent 永久固定和 Orchestrator 永久唯一推进方等旧描述。
 
@@ -58,7 +99,7 @@ uv run pytest -v
 
 **验收标准：** 旧扫描无有效命中；当前与目标运行时边界一致；旧 Agno 待办不存在；53 项现有测试通过。
 
-### 任务 26：锁定业务阶段并定义核心状态协议
+### - [ ] 任务 26：锁定业务阶段并定义核心状态协议
 
 **目标：** 先从当前行为提取稳定阶段，再定义不依赖框架的请求、状态和结果，避免枚举反向修改。
 
@@ -78,7 +119,7 @@ uv run pytest -v
 
 **验收标准：** 协议不导入任何 Agent 框架类型；阶段覆盖所有 characterization 场景；状态可序列化；现有 CLI 行为不变。
 
-### 任务 27：定义 StatePatch、Reducer、调用身份和 Trace 协议
+### - [ ] 任务 27：定义 StatePatch、Reducer、调用身份和 Trace 协议
 
 **目标：** 在引入运行时前冻结状态增量、重放、调用关联和运行证据语义。
 
@@ -99,7 +140,7 @@ uv run pytest -v
 
 **验收标准：** reducer 不依赖框架；重复 patch 不重复追加；非法转换结构化失败；LangGraph 接入前 trace schema 已稳定。
 
-### 任务 28：建立 CapabilityGateway 端口和 ToolExecutor 适配
+### - [ ] 任务 28：建立 CapabilityGateway 端口和 ToolExecutor 适配
 
 **目标：** 在图运行时前建立统一能力边界，避免 ToolNode 或 Agent 绕过现有治理。
 
@@ -119,7 +160,7 @@ uv run pytest -v
 
 **验收标准：** Agent/Runtime 只依赖 gateway port；现有工具行为不变；相同逻辑调用不会产生不可解释的重复执行。
 
-### 任务 29：阶段化 Native Runtime 并建立 Runtime Contract
+### - [ ] 任务 29：阶段化 Native Runtime 并建立 Runtime Contract
 
 **目标：** 将现有 orchestrator 拆成阶段服务，并让 CLI/Eval 依赖 `WorkflowRuntime` 端口。
 
@@ -139,7 +180,7 @@ uv run pytest -v
 
 **验收标准：** `ask()` 不再原地修改大状态对象；阶段可独立测试；CLI/Eval 不依赖具体 runtime；无 LangGraph 依赖。
 
-### 任务 30：接入最小串行 LangGraph Runtime
+### - [ ] 任务 30：接入最小串行 LangGraph Runtime
 
 **目标：** 只映射已经稳定的项目阶段和协议，并将 LangGraph 设为默认可配置运行时。
 
@@ -165,7 +206,7 @@ uv run pytest tests/test_runtime_selection.py -v
 
 **验收标准：** 默认选择 LangGraph；Native 可切换；两个实现通过单 runtime contract；项目公共模块没有 LangGraph 导入。
 
-### 任务 31：双运行时差分验收
+### - [ ] 任务 31：双运行时差分验收
 
 **目标：** 比较两个运行时的业务语义，不重复维护单 runtime contract。
 
@@ -185,7 +226,7 @@ uv run pytest tests/test_runtime_selection.py -v
 
 **验收标准：** 无禁止差异；项目 trace 是两种运行时共同事实源；EvalRunner 不读取 LangGraph 内部对象。
 
-### 任务 32：接入真实 ModelGateway
+### - [ ] 任务 32：接入真实 ModelGateway
 
 **目标：** 以项目模型端口接入一个真实 provider，不依赖 LangGraph 模型封装。
 
@@ -199,7 +240,7 @@ uv run pytest tests/test_runtime_selection.py -v
 
 **验收标准：** Native/LangGraph 复用同一 gateway；无 key CI 不失败；真实结果和 fake 指标分开报告。
 
-### 任务 33：建立真实 KnowledgeGateway 与政策基线
+### - [ ] 任务 33：建立真实 KnowledgeGateway 与政策基线
 
 **目标：** 建立带可信元数据和引用的政策检索基线，暂不因技术展示引入向量库。
 
@@ -213,7 +254,7 @@ uv run pytest tests/test_runtime_selection.py -v
 
 **验收标准：** 模型提及地区不能改变可信范围；证据可追溯；无结果不编造；两个 runtime 复用同一 gateway。
 
-### 任务 34：运行真实咨询 Smoke Eval
+### - [ ] 任务 34：运行真实咨询 Smoke Eval
 
 **目标：** 组合真实 ModelGateway 和 KnowledgeGateway，验证最小咨询链路并暴露真实失败。
 
