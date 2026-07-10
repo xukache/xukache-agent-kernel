@@ -249,6 +249,23 @@ uv run pytest tests/test_runtime_selection.py -v
 
 **验收标准：** Native/LangGraph 复用同一 gateway；无 key CI 不失败；真实结果和 fake 指标分开报告。
 
+### - [x] 任务 33A：Provider/Profile 模型目录
+
+**状态：** 已完成。
+
+**目标：** 通过 `providers + profiles` 两层目录支持多个 OpenAI-compatible provider，并让
+Agent 和 Prompt 只选择 `model_profile`。
+
+**验证：**
+
+- `uv run pytest tests/test_model_catalog_config.py tests/test_model_router_config.py tests/test_model_gateway_contract.py -v`
+- `uv run pytest -v`
+- `uv run ananhu-agent ask "四川十级工伤，月工资6000，大概能赔多少钱？"`
+- `uv run ananhu-agent eval data/eval/eval_cases.jsonl --runtime both`
+
+**事实源状态：** 已发布 v0.6 模型目录架构；目录优先、v0.5 环境变量兼容；密钥只通过
+provider 声明的环境变量名解析，不进入 profile、trace、fixture 或 artifact。
+
 ### - [ ] 任务 33：建立真实 KnowledgeGateway 与政策基线
 
 **目标：** 建立带可信元数据和引用的政策检索基线，暂不因技术展示引入向量库。
