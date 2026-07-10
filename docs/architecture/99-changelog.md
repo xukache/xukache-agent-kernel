@@ -6,6 +6,7 @@
 
 | 日期 | 变更内容 |
 |---|---|
+| 2026-07-10 | 发布 v0.4：新增 Native/LangGraph 双运行时差分 runner、`runtime-differential.v1` artifact 和 CLI `eval --runtime both`；仅忽略 runtime 身份、事件 ID、时间、毫秒延迟和内部事件顺序，业务状态、能力参数、证据与安全结果必须一致。 |
 | 2026-07-10 | 发布 v0.3：引入最小串行 `LangGraphWorkflowRuntime` 作为默认运行时，保留 `runtime=native` 显式回归选择；图节点只返回 `StatePatch`，项目 reducer 和 CapabilityGateway 继续拥有状态合并与能力治理语义。 |
 | 2026-07-10 | 统一架构文档口径：当前实现称为 Native Runtime，未使用旧架构和兼容入口应删除，已发布版本快照保留为审计历史。 |
 | 2026-07-10 | 新增 `WorkflowRuntime.invoke()` 端口、`NativeWorkflowRuntime`、Native 阶段服务和 runtime contract suite，CLI 与 EvalRunner 改为依赖 Runtime port，并删除旧 orchestrator 兼容入口。 |

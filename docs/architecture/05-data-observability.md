@@ -130,3 +130,15 @@ Badcase 保存最小必要输入、关键状态版本、实际/期望结果、�
 每个 EvaluationArtifact 记录代码 commit、branch、数据集版本、fixture snapshot、模型配置、Prompt/Tool/语料版本、runtime 版本和每条 case 结果。Fake 与真实模型结果分开报告。
 
 Native 和 LangGraph Runtime 运行同一 contract/eval 集时，比较业务结果、关键状态、能力调用和项目 trace 语义，不要求框架内部事件逐字一致。
+
+## 双运行时差分验收
+
+`RuntimeDifferentialRunner` 使用同一 `RunRequest` 分别调用 Native 与 LangGraph 的 `WorkflowRuntime` 端口，并只读取项目 `WorkflowResult`、最终 `WorkflowState` 和 `TraceEvent`。它不读取 LangGraph graph state、task、checkpoint 或其他框架内部对象。
+
+差分 artifact 使用 `runtime-differential.v1` schema，记录 case、request、是否等价、比较事件数和逐字段 mismatch。允许差异限于 runtime 名称/版本、TraceEvent ID、创建时间、毫秒延迟和节点内部事件顺序；业务状态、StopReason、能力参数、logical call ID、证据 ID/内容、安全结果和关键事件不得不同。
+
+```bash
+uv run ananhu-agent eval data/eval/eval_cases.jsonl --runtime both
+```
+
+产物写入运行目录的 `runtime-differential.json`；存在禁止差异时命令返回非零退出码。Native 与 LangGraph 分别使用隔离的运行目录，避免 trace、session 和幂等缓存互相污染。

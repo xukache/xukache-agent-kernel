@@ -20,6 +20,7 @@ uv run pytest -v
 uv run ananhu-agent version
 uv run ananhu-agent ask "四川十级工伤，月工资6000，大概能赔多少钱？"
 uv run ananhu-agent eval data/eval/eval_cases.jsonl
+uv run ananhu-agent eval data/eval/eval_cases.jsonl --runtime both
 ```
 
 ## 目标模块边界
@@ -97,5 +98,6 @@ ananhu_agent/
 - 纯领域规则和 reducer 使用单元测试。
 - Agent、Capability、Repository 和 Runtime 使用 contract tests。
 - Native/LangGraph 使用相同 fixture 验证结果、StopReason、能力调用和 trace。
+- 双运行时差分只规范化 runtime 身份、事件 ID、时间、毫秒延迟和内部事件顺序；不得忽略业务 ID、能力参数或证据字段。
 - Fake Model 用于确定性回归；真实 provider smoke 显式 opt-in，结果单独报告。
 - 文档变更至少运行 Markdown 链接/过期口径扫描和现有全量测试，确认文档没有把未实现能力写成已完成。

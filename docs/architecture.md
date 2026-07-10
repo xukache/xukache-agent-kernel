@@ -4,10 +4,10 @@
 
 ## 文档状态
 
-- 当前阶段：最小串行 LangGraph 运行时已接入，Native Runtime 保留用于回归。
-- 当前架构版本：v0.3，完整快照见 `architecture/versions/v0.3-langgraph-runtime.md`。
+- 当前阶段：最小串行 LangGraph 运行时与 Native/LangGraph 差分验收已接入，Native Runtime 保留用于回归。
+- 当前架构版本：v0.4，完整快照见 `architecture/versions/v0.4-runtime-differential.md`。
 - 当前运行时：默认 `LangGraphWorkflowRuntime`，通过 `WorkflowRuntime` 端口调用；可显式选择 `NativeWorkflowRuntime`。
-- 演进方向：在框架中立协议下逐步扩展真实模型、知识和差分验收。
+- 演进方向：在已验证的双运行时基线上逐步扩展真实模型和知识能力。
 - 核心原则：领域、应用、Agent、Capability、Trace 和 Eval 协议不依赖 LangGraph。
 - 外部接口：当前只有 CLI；没有 HTTP API、WebSocket 或前端。
 - 架构版本入口：`TECH_ARCHITECTURE_MVP.md`。

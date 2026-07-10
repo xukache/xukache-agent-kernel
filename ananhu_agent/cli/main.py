@@ -1,5 +1,6 @@
 import os
 import asyncio
+import json
 from pathlib import Path
 from typing import Annotated
 from uuid import uuid4
@@ -7,9 +8,10 @@ from uuid import uuid4
 import typer
 
 from ananhu_agent import __version__
+from ananhu_agent.config.settings import RuntimeSettings
 from ananhu_agent.runtime import create_default_runtime
 from ananhu_agent.schemas import BadcaseRecord, now_cn
-from ananhu_agent.storage.runtime_stores import BadcaseStore
+from ananhu_agent.storage.runtime_stores import BadcaseStore, TraceRecorder
 from ananhu_agent.workflow.contracts import RunRequest, WorkflowResult, WorkflowRuntime, WorkflowState
 
 app = typer.Typer(help="安安虎工伤智能助手 CLI MVP")
@@ -39,16 +41,64 @@ def ask(query: str) -> None:
 @app.command("eval")
 def eval_command(
     cases: Annotated[Path, typer.Argument()] = Path("data/eval/eval_cases.jsonl"),
+    runtime: Annotated[str | None, typer.Option(help="运行时：native、langgraph 或 both")] = None,
 ) -> None:
     """Run local eval cases."""
     runtime_dir = Path(os.getenv("ANANHU_RUNTIME_DIR", ".ananhu-runtime"))
-    runtime: WorkflowRuntime = create_default_runtime(runtime_dir)
+    if runtime == "both":
+        _run_differential_eval(cases, runtime_dir)
+        return
+    if runtime not in {None, "native", "langgraph"}:
+        raise typer.BadParameter("runtime 必须是 native、langgraph 或 both")
+    selected_runtime: WorkflowRuntime = create_default_runtime(
+        runtime_dir,
+        RuntimeSettings(runtime_dir=runtime_dir, runtime=runtime) if runtime else None,
+    )
 
     from ananhu_agent.evaluation.runner import EvalRunner
 
-    metrics = EvalRunner(runtime, runtime_dir).run(cases)
+    metrics = EvalRunner(selected_runtime, runtime_dir).run(cases)
     typer.echo(metrics)
     typer.echo(f"Metrics: {runtime_dir / 'metrics.json'}")
+
+
+def _run_differential_eval(cases: Path, runtime_dir: Path) -> None:
+    """对同一 eval 数据运行 Native/LangGraph 并写入差分产物。"""
+
+    from ananhu_agent.evaluation.differential import RuntimeDifferentialRunner
+
+    native_dir = runtime_dir / "native"
+    langgraph_dir = runtime_dir / "langgraph"
+    rows = [
+        json.loads(line)
+        for line in cases.read_text(encoding="utf-8").splitlines()
+        if line.strip()
+    ]
+    runner = RuntimeDifferentialRunner(
+        native_runtime=create_default_runtime(
+            native_dir,
+            RuntimeSettings(runtime_dir=native_dir, runtime="native"),
+        ),
+        langgraph_runtime=create_default_runtime(
+            langgraph_dir,
+            RuntimeSettings(runtime_dir=langgraph_dir, runtime="langgraph"),
+        ),
+        native_trace=TraceRecorder(native_dir / "traces.jsonl"),
+        langgraph_trace=TraceRecorder(langgraph_dir / "traces.jsonl"),
+        artifact_path=runtime_dir / "runtime-differential.json",
+    )
+    report = runner.run_cases(rows)
+    typer.echo(
+        {
+            "schema_version": report.schema_version,
+            "total": report.total,
+            "equivalent": report.equivalent,
+            "different": report.different,
+        }
+    )
+    typer.echo(f"Runtime differential: {runtime_dir / 'runtime-differential.json'}")
+    if report.different:
+        raise typer.Exit(code=1)
 
 
 @app.command()

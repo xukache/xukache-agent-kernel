@@ -46,7 +46,7 @@
 - [x] 任务 28：建立 CapabilityGateway 端口和 ToolExecutor 适配
 - [x] 任务 29：阶段化 Native Runtime 并建立 Runtime Contract
 - [x] 任务 30：接入最小串行 LangGraph Runtime
-- [ ] 任务 31：双运行时差分验收
+- [x] 任务 31：双运行时差分验收
 - [ ] 任务 32：接入真实 ModelGateway
 - [ ] 任务 33：建立真实 KnowledgeGateway 与政策基线
 - [ ] 任务 34：运行真实咨询 Smoke Eval
@@ -88,7 +88,7 @@
 
 **步骤流程：** 扫描旧口径；更新事实源；归档旧计划；建立本计划；运行术语扫描和全量测试。
 
-**事实源状态：** 当前事实源已统一为 Native Runtime 已实现、LangGraph 尚未接入、先完成框架中立协议再接入运行时；历史 Agno 计划只保留为只读归档，不再作为待办。
+**任务完成时状态：** 任务 25 已将当时事实源统一为 Native Runtime 已实现、LangGraph 尚未接入、先完成框架中立协议再接入运行时；历史 Agno 计划只保留为只读归档，不再作为待办。后续当前状态以任务 30 及之后记录为准。
 
 **验证命令：**
 
@@ -210,7 +210,7 @@ uv run pytest tests/test_runtime_selection.py -v
 
 **验收标准：** 默认选择 LangGraph；Native 可切换；两个实现通过单 runtime contract；项目公共模块没有 LangGraph 导入。
 
-### - [ ] 任务 31：双运行时差分验收
+### - [x] 任务 31：双运行时差分验收
 
 **目标：** 比较两个运行时的业务语义，不重复维护单 runtime contract。
 
@@ -227,6 +227,8 @@ uv run pytest tests/test_runtime_selection.py -v
 5. 对 30+ eval cases 执行双运行时差分。
 
 **验证命令：** `uv run pytest tests/test_runtime_differential.py -v && uv run ananhu-agent eval data/eval/eval_cases.jsonl --runtime both`
+
+**事实源状态：** 已新增 `RuntimeDifferentialRunner`、`runtime-differential.v1` artifact 和 CLI `eval --runtime both`；30 条 eval case 的 Native/LangGraph 业务结果、状态、能力调用、证据、安全结果和项目 trace 无禁止差异。差分只忽略 runtime 身份、TraceEvent ID、时间、毫秒延迟和内部事件顺序。
 
 **验收标准：** 无禁止差异；项目 trace 是两种运行时共同事实源；EvalRunner 不读取 LangGraph 内部对象。
 
