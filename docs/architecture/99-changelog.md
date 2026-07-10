@@ -6,6 +6,8 @@
 
 | 日期 | 变更内容 |
 |---|---|
+| 2026-07-10 | 建立架构版本快照机制：将 v0.2 完整正文固化为 `versions/v0.2-framework-neutral-baseline.md`，根 `TECH_ARCHITECTURE_MVP.md` 改为稳定版本入口。 |
+| 2026-07-10 | 后续架构升级必须新增完整版本正文，并同步更新版本入口、主题分册、任务计划和 changelog，禁止覆盖已发布版本。 |
 | 2026-07-10 | 技术路线从 Agno-compatible harness 演进为“LangGraph 默认运行时 + 框架中立业务内核”。 |
 | 2026-07-10 | 将现有 `AgentOrchestrator` 定位为 Native Runtime，不再作为永久唯一状态推进方。 |
 | 2026-07-10 | 定义 `WorkflowRuntime`、`RunRequest`、`WorkflowState`、`StatePatch`、`WorkflowResult` 和项目 reducer 边界。 |
