@@ -2,24 +2,25 @@
 
 > 本文件是稳定入口，不再承载可被覆盖的完整架构正文。
 >
-> 当前有效版本：[`v0.5-real-model-gateway.md`](docs/architecture/versions/v0.5-real-model-gateway.md)
+> 当前有效版本：[`v0.6-model-catalog.md`](docs/architecture/versions/v0.6-model-catalog.md)
 
 ## 当前版本
 
 | 字段 | 内容 |
 |---|---|
-| 架构版本 | v0.5 |
+| 架构版本 | v0.6 |
 | 发布日期 | 2026-07-10 |
-| 基线 | v0.4 Native/LangGraph 双运行时差分验收 |
-| 技术路线 | 框架中立业务内核 + 双运行时共享 ModelGateway + OpenAI-compatible provider |
-| 完整正文 | `docs/architecture/versions/v0.5-real-model-gateway.md` |
+| 基线 | v0.5 Real ModelGateway |
+| 技术路线 | 框架中立业务内核 + 双运行时共享 ModelGateway + Provider/Profile 模型目录 |
+| 完整正文 | `docs/architecture/versions/v0.6-model-catalog.md` |
 | 演进计划 | `docs/superpowers/plans/2026-07-10-framework-neutral-langgraph-evolution.md` |
 
 ## 版本索引
 
 | 版本 | 状态 | 文档 | 说明 |
 |---|---|---|---|
-| v0.5 | 当前有效 | `docs/architecture/versions/v0.5-real-model-gateway.md` | 框架中立 ModelGateway 与 OpenAI-compatible provider |
+| v0.6 | 当前有效 | `docs/architecture/versions/v0.6-model-catalog.md` | Provider/Profile 模型目录与按模型档位路由 |
+| v0.5 | 已归档 | `docs/architecture/versions/v0.5-real-model-gateway.md` | 框架中立 ModelGateway 与 OpenAI-compatible provider |
 | v0.4 | 已归档 | `docs/architecture/versions/v0.4-runtime-differential.md` | Native/LangGraph 双运行时差分验收 |
 | v0.3 | 已归档 | `docs/architecture/versions/v0.3-langgraph-runtime.md` | 最小串行 LangGraph Runtime |
 | v0.2 | 已归档 | `docs/architecture/versions/v0.2-framework-neutral-baseline.md` | 框架中立化与 LangGraph 演进基线 |

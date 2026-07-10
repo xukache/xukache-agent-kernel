@@ -17,6 +17,8 @@ class RuntimeSettings(BaseSettings):
     runtime_dir: Path = Path(".ananhu-runtime")
     runtime: Literal["native", "langgraph"] = "langgraph"
     prompt_template_dir: Path = Path("ananhu_agent/prompts/templates")
+    # 配置目录优先；以下三个字段保留为 v0.5 单 provider 兼容入口。
+    model_catalog: Path | None = None
     model_api_key: SecretStr | None = None
     model_base_url: str = ""
     models: dict[str, dict[str, Any]] = Field(

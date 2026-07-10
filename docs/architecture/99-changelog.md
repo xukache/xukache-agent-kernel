@@ -4,6 +4,12 @@
 
 本文记录架构文档和重大设计决策变化。凡是影响系统模块边界、核心数据模型、运行时、消息 / 事件、状态机、Agent 编排、Prompt、Tool、模型策略或观测诊断的变更，都必须在此记录。
 
+## v0.6 - 2026-07-10
+
+- 引入 Provider/Profile 两层模型目录，支持多个 OpenAI-compatible provider 和按模型档位路由。
+- 保留 v0.5 环境变量兼容路径；默认 Fake 模型和离线 eval 行为不变。
+- API key 继续只通过环境变量读取，禁止进入 profile、trace、测试 fixture 或 artifact。
+
 | 日期 | 变更内容 |
 |---|---|
 | 2026-07-10 | 发布 v0.5：定义框架中立 async ModelGateway、OpenAI-compatible provider 最小协议、结构化错误和模型 usage；Native/LangGraph 共用组合根，Fake 回归与显式 opt-in 真实 smoke 分开报告。 |
