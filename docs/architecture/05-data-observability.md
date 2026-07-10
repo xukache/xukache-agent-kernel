@@ -9,7 +9,7 @@
 | 对象 | 状态 | 回答的问题 |
 |---|---|---|
 | `SessionState` | 当前已实现 | 连续对话记住了哪些槽位和轮次 |
-| `TaskState` | 当前已实现 | Native run 最终审计快照是什么 |
+| `TaskState` | 当前已实现 | Workflow run 最终审计快照是什么 |
 | `TraceEvent` | 当前已实现 | 中间发生了什么 |
 | `RunReport` | 当前已实现 | 最终结果和基础指标是什么 |
 | `BadcaseRecord` | 当前已实现 | 哪些运行需要回归 |

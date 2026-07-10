@@ -13,8 +13,8 @@
 ## 项目形态
 
 - 类型：工伤咨询领域的后端 Agent Harness，当前以 CLI 作为开发和验收入口。
-- 当前阶段：MVP 离线闭环已实现，正在演进框架中立协议和 LangGraph 运行时。
-- 技术路线：不使用 Dify；协议重构完成后以 LangGraph 作为目标默认工作流运行时，领域和应用核心不得依赖 LangGraph 类型。
+- 当前阶段：MVP 离线闭环和最小串行 LangGraph Runtime 已实现，正在推进双运行时差分验收。
+- 技术路线：不使用 Dify；LangGraph 是默认可配置工作流运行时，Native Runtime 保留用于回归，领域和应用核心不得依赖 LangGraph 类型。
 - 环境管理：统一使用 `uv` 管理 Python、虚拟环境、依赖和命令运行。
 - Python 版本：固定使用 Python 3.11，版本文件为 `.python-version`。
 - 对外接口：当前没有 HTTP API、WebSocket 或前端；这只是当前交付边界，不是 Agent 内核的永久限制。

@@ -2,24 +2,25 @@
 
 > 本文件是稳定入口，不再承载可被覆盖的完整架构正文。
 >
-> 当前有效版本：[`v0.2-framework-neutral-baseline.md`](docs/architecture/versions/v0.2-framework-neutral-baseline.md)
+> 当前有效版本：[`v0.3-langgraph-runtime.md`](docs/architecture/versions/v0.3-langgraph-runtime.md)
 
 ## 当前版本
 
 | 字段 | 内容 |
 |---|---|
-| 架构版本 | v0.2 |
+| 架构版本 | v0.3 |
 | 发布日期 | 2026-07-10 |
-| 基线 | 既有 Native MVP 实现 |
-| 技术路线 | 框架中立业务内核 + 目标默认 LangGraph Runtime |
-| 完整正文 | `docs/architecture/versions/v0.2-framework-neutral-baseline.md` |
+| 基线 | v0.2 框架中立基线 |
+| 技术路线 | 框架中立业务内核 + 默认 LangGraph Runtime |
+| 完整正文 | `docs/architecture/versions/v0.3-langgraph-runtime.md` |
 | 演进计划 | `docs/superpowers/plans/2026-07-10-framework-neutral-langgraph-evolution.md` |
 
 ## 版本索引
 
 | 版本 | 状态 | 文档 | 说明 |
 |---|---|---|---|
-| v0.2 | 当前有效 | `docs/architecture/versions/v0.2-framework-neutral-baseline.md` | 框架中立化与 LangGraph 演进基线 |
+| v0.3 | 当前有效 | `docs/architecture/versions/v0.3-langgraph-runtime.md` | 最小串行 LangGraph Runtime |
+| v0.2 | 已归档 | `docs/architecture/versions/v0.2-framework-neutral-baseline.md` | 框架中立化与 LangGraph 演进基线 |
 
 ## 发布规则
 

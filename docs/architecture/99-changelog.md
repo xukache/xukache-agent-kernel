@@ -6,6 +6,7 @@
 
 | 日期 | 变更内容 |
 |---|---|
+| 2026-07-10 | 发布 v0.3：引入最小串行 `LangGraphWorkflowRuntime` 作为默认运行时，保留 `runtime=native` 显式回归选择；图节点只返回 `StatePatch`，项目 reducer 和 CapabilityGateway 继续拥有状态合并与能力治理语义。 |
 | 2026-07-10 | 统一架构文档口径：当前实现称为 Native Runtime，未使用旧架构和兼容入口应删除，已发布版本快照保留为审计历史。 |
 | 2026-07-10 | 新增 `WorkflowRuntime.invoke()` 端口、`NativeWorkflowRuntime`、Native 阶段服务和 runtime contract suite，CLI 与 EvalRunner 改为依赖 Runtime port，并删除旧 orchestrator 兼容入口。 |
 | 2026-07-10 | 新增框架中立 `CapabilityRequest`、`CapabilityResult`、`CapabilityPolicy`、`CapabilityGateway` 端口和 `ToolExecutorCapabilityGateway`，保持 ToolExecutor 治理并为 logical call 重试提供幂等复用。 |

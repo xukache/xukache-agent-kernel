@@ -47,6 +47,8 @@ class NativeStageServices:
         capability_gateway: CapabilityGateway,
         trace_recorder: TraceRecorder,
         model_router: ModelRouter,
+        runtime_name: str = RUNTIME_NAME,
+        runtime_version: str = RUNTIME_VERSION,
     ) -> None:
         self.ctx = ctx
         self.intent_agent = intent_agent
@@ -56,6 +58,8 @@ class NativeStageServices:
         self.capability_gateway = capability_gateway
         self.trace_recorder = trace_recorder
         self.model_router = model_router
+        self.runtime_name = runtime_name
+        self.runtime_version = runtime_version
 
     def understand(self, state: WorkflowState) -> StatePatch:
         self._record(state, "request_received", "understand", {"user_query": state.case_facts["user_query"]})
@@ -295,6 +299,8 @@ class NativeStageServices:
                     node_id=node_id,
                     logical_call_id=call.tool_call_id,
                     attempt=1,
+                    runtime_name=self.runtime_name,
+                    runtime_version=self.runtime_version,
                 )
             )
             self.ctx.tool_results.append(self._tool_result_from_capability(result))
@@ -318,8 +324,8 @@ class NativeStageServices:
                 session_id=state.session_id,
                 event_type=event_type,
                 phase=phase,
-                runtime_name=RUNTIME_NAME,
-                runtime_version=RUNTIME_VERSION,
+                runtime_name=self.runtime_name,
+                runtime_version=self.runtime_version,
                 node_id=phase,
                 logical_call_id=f"{state.run_id}:{phase}",
                 attempt=1,

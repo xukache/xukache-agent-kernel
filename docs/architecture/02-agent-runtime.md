@@ -8,11 +8,11 @@
 
 ```text
 WorkflowRuntime
-  +-- NativeWorkflowRuntime      当前默认运行时
-  +-- LangGraphWorkflowRuntime   协议稳定后的默认运行时
+  +-- NativeWorkflowRuntime      显式回归运行时
+  +-- LangGraphWorkflowRuntime   当前默认运行时
 ```
 
-当前 `NativeWorkflowRuntime` 是默认运行时，使用项目 reducer 串行推进阶段。CLI、Eval 和后续外部入口只依赖 `WorkflowRuntime` 端口。
+当前 `LangGraphWorkflowRuntime` 是默认运行时，使用 LangGraph 串行调度项目阶段；业务状态仍只通过项目 reducer 合并。通过 `RuntimeSettings(runtime="native")` 可显式切回 `NativeWorkflowRuntime` 做回归。CLI、Eval 和后续外部入口只依赖 `WorkflowRuntime` 端口。
 
 ## 运行时所有权
 
@@ -48,7 +48,7 @@ StopReason       框架无关停止语义
 - `WorkflowPhase`、`RunStatus`、`StopReason`：冻结 Native 与后续 LangGraph Runtime 共享的阶段、状态和停止语义。
 - `WorkflowRuntime.invoke()`：async 运行时端口，CLI、EvalRunner 和后续入口通过该端口调用运行时。
 
-默认组合根为 `create_default_runtime()`，当前装配 `NativeWorkflowRuntime`；LangGraph Runtime 将在同一端口下接入。
+默认组合根为 `create_default_runtime()`，按 `RuntimeSettings.runtime` 装配运行时，默认值为 `langgraph`；`native` 是保留的显式回归选项。
 
 ## StatePatch 与 Reducer
 
@@ -124,12 +124,12 @@ understand
 
 ## Native Runtime 阶段服务
 
-`ananhu_agent/runtimes/native/` 已落地首版阶段化实现：
+`ananhu_agent/runtimes/native/` 提供阶段服务与 Native Runtime；`ananhu_agent/runtimes/langgraph/` 将同一阶段服务映射为串行图：
 
 - 阶段服务读取 `WorkflowState`，返回 `StatePatch`。
-- Native Runtime 通过 `reduce_workflow_state()` 应用 patch，不让 CLI/Eval 原地操作大状态对象。
+- 两种 Runtime 都通过 `reduce_workflow_state()` 应用 patch，不让 CLI/Eval 原地操作大状态对象；LangGraph 节点只返回 patch，独立 `apply_patch` 节点负责调用 reducer。
 - `execute` 阶段把 Agent 生成的工具意图转换为 `CapabilityRequest`，统一经过 `CapabilityGateway`，不绕过 ToolExecutor 治理。
-- `TraceEvent` 统一写入 `runtime_name=native`、`node_id`、`logical_call_id` 和 `attempt`。
+- `TraceEvent` 统一写入实际 `runtime_name`、`node_id`、`logical_call_id` 和 `attempt`。
 - `WorkflowResult.final_state` 仅作为 Eval 和诊断使用的状态快照，CLI 对外仍只展示最终答复、追问或错误信息。
 
 ## Agent 当前协议与目标规则
@@ -169,7 +169,7 @@ checkpoint 必须带状态 schema、runtime、Prompt、Tool Registry、知识语
 - application service、模型、检索和能力执行采用 async 边界。
 - `WorkflowRuntime` 未来可同时提供 `invoke()` 和项目定义的 `stream()` 事件。
 - 当前 CLI 可以消费最终结果；未来外部流式协议不能直接暴露 LangGraph 事件。
-- 首个 LangGraph 实现不启用复杂并行、后台队列或多路事件流。
+- 首个 LangGraph 实现不启用 ToolNode 直连、checkpoint、interrupt、复杂并行、后台队列或多路事件流。
 
 ## Contract Tests
 
