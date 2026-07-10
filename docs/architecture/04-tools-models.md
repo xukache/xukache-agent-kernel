@@ -102,6 +102,30 @@ OpenAI-compatible `json_object` 调用由 Gateway 统一向消息附加英文 `J
 `output_schema`，兼容要求消息显式包含 JSON 关键字的 provider；响应仍须由项目 JSON Schema
 校验，不能仅依赖模型遵循提示。
 
+### ObservableModelGateway 与 Reasoning
+
+组合根在具体 gateway 外装配 `ObservableModelGateway`，集中发布 model started/finished/failed。装饰器
+只在收到完整 `ModelRequest` 后发布真实输入视图，完成后发布结构化输出、Usage、耗时和瞬态 reasoning；
+Agent 不依赖 RunEventSink，阶段内旧的重复模型埋点必须移除。
+
+OpenAI-compatible adapter 只接受字符串类型的 `message.reasoning_content`；未返回、null 或空字符串
+归一为 `None`，其他类型归类为 provider 响应格式错误。`ModelResult.reasoning_content` 必须设置
+`exclude=True, repr=False`。实时公共投影只记录 `reasoning_available`、原始字符数和裁剪状态，裁剪
+脱敏后的原文仅存在于当前进程瞬态 payload，不能进入 trace、状态、报告、badcase 或 eval。
+
+### Usage Reported 语义
+
+`ModelUsage.reported` 区分 provider 明确报告的零值与未报告 usage。单轮 token 只聚合成功且
+`reported=True` 的 ModelResult；任一成功 provider 调用未报告时合计为 `tokens unknown` 且速度为 `--`。
+Fake 固定为 `reported=False, usage_source=fake`，纯 Fake 轮次显示 `fake · 0 tokens`。失败且无
+ModelResult 的尝试不计 token；provider total 与分项不一致时保留原值并标记 inconsistent。
+
+## 实时 Capability 事件
+
+`CapabilityRequest` 必须携带 `run_id`。CapabilityGateway 在既有权限、schema、幂等、重试和超时治理
+边界内发布 started/finished/failed，payload 只包含治理后的实际参数、结果、fallback 和耗时。ToolExecutor
+或 LangGraph ToolNode 不得绕过网关，也不得自行发布缺失 run 身份的事件。
+
 ## KnowledgeGateway
 
 检索前必须使用可信元数据过滤：
