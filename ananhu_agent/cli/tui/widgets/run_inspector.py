@@ -37,6 +37,7 @@ class RunInspector(Static):
         self._tree.show_root = False
         self._tree.auto_expand = False
         self._detail = Static(id="json-content")
+        self.running_node: str | None = None
 
     def compose(self):
         yield self._tree
@@ -49,6 +50,10 @@ class RunInspector(Static):
         self._tree.clear()
         for item_id in self.model.roots:
             self._add_tree_item(self._tree.root, self.model.item(item_id))
+        self.running_node = next(
+            (item.item_id for item in self.model.items() if item.kind == "node" and item.expanded),
+            None,
+        )
 
     def _add_tree_item(self, parent, item: InspectorItem) -> None:
         node = parent.add(item.label, data=item, expand=item.expanded)

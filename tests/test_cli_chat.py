@@ -1,51 +1,29 @@
-import json
-
 from typer.testing import CliRunner
 
 from ananhu_agent.cli.main import app
 
 
-def test_cli_chat_runs_until_exit(tmp_path, monkeypatch):
+def test_cli_chat_requires_interactive_ansi_terminal(tmp_path, monkeypatch):
     monkeypatch.setenv("ANANHU_RUNTIME_DIR", str(tmp_path))
     result = CliRunner().invoke(
         app,
         ["chat"],
-        input="四川十级工伤，月工资6000，大概能赔多少钱？\n/exit\n",
+        input="",
     )
 
-    assert result.exit_code == 0
-    assert "安安虎工伤智能助手 CLI" in result.output
-    assert "一次性伤残补助金" in result.output
-    assert "Trace:" in result.output
+    assert result.exit_code == 2
+    assert result.stderr == "ananhu-agent chat requires an interactive ANSI terminal\n"
 
 
-def test_cli_chat_help_command(tmp_path, monkeypatch):
+def test_noninteractive_commands_execute_without_importing_textual_chat_app(tmp_path, monkeypatch):
+    import sys
+
     monkeypatch.setenv("ANANHU_RUNTIME_DIR", str(tmp_path))
-    result = CliRunner().invoke(app, ["chat"], input="/help\n/exit\n")
+    sys.modules.pop("ananhu_agent.cli.tui.app", None)
+    assert CliRunner().invoke(app, ["version"]).exit_code == 0
+    assert CliRunner().invoke(app, ["ask", "四川十级工伤，月工资6000"] ).exit_code == 0
+    cases = tmp_path / "cases.jsonl"
+    cases.write_text('{"id":"case_1","query":"四川十级工伤，月工资6000","expect_contains":["一次性伤残补助金"]}\n', encoding="utf-8")
+    assert CliRunner().invoke(app, ["eval", str(cases)]).exit_code == 0
 
-    assert result.exit_code == 0
-    assert "/new" in result.output
-    assert "/context" in result.output
-    assert "/trace" in result.output
-    assert "/feedback bad" in result.output
-
-
-def test_cli_chat_reuses_session_and_increments_turn(tmp_path, monkeypatch):
-    monkeypatch.setenv("ANANHU_RUNTIME_DIR", str(tmp_path))
-    result = CliRunner().invoke(
-        app,
-        ["chat"],
-        input=(
-            "四川十级工伤，月工资6000，大概能赔多少钱？\n"
-            "劳动能力鉴定需要准备哪些材料？\n"
-            "/exit\n"
-        ),
-    )
-
-    assert result.exit_code == 0
-    states = [
-        json.loads(line)
-        for line in (tmp_path / "task_states.jsonl").read_text(encoding="utf-8").splitlines()
-    ]
-    assert [state["turn_id"] for state in states] == [1, 2]
-    assert len({state["session_id"] for state in states}) == 1
+    assert "ananhu_agent.cli.tui.app" not in sys.modules

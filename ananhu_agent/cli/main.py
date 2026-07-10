@@ -1,6 +1,7 @@
 import os
 import asyncio
 import json
+import sys
 from pathlib import Path
 from typing import Annotated
 from uuid import uuid4
@@ -105,56 +106,22 @@ def _run_differential_eval(cases: Path, runtime_dir: Path) -> None:
 @app.command()
 def chat() -> None:
     """Start an interactive consultation session."""
+    if not (
+        sys.stdin.isatty()
+        and sys.stdout.isatty()
+        and os.getenv("TERM") not in {None, "", "dumb"}
+    ):
+        typer.echo("ananhu-agent chat requires an interactive ANSI terminal", err=True)
+        raise typer.Exit(code=2)
+
+    # 仅 chat 装配 Textual，ask/eval/version 保持无终端 UI 依赖的启动路径。
+    from ananhu_agent.cli.tui.app import AnanhuChatApp
+
     runtime_dir = Path(os.getenv("ANANHU_RUNTIME_DIR", ".ananhu-runtime"))
-    runtime = create_default_runtime(runtime_dir)
-    badcase_store = BadcaseStore(runtime_dir / "badcases.jsonl")
-    session_id = _new_chat_session_id()
-    turn_id = 0
-    latest_result: WorkflowResult | None = None
-
-    typer.echo("安安虎工伤智能助手 CLI")
-    typer.echo("输入 /help 查看命令，输入 /exit 退出。")
-
-    while True:
-        try:
-            user_input = typer.prompt(">").strip()
-        except (EOFError, KeyboardInterrupt):
-            typer.echo()
-            break
-
-        if not user_input:
-            continue
-
-        normalized = user_input.lower()
-        if normalized in {"/exit", "exit", "quit"}:
-            break
-        if normalized == "/help":
-            _print_chat_help()
-            continue
-        if normalized == "/new":
-            session_id = _new_chat_session_id()
-            turn_id = 0
-            latest_result = None
-            typer.echo("已开始新的咨询会话。")
-            continue
-        if normalized == "/context":
-            _print_context(_latest_state(latest_result))
-            continue
-        if normalized == "/trace":
-            _print_trace(latest_result, runtime_dir)
-            continue
-        if normalized == "/badcase":
-            _record_badcase(badcase_store, latest_result)
-            continue
-        if normalized.startswith("/feedback"):
-            _handle_feedback(normalized, badcase_store, latest_result)
-            continue
-
-        # 交互式会话由 CLI 维护轻量 session 和 turn；业务状态推进由 WorkflowRuntime 负责。
-        turn_id += 1
-        latest_result = asyncio.run(runtime.invoke(_run_request(session_id, turn_id, user_input)))
-        typer.echo(visible_result_message(latest_result))
-        typer.echo(f"Trace: {runtime_dir / 'traces.jsonl'}")
+    AnanhuChatApp(
+        runtime_factory=create_default_runtime,
+        runtime_dir=runtime_dir,
+    ).run()
 
 
 def _new_chat_session_id() -> str:

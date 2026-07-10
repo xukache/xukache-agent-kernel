@@ -8,7 +8,7 @@ from urllib.parse import parse_qsl, urlencode, urlsplit, urlunsplit
 
 from pydantic import BaseModel, SecretStr
 
-from ananhu_agent.ports.model_gateway import ModelResult
+from ananhu_agent.ports.model_gateway import ModelResult, ModelUsage
 from ananhu_agent.ports.run_event_sink import RunProgressEvent, validate_run_progress_event
 from ananhu_agent.workflow.contracts import StopReason, WorkflowResult
 
@@ -174,6 +174,33 @@ def format_usage_line(results: Iterable[ModelResult] | UsageSummary, elapsed_ms:
     )
 
 
+def format_usage_line_from_events(events: Iterable[RunProgressEvent]) -> str:
+    """从本轮公开 model_finished 事件重建 usage，避免 TUI 读取运行时内部状态。"""
+
+    results: list[ModelResult] = []
+    elapsed_ms = 0
+    for event in events:
+        if event.kind == "model_finished":
+            payload = event.public_payload
+            usage = ModelUsage.model_validate({
+                "usage_source": "unknown",
+                **payload.usage,
+            })
+            results.append(ModelResult(
+                output=payload.output_summary,
+                provider=payload.provider,
+                model=payload.model,
+                profile=payload.profile,
+                finish_reason=payload.finish_reason,
+                usage=usage,
+                latency_ms=payload.latency_ms,
+                attempt=event.attempt,
+            ))
+        elif event.kind == "run_finished":
+            elapsed_ms = event.public_payload.latency_ms
+    return format_usage_line(results, elapsed_ms)
+
+
 def _detail_suffix(summary: UsageSummary) -> str:
     cache_tokens = sum(detail.cache_tokens for detail in summary.details)
     if cache_tokens <= 0:
@@ -185,6 +212,10 @@ _SENSITIVE_KEY = re.compile(
     r"(?:api[_-]?key|authorization|cookie|token|password|passwd|secret|"
     r"proxy|credential|access[_-]?key|client[_-]?secret)",
     re.IGNORECASE,
+)
+_SENSITIVE_VALUE = re.compile(
+    r"(?i)\b(?:api[_-]?key|authorization|cookie|token|password|passwd|secret|"
+    r"credential|access[_-]?key|client[_-]?secret)\s*=\s*[^\s&]+"
 )
 
 
@@ -224,6 +255,7 @@ def _sanitize_value(value: Any, configured_secrets: tuple[str, ...]) -> Any:
         clean = value
         for secret in configured_secrets:
             clean = clean.replace(secret, "***")
+        clean = _SENSITIVE_VALUE.sub(lambda match: f"{match.group(0).split('=', 1)[0]}=***", clean)
         return _sanitize_url(clean)
     if isinstance(value, Exception):
         return f"{type(value).__name__}: {_sanitize_value(str(value), configured_secrets)}"
