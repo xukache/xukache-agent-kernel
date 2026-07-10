@@ -43,7 +43,7 @@
 - [x] 任务 25：统一框架中立架构、版本文档和后续计划
 - [x] 任务 26：锁定业务阶段并定义核心状态协议
 - [x] 任务 27：定义 StatePatch、Reducer、调用身份和 Trace 协议
-- [ ] 任务 28：建立 CapabilityGateway 端口和 ToolExecutor 适配
+- [x] 任务 28：建立 CapabilityGateway 端口和 ToolExecutor 适配
 - [ ] 任务 29：阶段化 Native Runtime 并建立 Runtime Contract
 - [ ] 任务 30：接入最小串行 LangGraph Runtime
 - [ ] 任务 31：双运行时差分验收
@@ -140,7 +140,7 @@ uv run pytest -v
 
 **验收标准：** reducer 不依赖框架；重复 patch 不重复追加；非法转换结构化失败；LangGraph 接入前 trace schema 已稳定。
 
-### - [ ] 任务 28：建立 CapabilityGateway 端口和 ToolExecutor 适配
+### - [x] 任务 28：建立 CapabilityGateway 端口和 ToolExecutor 适配
 
 **目标：** 在图运行时前建立统一能力边界，避免 ToolNode 或 Agent 绕过现有治理。
 
