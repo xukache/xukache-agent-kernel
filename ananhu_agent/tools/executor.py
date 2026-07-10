@@ -31,6 +31,7 @@ class ToolExecutor:
         node_id: str | None = None,
         logical_call_id: str | None = None,
         attempt: int | None = None,
+        run_id: str | None = None,
     ) -> ToolCallResult:
         """执行一次工具调用。
 
@@ -43,6 +44,7 @@ class ToolExecutor:
             node_id: 发起调用的业务节点；用于 trace 关联。
             logical_call_id: 稳定逻辑调用 ID；重试时不变。
             attempt: 物理尝试次数；重试时递增。
+            run_id: 单次运行 ID；CapabilityGateway 新调用必须提供。
 
         返回:
             归一化 `ToolCallResult`，成功和失败都会写入项目 trace。
@@ -58,6 +60,7 @@ class ToolExecutor:
             node_id=node_id,
             logical_call_id=logical_call_id,
             attempt=attempt,
+            run_id=run_id,
         )
         definition = self.registry.get(request.tool_name)
         if definition is None:
@@ -72,6 +75,7 @@ class ToolExecutor:
                 node_id,
                 logical_call_id,
                 attempt,
+                run_id,
             )
         if request.called_by not in definition.allowed_callers:
             return self._fail(
@@ -85,6 +89,7 @@ class ToolExecutor:
                 node_id,
                 logical_call_id,
                 attempt,
+                run_id,
             )
 
         fingerprint = self._fingerprint(request_id, request)
@@ -100,6 +105,7 @@ class ToolExecutor:
                 node_id,
                 logical_call_id,
                 attempt,
+                run_id,
             )
         self._call_fingerprints.add(fingerprint)
 
@@ -116,6 +122,7 @@ class ToolExecutor:
                 node_id,
                 logical_call_id,
                 attempt,
+                run_id,
             )
 
         try:
@@ -132,6 +139,7 @@ class ToolExecutor:
                 node_id,
                 logical_call_id,
                 attempt,
+                run_id,
             )
         except Exception:
             return self._fail(
@@ -145,6 +153,7 @@ class ToolExecutor:
                 node_id,
                 logical_call_id,
                 attempt,
+                run_id,
             )
 
         missing_output = [key for key in definition.output_required_keys if key not in output]
@@ -160,6 +169,7 @@ class ToolExecutor:
                 node_id,
                 logical_call_id,
                 attempt,
+                run_id,
             )
 
         result = ToolCallResult(
@@ -184,6 +194,7 @@ class ToolExecutor:
             node_id=node_id,
             logical_call_id=logical_call_id,
             attempt=attempt,
+            run_id=run_id,
         )
         return result
 
@@ -211,6 +222,7 @@ class ToolExecutor:
         node_id: str | None = None,
         logical_call_id: str | None = None,
         attempt: int | None = None,
+        run_id: str | None = None,
     ) -> ToolCallResult:
         """构造失败结果并写入 trace，保留调用身份字段。"""
 
@@ -236,6 +248,7 @@ class ToolExecutor:
             node_id=node_id,
             logical_call_id=logical_call_id,
             attempt=attempt,
+            run_id=run_id,
         )
         return result
 
@@ -249,12 +262,14 @@ class ToolExecutor:
         node_id: str | None = None,
         logical_call_id: str | None = None,
         attempt: int | None = None,
+        run_id: str | None = None,
     ) -> None:
         """记录工具调用开始事件。"""
 
         self.trace_recorder.record(
             TraceEvent.new(
                 request_id=request_id,
+                run_id=run_id,
                 session_id=session_id,
                 event_type="tool_called",
                 phase="tool",
@@ -278,12 +293,14 @@ class ToolExecutor:
         node_id: str | None = None,
         logical_call_id: str | None = None,
         attempt: int | None = None,
+        run_id: str | None = None,
     ) -> None:
         """记录工具调用完成或失败事件。"""
 
         self.trace_recorder.record(
             TraceEvent.new(
                 request_id=request_id,
+                run_id=run_id,
                 session_id=session_id,
                 event_type=event_type,
                 phase="tool",

@@ -11,11 +11,13 @@ from ananhu_agent.agents.policy_rag import PolicyRAGAgent
 from ananhu_agent.capabilities.contracts import CapabilityGateway
 from ananhu_agent.models.model_router import ModelRouter
 from ananhu_agent.orchestrator.badcase_rules import detect_badcase_issues
+from ananhu_agent.ports.run_event_sink import RunEventSink
 from ananhu_agent.runtimes.native.runtime import (
     _context_from_request,
     _initial_state,
     _model_usage_summary,
     _run_stage,
+    _run_with_lifecycle,
 )
 from ananhu_agent.runtimes.native.stages import NativeStageServices
 from ananhu_agent.schemas import BadcaseRecord, RunReport, SessionState, TaskState, now_cn
@@ -69,6 +71,7 @@ class LangGraphWorkflowRuntime(WorkflowRuntime):
         session_state_store: SessionStateStore,
         badcase_store: BadcaseStore,
         model_router: ModelRouter,
+        event_sink: RunEventSink,
     ) -> None:
         self.intent_agent = intent_agent
         self.domain_agent = domain_agent
@@ -81,8 +84,20 @@ class LangGraphWorkflowRuntime(WorkflowRuntime):
         self.session_state_store = session_state_store
         self.badcase_store = badcase_store
         self.model_router = model_router
+        self.event_sink = event_sink
 
     async def invoke(self, request: RunRequest) -> WorkflowResult:
+        """运行 LangGraph 图，并复用项目统一的 run 生命周期。"""
+
+        return await _run_with_lifecycle(
+            request,
+            self.event_sink,
+            RUNTIME_NAME,
+            RUNTIME_VERSION,
+            lambda: self._invoke(request),
+        )
+
+    async def _invoke(self, request: RunRequest) -> WorkflowResult:
         """运行一张仅调度项目阶段的 LangGraph 图。"""
 
         ctx = _context_from_request(request)
@@ -99,7 +114,7 @@ class LangGraphWorkflowRuntime(WorkflowRuntime):
             runtime_name=RUNTIME_NAME,
             runtime_version=RUNTIME_VERSION,
         )
-        output = await _build_graph(stages).ainvoke(
+        output = await _build_graph(stages, self.event_sink).ainvoke(
             {"state": _initial_state(request), "patch": None, "reducer_error": None}
         )
         state = output["state"]
@@ -177,14 +192,14 @@ class LangGraphWorkflowRuntime(WorkflowRuntime):
         ))
 
 
-def _build_graph(stages: NativeStageServices):
+def _build_graph(stages: NativeStageServices, event_sink: RunEventSink):
     """构造每次 run 独立的串行图，闭包只捕获本次运行的阶段服务。"""
 
     graph = StateGraph(LangGraphState)
     phases = tuple(phase for phase in WorkflowPhase if phase is not WorkflowPhase.COMPLETE)
 
     for phase in phases:
-        graph.add_node(phase.value, _stage_node(stages, phase))
+        graph.add_node(phase.value, _stage_node(stages, phase, event_sink))
     graph.add_node("apply_patch", _apply_patch)
     graph.add_edge(START, WorkflowPhase.UNDERSTAND.value)
     for phase in phases:
@@ -193,9 +208,20 @@ def _build_graph(stages: NativeStageServices):
     return graph.compile()
 
 
-def _stage_node(stages: NativeStageServices, phase: WorkflowPhase):
+def _stage_node(
+    stages: NativeStageServices,
+    phase: WorkflowPhase,
+    event_sink: RunEventSink,
+):
     async def node(graph_state: LangGraphState) -> dict[str, StatePatch | None]:
-        return {"patch": await _run_stage(stages, phase, graph_state["state"])}
+        return {
+            "patch": await _run_stage(
+                stages,
+                phase,
+                graph_state["state"],
+                event_sink,
+            )
+        }
 
     return node
 

@@ -1,5 +1,7 @@
 from __future__ import annotations
 
+from time import perf_counter
+
 from ananhu_agent.capabilities.contracts import (
     CapabilityError,
     CapabilityGateway,
@@ -8,6 +10,16 @@ from ananhu_agent.capabilities.contracts import (
     CapabilityRequest,
     CapabilityResult,
     CapabilityStatus,
+)
+from ananhu_agent.ports.run_event_sink import (
+    CapabilityFailedEvent,
+    CapabilityFailedPayload,
+    CapabilityFinishedEvent,
+    CapabilityFinishedPayload,
+    CapabilityStartedEvent,
+    CapabilityStartedPayload,
+    NoOpRunEventSink,
+    RunEventSink,
 )
 from ananhu_agent.schemas import ToolCallRequest
 from ananhu_agent.tools.executor import ToolExecutor
@@ -20,11 +32,16 @@ class ToolExecutorCapabilityGateway(CapabilityGateway):
     既有的权限、schema、超时、错误归一和 trace 行为。
     """
 
-    def __init__(self, tool_executor: ToolExecutor) -> None:
+    def __init__(
+        self,
+        tool_executor: ToolExecutor,
+        event_sink: RunEventSink | None = None,
+    ) -> None:
         self.tool_executor = tool_executor
+        self.event_sink = event_sink or NoOpRunEventSink()
         # 任务 28 的最小幂等存储：同一进程内相同 logical_call_id 只执行一次底层工具。
         # 后续接入持久化幂等记录时，需要把 run_id、capability_version 纳入键。
-        self._results_by_logical_call_id: dict[str, CapabilityResult] = {}
+        self._results_by_logical_call_id: dict[tuple[str, str], CapabilityResult] = {}
 
     @property
     def trace_recorder(self):
@@ -43,9 +60,31 @@ class ToolExecutorCapabilityGateway(CapabilityGateway):
             但保留本次请求的 `attempt`，用于区分物理重试。
         """
 
-        if request.logical_call_id in self._results_by_logical_call_id:
-            cached = self._results_by_logical_call_id[request.logical_call_id]
-            return cached.model_copy(update={"attempt": request.attempt, "reused": True}, deep=True)
+        started = perf_counter()
+        event_fields = {
+            "run_id": request.run_id,
+            "request_id": request.request_id,
+            "session_id": request.session_id,
+            "node_id": request.node_id,
+            "logical_call_id": request.logical_call_id,
+            "attempt": request.attempt,
+        }
+        self.event_sink.publish(CapabilityStartedEvent(
+            **event_fields,
+            public_payload=CapabilityStartedPayload(
+                capability_name=request.capability_name,
+                input_summary=request.input,
+            ),
+        ))
+        cache_key = (request.run_id, request.logical_call_id)
+        if cache_key in self._results_by_logical_call_id:
+            cached = self._results_by_logical_call_id[cache_key]
+            result = cached.model_copy(
+                update={"attempt": request.attempt, "reused": True},
+                deep=True,
+            )
+            self._publish_terminal(result, event_fields, started)
+            return result
 
         definition = self.tool_executor.registry.get(request.capability_name)
         policy = _policy_from_definition(request.capability_name, definition)
@@ -65,6 +104,7 @@ class ToolExecutorCapabilityGateway(CapabilityGateway):
             node_id=request.node_id,
             logical_call_id=request.logical_call_id,
             attempt=request.attempt,
+            run_id=request.run_id,
         )
         status = (
             CapabilityStatus.SUCCESS
@@ -93,8 +133,41 @@ class ToolExecutorCapabilityGateway(CapabilityGateway):
             ),
             tool_call_result=tool_result.model_dump(),
         )
-        self._results_by_logical_call_id[request.logical_call_id] = result
+        self._results_by_logical_call_id[cache_key] = result
+        self._publish_terminal(result, event_fields, started)
         return result
+
+    def _publish_terminal(
+        self,
+        result: CapabilityResult,
+        event_fields: dict,
+        started: float,
+    ) -> None:
+        latency_ms = int((perf_counter() - started) * 1000)
+        if result.status is CapabilityStatus.SUCCESS:
+            self.event_sink.publish(CapabilityFinishedEvent(
+                **event_fields,
+                public_payload=CapabilityFinishedPayload(
+                    capability_name=result.capability_name,
+                    status=result.status.value,
+                    output_summary=result.output,
+                    fallback_used=False,
+                    reused=result.reused,
+                    latency_ms=latency_ms,
+                ),
+            ))
+            return
+        self.event_sink.publish(CapabilityFailedEvent(
+            **event_fields,
+            public_payload=CapabilityFailedPayload(
+                capability_name=result.capability_name,
+                error_code=(result.error.code if result.error else "capability_failed"),
+                retryable=False,
+                fallback_used=True,
+                latency_ms=latency_ms,
+                error_message=(result.error.message if result.error else None),
+            ),
+        ))
 
 
 def _policy_from_definition(capability_name: str, definition) -> CapabilityPolicy:

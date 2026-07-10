@@ -35,6 +35,7 @@ class RunStatus(str, Enum):
     STOPPED = "stopped"
     COMPLETED = "completed"
     FAILED = "failed"
+    CANCELLED = "cancelled"
 
 
 class StopReason(str, Enum):
@@ -45,6 +46,7 @@ class StopReason(str, Enum):
     INSUFFICIENT_EVIDENCE = "insufficient_evidence"
     CAPABILITY_FAILED = "capability_failed"
     SAFETY_BLOCKED = "safety_blocked"
+    USER_CANCELLED = "user_cancelled"
 
 
 class RunRequest(BaseModel):
