@@ -23,8 +23,8 @@ def detect_badcase_issues(state: WorkflowState) -> list[str]:
             if issue == "missing_citation":
                 issues.append("missing_citation")
 
-    if any(result.get("tool_status") == "failed" for result in state.capability_results):
-        issues.append("tool_failed")
+    if any(result.get("status") == "failed" for result in state.capability_results):
+        issues.append("capability_failed")
 
     if state.safety_result and not state.safety_result.get("passed", True):
         issues.append("unsafe_answer")
@@ -37,10 +37,13 @@ def detect_badcase_issues(state: WorkflowState) -> list[str]:
 
 def _policy_rag_returned_no_result(state: WorkflowState) -> bool:
     rag_results = [
-        result for result in state.capability_results if result.get("tool_name") == "PolicyRAGTool"
+        result
+        for result in state.capability_results
+        if result.get("capability_name") == "knowledge.search"
     ]
     return any(
-        result.get("tool_status") == "success" and not result.get("output", {}).get("documents")
+        result.get("status") == "success"
+        and not result.get("output", {}).get("evidences")
         for result in rag_results
     )
 

@@ -87,7 +87,7 @@ ananhu_agent/
 
 ## Capability 规则
 
-- 所有能力通过 `CapabilityGateway` 端口；当前 `ToolExecutorCapabilityGateway` 适配现有 `ToolExecutor`。
+- 所有能力通过 `CapabilityGateway` 端口；当前由 `DefaultCapabilityGateway` 直接执行显式注册能力。
 - 能力声明输入输出 schema、版本、风险、权限、超时、重试和幂等等级。
 - 结果使用结构化 `CapabilityResult`，关键字段不得只存在于自然语言文本。
 - 框架 tool adapter 只能转发到执行网关，不能绕过治理。

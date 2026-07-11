@@ -36,14 +36,14 @@ class CapabilityPolicy(BaseModel):
 class CapabilityError(BaseModel):
     """能力失败的结构化错误。"""
 
-    code: str = Field(description="稳定错误码，沿用或映射 ToolExecutor 错误。")
+    code: str = Field(description="稳定错误码，由能力执行网关统一定义。")
     message: str = Field(description="人类可读错误说明。")
 
 
 class CapabilityRequest(BaseModel):
     """Runtime 或阶段服务发起的能力调用请求。
 
-    该对象是 Agent/Runtime 能看到的唯一能力入口协议；底层 ToolExecutor、
+    该对象是 Runtime/阶段服务看到的唯一能力执行协议；底层 handler、
     LangGraph ToolNode 或第三方 SDK 类型不得暴露给调用方。
     """
 
@@ -51,8 +51,8 @@ class CapabilityRequest(BaseModel):
     run_id: str = Field(description="单次运行 ID，用于事件、trace 和幂等隔离。")
     request_id: str = Field(description="用户请求 ID，用于 trace 关联。")
     session_id: str = Field(description="会话 ID，用于 trace 关联。")
-    capability_name: str = Field(description="能力名称；当前映射到 ToolDefinition.name。")
-    caller: str = Field(description="调用方身份；当前映射到 ToolCallRequest.called_by。")
+    capability_name: str = Field(description="显式注册的能力名称。")
+    caller: str = Field(description="调用方身份，用于能力权限校验。")
     input: dict[str, Any] = Field(default_factory=dict, description="能力输入。")
     node_id: str = Field(description="发起调用的业务节点或阶段服务。")
     logical_call_id: str = Field(description="逻辑调用 ID，重试时保持不变。")
@@ -83,10 +83,6 @@ class CapabilityResult(BaseModel):
     output: dict[str, Any] = Field(default_factory=dict, description="能力结构化输出。")
     error: CapabilityError | None = Field(default=None, description="失败时的结构化错误。")
     reused: bool = Field(default=False, description="是否复用了同一 logical_call_id 的历史结果。")
-    tool_call_result: dict[str, Any] = Field(
-        default_factory=dict,
-        description="当前 MVP 适配 ToolExecutor 后保留的底层工具结果快照。",
-    )
 
 
 class CapabilityGateway(ABC):

@@ -2,7 +2,17 @@
 
 > 返回总纲：`../architecture.md`
 
-本文记录架构文档和重大设计决策变化。凡是影响系统模块边界、核心数据模型、运行时、消息 / 事件、状态机、Agent 编排、Prompt、Tool、模型策略或观测诊断的变更，都必须在此记录。
+本文记录架构文档和重大设计决策变化。凡是影响系统模块边界、核心数据模型、运行时、消息 / 事件、状态机、Agent 编排、Prompt、Capability、模型策略或观测诊断的变更，都必须在此记录。
+
+## v0.9 - 2026-07-11
+
+- 将 Agent 能力意图统一为 `CapabilityCall`，阶段服务补齐运行身份后构造 `CapabilityRequest`。
+- 新增直接执行显式能力白名单的 `DefaultCapabilityGateway` 和 `CapabilityRegistry`。
+- 能力名称冻结为 `knowledge.search` 与 `payment.calculate`；政策检索直接调用组合根注入的 `KnowledgeGateway`。
+- 删除旧政策工具名、旧同步适配函数、旧工具执行器/注册表和旧能力结果投影；政策证据只从
+  `CapabilityResult.output["evidences"]` 进入 WorkflowState 和最终答案。
+- Native/LangGraph 继续复用同一阶段服务、能力协议、reducer 和评测数据；离线差分结果为 30/30
+  equivalent、0 different。
 
 ## v0.8 - 2026-07-11
 

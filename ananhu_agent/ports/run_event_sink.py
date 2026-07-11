@@ -111,6 +111,8 @@ class RunEventBase(BaseModel):
     run_id: str
     request_id: str
     session_id: str
+    runtime_name: str | None = None
+    runtime_version: str | None = None
     node_id: str | None = None
     logical_call_id: str | None = None
     attempt: int = Field(default=1, ge=1)
@@ -127,6 +129,8 @@ class RunEventBase(BaseModel):
             session_id=self.session_id,
             event_type=self.kind,
             phase=self.node_id or "run",
+            runtime_name=self.runtime_name,
+            runtime_version=self.runtime_version,
             node_id=self.node_id,
             logical_call_id=self.logical_call_id,
             attempt=self.attempt,

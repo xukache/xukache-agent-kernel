@@ -512,18 +512,18 @@ def _add_capability_event(model: InspectorModel, event: RunProgressEvent) -> Non
     payload = event.public_payload
     name = payload.capability_name
     call_id = event.logical_call_id or str(event.sequence_no or "unknown")
-    capability_id = f"{node.item_id}.tool.{name}.{call_id}"
+    capability_id = f"{node.item_id}.capability.{name}.{call_id}"
     capability = model.ensure(
         capability_id,
         label=name,
-        kind="tool",
+        kind="capability",
         value={},
         parent_id=node.item_id,
     )
     if event.kind == "capability_started":
         model.ensure(
             f"{capability_id}.input",
-            label="工具输入",
+            label="能力输入",
             kind="input",
             value=payload.input_summary,
             parent_id=capability_id,
@@ -531,7 +531,7 @@ def _add_capability_event(model: InspectorModel, event: RunProgressEvent) -> Non
     elif event.kind == "capability_finished":
         model.ensure(
             f"{capability_id}.output",
-            label="工具输出",
+            label="能力输出",
             kind="output",
             value=payload.output_summary,
             parent_id=capability_id,
@@ -540,7 +540,7 @@ def _add_capability_event(model: InspectorModel, event: RunProgressEvent) -> Non
         capability.expanded = True
         model.ensure(
             f"{capability_id}.error",
-            label="工具错误",
+            label="能力错误",
             kind="error",
             value={"error_code": payload.error_code, "message": payload.error_message},
             parent_id=capability_id,

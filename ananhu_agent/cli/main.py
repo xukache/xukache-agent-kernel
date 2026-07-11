@@ -32,14 +32,28 @@ def version() -> None:
 
 
 @app.command()
-def ask(query: str) -> None:
+def ask(
+    query: str,
+    province: str | None = typer.Option(
+        None,
+        help="已确认的省份；未提供时不检索地区政策。",
+    ),
+    city: str | None = typer.Option(
+        None,
+        help="已确认的城市；需要与省份一并提供。",
+    ),
+) -> None:
     """Ask one work injury consultation question."""
     runtime_dir = Path(os.getenv("ANANHU_RUNTIME_DIR", ".ananhu-runtime"))
     runtime: WorkflowRuntime = create_default_runtime(
         runtime_dir,
         _cli_settings(runtime_dir),
     )
-    result = asyncio.run(runtime.invoke(_run_request("cli", 1, query)))
+    result = asyncio.run(
+        runtime.invoke(
+            _run_request("cli", 1, query, province=province, city=city)
+        )
+    )
     typer.echo(visible_result_message(result))
     typer.echo(f"Trace: {runtime_dir / 'traces.jsonl'}")
 
@@ -169,13 +183,25 @@ def _new_chat_session_id() -> str:
     return f"cli-chat-{uuid4().hex}"
 
 
-def _run_request(session_id: str, turn_id: int, query: str) -> RunRequest:
+def _run_request(
+    session_id: str,
+    turn_id: int,
+    query: str,
+    *,
+    province: str | None = None,
+    city: str | None = None,
+) -> RunRequest:
     return RunRequest(
         run_id=f"run_{uuid4().hex[:12]}",
         request_id=f"req_{uuid4().hex[:12]}",
         session_id=session_id,
         turn_id=turn_id,
         user_query=query,
+        trusted_jurisdiction={
+            key: value
+            for key, value in {"province": province, "city": city}.items()
+            if value is not None
+        },
         created_at=now_cn(),
     )
 
@@ -256,10 +282,10 @@ def _record_badcase(badcase_store: BadcaseStore, result: WorkflowResult | None) 
             predicted_intent=state.intent_result.get("intent") if state.intent_result else None,
             issue_type=_normalize_issue_type(issue_choice),
             agent_route=state.execution_plan.get("route_agents", []) if state.execution_plan else [],
-            tool_calls=[
-                capability.get("tool_name", "")
+            capability_calls=[
+                capability.get("capability_name", "")
                 for capability in state.capability_results
-                if capability.get("tool_name")
+                if capability.get("capability_name")
             ],
             actual_answer=result.final_answer or result.clarification_question or "",
             expected_answer=expected_answer,

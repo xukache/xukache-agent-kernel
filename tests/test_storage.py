@@ -40,7 +40,7 @@ def test_task_state_and_report_store_append_runtime_evidence(tmp_path):
             final_status="success",
             final_intent="labor_capacity",
             route_agents=["DomainConsultationAgent", "PolicyRAGAgent"],
-            tool_count=1,
+            capability_count=1,
             model_attempts=1,
             prompt_refs=["intent_router.v1"],
             prompt_metadata={},

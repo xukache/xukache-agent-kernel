@@ -159,7 +159,9 @@ class LangGraphWorkflowRuntime(WorkflowRuntime):
                 query=ctx.request.user_query,
                 predicted_intent=ctx.intent_result.intent if ctx.intent_result else None,
                 issue_type=issue, agent_route=ctx.agent_plan.route_agents if ctx.agent_plan else [],
-                tool_calls=[result.tool_name for result in ctx.tool_results], actual_answer=ctx.final_answer or "",
+                capability_calls=[
+                    result.capability_name for result in ctx.capability_results
+                ], actual_answer=ctx.final_answer or "",
                 expected_answer="", correction_note="system_auto_candidate", added_to_eval=False,
                 fixed=False, created_at=now_cn(),
             ))
@@ -167,7 +169,9 @@ class LangGraphWorkflowRuntime(WorkflowRuntime):
     def _append_runtime_evidence(self, ctx, badcase_issues: list[str]) -> None:
         prompt_refs = [message.data["prompt_ref"] for message in ctx.agent_outputs if "prompt_ref" in message.data]
         prompt_ref = prompt_refs[0] if prompt_refs else ""
-        fallback_used = any(result.fallback_used for result in ctx.tool_results)
+        fallback_used = any(
+            result.status.value == "failed" for result in ctx.capability_results
+        )
         self.task_state_store.append(TaskState(
             id=f"state_{ctx.request.request_id}", session_id=ctx.request.session_id,
             turn_id=ctx.request.turn_id, user_query=ctx.request.user_query, status="completed",
@@ -176,13 +180,16 @@ class LangGraphWorkflowRuntime(WorkflowRuntime):
             active_slots=ctx.conversation.active_slots,
             missing_slots=ctx.intent_result.missing_slots if ctx.intent_result else [],
             route_agents=ctx.agent_plan.route_agents if ctx.agent_plan else [], prompt_refs=prompt_refs,
-            tool_steps=[result.tool_name for result in ctx.tool_results], model_attempts=1 if prompt_ref else 0,
+            capability_steps=[
+                result.capability_name for result in ctx.capability_results
+            ], model_attempts=1 if prompt_ref else 0,
             fallback_used=fallback_used, error_message=None,
         ))
         self.report_store.append(RunReport(
             id=f"report_{ctx.request.request_id}", session_id=ctx.request.session_id,
             final_status="success", final_intent=ctx.intent_result.intent if ctx.intent_result else None,
-            route_agents=ctx.agent_plan.route_agents if ctx.agent_plan else [], tool_count=len(ctx.tool_results),
+            route_agents=ctx.agent_plan.route_agents if ctx.agent_plan else [],
+            capability_count=len(ctx.capability_results),
             model_attempts=1 if prompt_ref else 0, prompt_refs=prompt_refs,
             prompt_metadata={message.data["prompt_ref"]: message.data["prompt_metadata"] for message in ctx.agent_outputs if "prompt_ref" in message.data},
             output_schema_valid_rate=1.0 if ctx.verification_result and ctx.verification_result.passed else 0.0,

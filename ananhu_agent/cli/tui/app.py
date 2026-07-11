@@ -10,6 +10,7 @@ from uuid import uuid4
 from textual.app import App, ComposeResult
 from textual.binding import Binding
 from textual.containers import VerticalScroll
+from textual.css.query import NoMatches
 from textual.widgets import Footer, Header, Markdown, Static, TextArea
 
 from ananhu_agent.cli.main import _run_request
@@ -133,10 +134,15 @@ class AnanhuChatApp(App[None]):
         self._turn_widget_count += 1
         turn = TurnWidget(request.user_query, inspector_model([]), id=f"turn-{self._turn_widget_count}")
         self._turns[request.run_id] = turn
-        self.query_one("#conversation", VerticalScroll).mount(turn)
+        mount = self.query_one("#conversation", VerticalScroll).mount(turn)
         self.input_area.disabled = True
         self.query_one("#chat-status", Static).update("处理中")
-        self._running_task = asyncio.create_task(self._invoke(request, turn))
+        self._running_task = asyncio.create_task(self._invoke_after_mount(request, turn, mount))
+
+    async def _invoke_after_mount(self, request, turn: TurnWidget, mount) -> None:
+        """等待 TurnWidget 完成挂载后再消费运行结果，避免瞬时运行的子控件未就绪。"""
+        await mount
+        await self._invoke(request, turn)
 
     async def _invoke(self, request, turn: TurnWidget) -> None:
         try:
@@ -152,14 +158,22 @@ class AnanhuChatApp(App[None]):
         except asyncio.CancelledError:
             raise
         except Exception as exc:
-            await turn.query_one("#assistant-message", Markdown).update(f"运行失败：{sanitize(exc)}")
+            try:
+                await turn.query_one("#assistant-message", Markdown).update(
+                    f"运行失败：{sanitize(exc)}"
+                )
+            except NoMatches:
+                pass
             turn.expand_inspector()
             turn.stop_spinner()
         finally:
             self.input_area.disabled = False
             if self._screen_stack:
-                self.query_one("#chat-status", Static).update("就绪")
-                self.input_area.focus()
+                try:
+                    self.query_one("#chat-status", Static).update("就绪")
+                    self.input_area.focus()
+                except NoMatches:
+                    pass
 
     async def _consume_events(self, queue: asyncio.Queue) -> None:
         while True:
@@ -277,7 +291,11 @@ class AnanhuChatApp(App[None]):
             predicted_intent=(state.intent_result or {}).get("intent") if state else None,
             issue_type=self._normalize_issue_type(feedback.get("issue_type", "")),
             agent_route=(state.execution_plan or {}).get("route_agents", []) if state else [],
-            tool_calls=[item.get("tool_name", "") for item in (state.capability_results if state else []) if item.get("tool_name")],
+            capability_calls=[
+                item.get("capability_name", "")
+                for item in (state.capability_results if state else [])
+                if item.get("capability_name")
+            ],
             actual_answer=result.final_answer or result.clarification_question or "",
             expected_answer=feedback.get("expected_answer", ""),
             correction_note=feedback.get("correction_note", ""),

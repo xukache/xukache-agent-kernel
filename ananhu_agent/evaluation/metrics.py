@@ -27,10 +27,10 @@ def score_slots(state: WorkflowState, expected_slots: dict[str, Any]) -> bool:
 
 
 def score_citations(state: WorkflowState, expected_citations: list[str]) -> bool:
-    """评估期望法规来源是否出现在 RAG 工具返回的引用标题中。"""
+    """评估期望法规来源是否出现在知识能力返回的引用标题中。"""
 
     citation_titles = [
-        item["document"]["citation"].get("title", "")
+        item["citation"].get("title", "")
         for item in state.evidence
     ]
     return all(
@@ -44,11 +44,11 @@ def score_evidence_support(evidence_ids: list[str], expected_ids: list[str]) -> 
     return all(expected in evidence_ids for expected in expected_ids)
 
 
-def score_tool_success(state: WorkflowState) -> bool:
-    """评估本轮实际发生的工具调用是否全部成功。"""
+def score_capability_success(state: WorkflowState) -> bool:
+    """评估本轮实际发生的能力调用是否全部成功。"""
 
     return bool(state.capability_results) and all(
-        result.get("tool_status") == "success" for result in state.capability_results
+        result.get("status") == "success" for result in state.capability_results
     )
 
 

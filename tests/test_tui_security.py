@@ -179,7 +179,7 @@ async def test_runtime_random_canary_never_leaks_to_screen_logs_or_artifacts(
                     provider="provider",
                     model="model",
                     output_summary={
-                        "tool_result": {"token": canary},
+                        "capability_result": {"token": canary},
                         "endpoint": f"https://user:{canary}@provider.example/v1",
                     },
                 ),
@@ -209,7 +209,7 @@ async def test_runtime_random_canary_never_leaks_to_screen_logs_or_artifacts(
         "secret": SecretStr(canary),
         "headers": {"Authorization": f"Bearer {canary}"},
         "url": f"https://user:{canary}@provider.example/v1?access_token={canary}",
-        "tool_result": {"token": canary},
+        "capability_result": {"token": canary},
         "error": RuntimeError(f"provider error token={canary}"),
     }, configured_secrets={canary})
     persisted = "\n".join(
@@ -218,7 +218,7 @@ async def test_runtime_random_canary_never_leaks_to_screen_logs_or_artifacts(
         if path.is_file()
     )
     git_scan = subprocess.run(
-        ["git", "grep", "-n", "--fixed-strings", canary, "--"],
+        ["git", "grep", "-n", "--fixed-strings", "-e", canary, "--"],
         cwd=Path(__file__).resolve().parents[1],
         capture_output=True,
         text=True,

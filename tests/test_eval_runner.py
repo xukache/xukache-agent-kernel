@@ -7,8 +7,8 @@ from ananhu_agent.runtime import create_default_runtime
 def test_eval_runner_outputs_metrics_and_badcases(tmp_path):
     cases = tmp_path / "eval_cases.jsonl"
     cases.write_text(
-        '{"id":"case_1","query":"四川十级工伤，月工资6000，大概能赔多少钱？","expect_contains":["一次性伤残补助金","42000"]}\n'
-        '{"id":"case_2","query":"劳动能力鉴定需要准备哪些材料？","expect_contains":["这个片段不会出现，用来验证 badcase 写入"]}\n',
+        '{"id":"case_1","query":"四川十级工伤，月工资6000，大概能赔多少钱？","trusted_jurisdiction":{"province":"四川省"},"expect_contains":["一次性伤残补助金","42000"]}\n'
+        '{"id":"case_2","query":"劳动能力鉴定需要准备哪些材料？","trusted_jurisdiction":{"province":"四川省"},"expect_contains":["这个片段不会出现，用来验证 badcase 写入"]}\n',
         encoding="utf-8",
     )
     runner = EvalRunner(create_default_runtime(tmp_path), tmp_path)
@@ -27,7 +27,7 @@ def test_eval_runner_outputs_metrics_and_badcases(tmp_path):
 def test_eval_runner_outputs_layered_metrics(tmp_path):
     cases = tmp_path / "eval_cases.jsonl"
     cases.write_text(
-        '{"id":"case_1","query":"四川十级工伤，月工资6000，大概能赔多少钱？","expected_intent":"payment_calculation","expected_slots":{"province":"四川省","disability_grade":"十级"},"expect_contains":["一次性伤残补助金"],"expected_citations":["四川省工伤保险条例实施办法"]}\n',
+        '{"id":"case_1","query":"四川十级工伤，月工资6000，大概能赔多少钱？","trusted_jurisdiction":{"province":"四川省"},"expected_intent":"payment_calculation","expected_slots":{"province":"四川省","disability_grade":"十级"},"expect_contains":["一次性伤残补助金"],"expected_citations":["四川省工伤保险条例实施办法"]}\n',
         encoding="utf-8",
     )
     runner = EvalRunner(create_default_runtime(tmp_path), tmp_path)
@@ -37,5 +37,5 @@ def test_eval_runner_outputs_layered_metrics(tmp_path):
     assert metrics["intent_accuracy"] == 1.0
     assert metrics["slot_accuracy"] == 1.0
     assert metrics["citation_accuracy"] == 1.0
-    assert metrics["tool_success_rate"] == 1.0
+    assert metrics["capability_success_rate"] == 1.0
     assert "latency_ms_avg" in metrics

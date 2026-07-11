@@ -9,7 +9,6 @@ from ananhu_agent.agents.intent_router import IntentRouterAgent
 from ananhu_agent.agents.payment_calculation import PaymentCalculationAgent
 from ananhu_agent.agents.policy_rag import PolicyRAGAgent
 from ananhu_agent.capabilities.contracts import CapabilityGateway
-from ananhu_agent.context.slot_rules import extract_user_jurisdiction
 from ananhu_agent.models.model_router import ModelRouter
 from ananhu_agent.ports.run_event_sink import (
     NodeFailedEvent,
@@ -180,7 +179,9 @@ class NativeWorkflowRuntime(WorkflowRuntime):
                     predicted_intent=ctx.intent_result.intent if ctx.intent_result else None,
                     issue_type=issue,
                     agent_route=ctx.agent_plan.route_agents if ctx.agent_plan else [],
-                    tool_calls=[result.tool_name for result in ctx.tool_results],
+                    capability_calls=[
+                        result.capability_name for result in ctx.capability_results
+                    ],
                     actual_answer=ctx.final_answer or "",
                     expected_answer="",
                     correction_note="system_auto_candidate",
@@ -191,7 +192,9 @@ class NativeWorkflowRuntime(WorkflowRuntime):
             )
 
     def _append_runtime_evidence(self, ctx: AgentContext, badcase_issues: list[str]) -> None:
-        fallback_used = any(result.fallback_used for result in ctx.tool_results)
+        fallback_used = any(
+            result.status.value == "failed" for result in ctx.capability_results
+        )
         prompt_refs = [
             message.data["prompt_ref"]
             for message in ctx.agent_outputs
@@ -212,7 +215,9 @@ class NativeWorkflowRuntime(WorkflowRuntime):
                 missing_slots=ctx.intent_result.missing_slots if ctx.intent_result else [],
                 route_agents=ctx.agent_plan.route_agents if ctx.agent_plan else [],
                 prompt_refs=prompt_refs,
-                tool_steps=[result.tool_name for result in ctx.tool_results],
+                capability_steps=[
+                    result.capability_name for result in ctx.capability_results
+                ],
                 model_attempts=1 if prompt_ref else 0,
                 fallback_used=fallback_used,
                 error_message=None,
@@ -225,7 +230,7 @@ class NativeWorkflowRuntime(WorkflowRuntime):
                 final_status="success",
                 final_intent=ctx.intent_result.intent if ctx.intent_result else None,
                 route_agents=ctx.agent_plan.route_agents if ctx.agent_plan else [],
-                tool_count=len(ctx.tool_results),
+                capability_count=len(ctx.capability_results),
                 model_attempts=1 if prompt_ref else 0,
                 prompt_refs=prompt_refs,
                 prompt_metadata={
@@ -405,8 +410,6 @@ def _model_usage_summary(ctx: AgentContext) -> dict:
 
 def _context_from_request(request: RunRequest) -> AgentContext:
     trusted_jurisdiction = dict(request.trusted_jurisdiction)
-    if not trusted_jurisdiction:
-        trusted_jurisdiction = extract_user_jurisdiction(request.user_query)
     ctx = AgentContext.new_for_query(
         session_id=request.session_id,
         turn_id=request.turn_id,

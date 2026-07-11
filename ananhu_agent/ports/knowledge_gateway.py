@@ -24,28 +24,6 @@ class KnowledgeQuery(BaseModel):
     document_version: str | None = None
     top_k: int = Field(default=3, ge=1, le=20)
 
-    @classmethod
-    def from_payload(cls, payload: dict[str, Any]) -> KnowledgeQuery:
-        """将旧 PolicyRAGTool 输入转成新的知识端口请求。"""
-
-        return cls(
-            query=str(payload["query"]),
-            tenant=str(payload.get("tenant", "default")),
-            jurisdiction={
-                "province": payload.get("province"),
-                "city": payload.get("city"),
-            }
-            if "jurisdiction" not in payload
-            else payload["jurisdiction"],
-            effective_at=payload.get("effective_at"),
-            review_status=payload.get("review_status", "approved"),
-            audience_role=str(payload.get("audience_role", "public")),
-            source_type=str(payload.get("source_type", "official")),
-            document_version=payload.get("document_version"),
-            top_k=int(payload.get("top_k", 3)),
-        )
-
-
 class Citation(BaseModel):
     """答案引用和证据溯源使用的稳定最小投影。"""
 
@@ -96,16 +74,6 @@ class KnowledgeSearchResult(BaseModel):
     applied_filters: dict[str, Any]
     evidences: list[EvidenceItem] = Field(default_factory=list)
     no_result_reason: str | None = None
-
-    def to_tool_payload(self) -> dict[str, Any]:
-        """保留旧工具的 documents 形状，内部字段全部来自 EvidenceItem。"""
-
-        return {
-            "documents": [evidence.model_dump(mode="json") for evidence in self.evidences],
-            "corpus_version": self.corpus_version,
-            "applied_filters": self.applied_filters,
-            "no_result_reason": self.no_result_reason,
-        }
 
 
 class KnowledgeGateway(ABC):

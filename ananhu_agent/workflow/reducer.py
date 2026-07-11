@@ -81,7 +81,7 @@ def reduce_workflow_state(state: WorkflowState, patch: StatePatch) -> ReducerRes
     updated.capability_results = _merge_by_business_id(
         updated.capability_results,
         patch.capability_results,
-        key="tool_call_id",
+        key="logical_call_id",
     )
     updated.evidence = _merge_by_business_id(updated.evidence, patch.evidence, key="evidence_id")
 

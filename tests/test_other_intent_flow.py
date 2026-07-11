@@ -38,7 +38,7 @@ def test_greeting_returns_exact_capability_message_without_tools(tmp_path, runti
     )
     assert result.status is RunStatus.COMPLETED
     assert not [event for event in events if event["event_type"].startswith("capability_")]
-    assert not [event for event in events if event["event_type"].startswith("tool_")]
+    assert not [event for event in events if event["event_type"].startswith("capability_")]
 
 
 @pytest.mark.parametrize("runtime_name", ["native", "langgraph"])
@@ -48,4 +48,4 @@ def test_non_domain_other_invites_rewrite_without_tools(tmp_path, runtime_name):
     assert result.final_answer is not None
     assert "请改写为工伤相关问题" in result.final_answer
     assert not [event for event in events if event["event_type"].startswith("capability_")]
-    assert not [event for event in events if event["event_type"].startswith("tool_")]
+    assert not [event for event in events if event["event_type"].startswith("capability_")]

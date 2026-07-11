@@ -126,7 +126,7 @@ class WorkflowState(BaseModel):
     )
     evidence: list[dict[str, Any]] = Field(
         default_factory=list,
-        description="直接支撑结论的证据投影；当前只收集 PolicyRAGTool 文档。",
+        description="直接支撑结论的 EvidenceItem 投影，按 evidence_id 合并。",
     )
     draft_final_answer: str | None = Field(default=None, description="安全校验前的答案草稿。")
     verification_result: dict[str, Any] | None = Field(
@@ -212,7 +212,7 @@ class StatePatch(BaseModel):
     execution_plan: dict[str, Any] | None = Field(default=None, description="执行计划覆盖写入。")
     capability_results: list[dict[str, Any]] = Field(
         default_factory=list,
-        description="能力结果列表，按 tool_call_id 业务 ID 合并。",
+        description="能力结果列表，按 logical_call_id 业务 ID 合并。",
     )
     evidence: list[dict[str, Any]] = Field(
         default_factory=list,

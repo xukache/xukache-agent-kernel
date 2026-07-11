@@ -111,12 +111,6 @@ class NativeStageServices:
             },
             logical_call_id=model_logical_call_id,
         )
-        # 保留旧事件名，确保历史 trace 消费方可渐进迁移。
-        self._record(state, "model_called", "understand", {
-            "model_profile": model_profile,
-            "model_config": model_config,
-            "prompt_ref": intent_message.data["prompt_ref"],
-        }, logical_call_id=model_logical_call_id)
         self._record(state, "intent_recognized", "understand", intent_message.data)
         self._last_intent_message = intent_message
         return StatePatch(
@@ -203,16 +197,16 @@ class NativeStageServices:
     def plan(self, state: WorkflowState) -> StatePatch:
         if self.ctx.intent_result and self.ctx.intent_result.intent == "other":
             # 非领域输入不调用业务 Agent 或能力网关，仍保留后续安全阶段。
-            self.ctx.agent_plan = AgentPlan(route_agents=[], required_tools=[])
+            self.ctx.agent_plan = AgentPlan(route_agents=[], required_capabilities=[])
         elif self.ctx.intent_result and self.ctx.intent_result.intent == "payment_calculation":
             self.ctx.agent_plan = AgentPlan(
                 route_agents=["PaymentCalculationAgent", "PolicyRAGAgent"],
-                required_tools=["PaymentCalculationTool", "PolicyRAGTool"],
+                required_capabilities=["payment.calculate", "knowledge.search"],
             )
         else:
             self.ctx.agent_plan = AgentPlan(
                 route_agents=["DomainConsultationAgent", "PolicyRAGAgent"],
-                required_tools=["PolicyRAGTool"],
+                required_capabilities=["knowledge.search"],
             )
         return StatePatch(
             patch_id=f"{state.run_id}:plan",
@@ -249,26 +243,35 @@ class NativeStageServices:
             next_phase=WorkflowPhase.VALIDATE_EVIDENCE,
             node_id="execute",
             logical_call_id=f"{state.run_id}:execute",
-            capability_results=[result.model_dump() for result in self.ctx.tool_results],
+            capability_results=[
+                result.model_dump(mode="json")
+                for result in self.ctx.capability_results
+            ],
             evidence=_collect_evidence_from_context(self.ctx),
             status=(
                 RunStatus.FAILED
-                if any(result.tool_status == "failed" for result in self.ctx.tool_results)
+                if any(
+                    result.status is CapabilityStatus.FAILED
+                    for result in self.ctx.capability_results
+                )
                 else None
             ),
             stop_reason=(
                 StopReason.CAPABILITY_FAILED
-                if any(result.tool_status == "failed" for result in self.ctx.tool_results)
+                if any(
+                    result.status is CapabilityStatus.FAILED
+                    for result in self.ctx.capability_results
+                )
                 else None
             ),
         )
 
     def validate_evidence(self, state: WorkflowState) -> StatePatch:
         insufficient = any(
-            result.tool_name == "PolicyRAGTool"
-            and result.tool_status == "success"
-            and not result.output.get("documents")
-            for result in self.ctx.tool_results
+            result.capability_name == "knowledge.search"
+            and result.status is CapabilityStatus.SUCCESS
+            and not result.output.get("evidences")
+            for result in self.ctx.capability_results
         )
         return StatePatch(
             patch_id=f"{state.run_id}:validate_evidence",
@@ -287,10 +290,13 @@ class NativeStageServices:
         else:
             self.ctx.final_answer = build_final_answer(self.ctx)
         citations = [
-            document["citation"]
-            for result in self.ctx.tool_results
-            if result.tool_name == "PolicyRAGTool"
-            for document in result.output.get("documents", [])
+            evidence["citation"]
+            for result in self.ctx.capability_results
+            if (
+                result.capability_name == "knowledge.search"
+                and result.status is CapabilityStatus.SUCCESS
+            )
+            for evidence in result.output.get("evidences", [])
         ]
         self.ctx.verification_result = AnswerValidator().validate(self.ctx.final_answer, citations)
         self._record(state, "answer_validated", "compose", self.ctx.verification_result.model_dump())
@@ -334,29 +340,23 @@ class NativeStageServices:
         message: AgentMessage,
         node_id: str,
     ) -> None:
-        for call in message.tool_calls:
+        for call in message.capability_calls:
             result = await self.capability_gateway.execute(
                 CapabilityRequest(
                     run_id=state.run_id,
                     request_id=self.ctx.request.request_id,
                     session_id=self.ctx.request.session_id,
-                    capability_name=call.tool_name,
+                    capability_name=call.capability_name,
                     caller=call.called_by,
                     input=call.input,
                     node_id=node_id,
-                    logical_call_id=call.tool_call_id,
+                    logical_call_id=call.call_id,
                     attempt=1,
                     runtime_name=self.runtime_name,
                     runtime_version=self.runtime_version,
                 )
             )
-            self.ctx.tool_results.append(self._tool_result_from_capability(result))
-
-    @staticmethod
-    def _tool_result_from_capability(result):
-        from ananhu_agent.schemas import ToolCallResult
-
-        return ToolCallResult(**result.tool_call_result)
+            self.ctx.capability_results.append(result)
 
     def _record(
         self,
@@ -385,16 +385,10 @@ class NativeStageServices:
 
 def _collect_evidence_from_context(ctx: AgentContext) -> list[dict]:
     evidence = []
-    for result in ctx.tool_results:
-        if result.tool_name != "PolicyRAGTool" or result.tool_status != "success":
-            continue
-        for index, document in enumerate(result.output.get("documents", []), start=1):
-            evidence.append(
-                {
-                    "evidence_id": f"{result.tool_call_id}:{index}",
-                    "source": "PolicyRAGTool",
-                    "tool_call_id": result.tool_call_id,
-                    "document": document,
-                }
-            )
+    for result in ctx.capability_results:
+        if (
+            result.capability_name == "knowledge.search"
+            and result.status is CapabilityStatus.SUCCESS
+        ):
+            evidence.extend(result.output.get("evidences", []))
     return evidence

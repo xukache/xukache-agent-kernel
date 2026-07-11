@@ -2,18 +2,19 @@
 
 ## 范围
 
-本文定义统一能力执行网关、模型适配、政策知识检索、幂等和版本治理。现有类名可以保留，但公共语义必须框架中立。
+本文定义统一能力执行网关、模型适配、政策知识检索、幂等和版本治理。公共语义使用框架中立能力协议。
 
 ## 能力分类
 
 | 能力 | 当前实现 | 目标端口 |
 |---|---|---|
-| 政策检索 | `PolicyRAGTool` | `KnowledgeGateway.search()` |
-| 待遇辅助测算 | `PaymentCalculationTool` | `CalculationService.calculate()` |
+| 政策检索 | `knowledge.search` | `KnowledgeGateway.search()` |
+| 待遇辅助测算 | `payment.calculate` | 确定性待遇测算 handler |
 | 模型调用 | `ModelRouter` + Fake Model | `ModelGateway` / `ModelRegistry` |
 | 未来语音/多模态 | 未实现 | `CapabilityGateway` 下的适配器 |
 
-Agent 不直接调用这些实现，只产生项目 `CapabilityRequest`。当前能力协议位于 `ananhu_agent/capabilities/`，通过 `ToolExecutorCapabilityGateway` 适配现有 `ToolExecutor`。
+Agent 不直接调用这些实现，只产生 `CapabilityCall`；阶段服务再构造 `CapabilityRequest`。
+当前能力协议位于 `ananhu_agent/capabilities/`，由 `DefaultCapabilityGateway` 直接执行显式注册能力。
 
 ## CapabilityRegistry
 
@@ -29,20 +30,20 @@ Agent 不直接调用这些实现，只产生项目 `CapabilityRequest`。当前
 
 ## CapabilityGateway
 
-`CapabilityGateway` 是 Runtime/阶段服务依赖的能力端口，`ToolExecutorCapabilityGateway` 包装现有 `ToolExecutor` 并保留原有治理行为。当前链路：
+`CapabilityGateway` 是 Runtime/阶段服务依赖的能力端口，`DefaultCapabilityGateway` 直接承担能力治理。当前链路：
 
 ```text
 解析 CapabilityRequest
   -> 注册和 schema 校验
   -> caller permission 校验
   -> 稳定幂等键检查
-  -> ToolExecutor adapter
+  -> registered capability handler
   -> timeout
   -> 输出 schema 校验
   -> trace
 ```
 
-LangGraph ToolNode 或 Agent framework tool 不得绕过该网关。
+LangGraph 的工具节点或 Agent framework tool 不得绕过该网关。
 
 ## CapabilityResult
 
@@ -60,20 +61,22 @@ logical_call_id
 attempt
 policy
 error
-tool_call_result
+    reused
 ```
 
 禁止仅返回一段自然语言文本并要求下游 Agent 二次解析关键计算字段。
 
 ## 幂等与重试
 
-逻辑调用键由 `run_id + node_id + logical_call_id + capability_version` 构成，`attempt` 单独记录。当前 MVP 适配器以 `logical_call_id` 复用同一进程内历史结果，避免同一逻辑调用被 ToolExecutor 判为不可解释的重复执行。能力声明：
+逻辑调用键由 `run_id + node_id + logical_call_id + capability_version` 构成，`attempt` 单独记录。
+当前 MVP 以 `logical_call_id` 复用同一进程内历史结果。能力声明：
 
 - `read_only_repeatable`：检索类，可在版本一致时重试。
 - `deterministic`：计算类，相同输入和版本返回相同结果。
 - `side_effecting`：未来写操作，必须持久化幂等记录并限制重放。
 
-框架节点重试不能自行决定是否重复执行业务能力。`CapabilityRequest` 同时携带项目运行时名称和版本，适配器仅将其写入 ToolExecutor trace，不把框架类型传入能力协议。
+框架节点重试不能自行决定是否重复执行业务能力。`CapabilityRequest` 同时携带项目运行时名称和版本，
+能力网关将其写入项目 trace，不把框架类型传入知识端口。
 
 ## ModelGateway
 
@@ -128,14 +131,14 @@ ModelResult 的尝试不计 token；provider total 与分项不一致时保留�
 ## 实时 Capability 事件
 
 `CapabilityRequest` 必须携带 `run_id`。CapabilityGateway 在既有权限、schema、幂等、重试和超时治理
-边界内发布 started/finished/failed，payload 只包含治理后的实际参数、结果、fallback 和耗时。ToolExecutor
-或 LangGraph ToolNode 不得绕过网关，也不得自行发布缺失 run 身份的事件。
+边界内发布 started/finished/failed，payload 只包含治理后的实际参数、结果、fallback 和耗时。
+LangGraph 框架工具节点不得绕过网关，也不得自行发布缺失 run 身份的事件。
 
 ## KnowledgeGateway
 
 当前实现为 `KnowledgeGateway` 端口和 `LexicalKnowledgeGateway`，通过 `policy-corpus.v1` JSONL
-语料提供离线可回放的真实政策基线。`PolicyRAGTool` 仍是旧 `ToolExecutor` 能力名，但其 handler
-只做协议兼容，实际检索复用组合根注入的 KnowledgeGateway；Native 与 LangGraph 可注入同一个实例。
+语料提供离线可回放的真实政策基线。`knowledge.search` handler 直接构造 `KnowledgeQuery`，
+调用组合根注入的 KnowledgeGateway；Native 与 LangGraph 可注入同一个实例。
 
 检索前必须使用可信元数据过滤：
 

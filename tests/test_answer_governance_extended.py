@@ -1,7 +1,13 @@
+from ananhu_agent.capabilities.contracts import (
+    CapabilityIdempotency,
+    CapabilityPolicy,
+    CapabilityResult,
+    CapabilityStatus,
+)
 from ananhu_agent.orchestrator.aggregator import build_final_answer
 from ananhu_agent.orchestrator.safety import PolicySafetyGuard
 from ananhu_agent.orchestrator.validators import AnswerValidator
-from ananhu_agent.schemas import AgentContext, ToolCallResult
+from ananhu_agent.schemas import AgentContext
 
 
 def test_validator_rejects_region_mismatch():
@@ -26,15 +32,21 @@ def test_safety_guard_rejects_medical_grade_commitment():
 
 def test_aggregator_uses_conservative_answer_without_citations():
     ctx = AgentContext.new_for_query("sess_1", 1, "大概赔多少钱？")
-    ctx.tool_results.append(
-        ToolCallResult(
-            tool_call_id="tool_1",
-            tool_name="PaymentCalculationTool",
-            called_by="PaymentCalculationAgent",
-            tool_status="success",
-            tool_error_code=None,
-            latency_ms=1,
-            input={},
+    ctx.capability_results.append(
+        CapabilityResult(
+            request_id=ctx.request.request_id,
+            session_id=ctx.request.session_id,
+            capability_name="payment.calculate",
+            caller="PaymentCalculationAgent",
+            node_id="execute",
+            logical_call_id="call_1",
+            attempt=1,
+            status=CapabilityStatus.SUCCESS,
+            policy=CapabilityPolicy(
+                risk_level="calculation",
+                timeout_ms=3000,
+                idempotency=CapabilityIdempotency.DETERMINISTIC,
+            ),
             output={"items": [{"name": "一次性伤残补助金", "amount": 42000, "formula": "6000 * 7"}]},
         )
     )

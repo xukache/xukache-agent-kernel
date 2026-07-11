@@ -102,6 +102,39 @@ class BarrierRuntime:
 
 
 @pytest.mark.asyncio
+async def test_immediate_runtime_waits_for_turn_mount_before_updating_widgets(tmp_path):
+    from ananhu_agent.cli.tui.app import AnanhuChatApp
+
+    class ImmediateRuntime:
+        async def invoke(self, request):
+            return WorkflowResult(
+                run_id=request.run_id,
+                request_id=request.request_id,
+                session_id=request.session_id,
+                status=RunStatus.COMPLETED,
+                final_state=WorkflowState(
+                    run_id=request.run_id,
+                    request_id=request.request_id,
+                    session_id=request.session_id,
+                    turn_id=request.turn_id,
+                    phase=WorkflowPhase.COMPLETE,
+                    status=RunStatus.COMPLETED,
+                    stop_reason=StopReason.COMPLETE,
+                ),
+                final_answer="完成",
+                stop_reason=StopReason.COMPLETE,
+            )
+
+    app = AnanhuChatApp(runtime_factory=lambda _: ImmediateRuntime(), runtime_dir=tmp_path)
+    async with app.run_test() as pilot:
+        await pilot.press("h", "i", "enter")
+        await app._running_task
+        assert app.latest_result is not None
+        assert app.latest_result.final_answer == "完成"
+        assert app.query_one("#turn-1").query_one("#assistant-message")
+
+
+@pytest.mark.asyncio
 async def test_chat_updates_events_live_and_collapses_after_terminal_barrier(tmp_path):
     from ananhu_agent.cli.tui.app import AnanhuChatApp
 

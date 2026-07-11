@@ -71,13 +71,17 @@ def test_workflow_state_json_round_trip():
         },
         capability_results=[
             {
-                "tool_call_id": "tool_1",
-                "tool_name": "PaymentCalculationTool",
-                "called_by": "PaymentCalculationAgent",
-                "tool_status": "success",
-                "tool_error_code": None,
-                "latency_ms": 1,
-                "input": {"disability_grade": "十级", "monthly_wage": 6000},
+                "logical_call_id": "call_1",
+                "capability_name": "payment.calculate",
+                "caller": "PaymentCalculationAgent",
+                "node_id": "execute",
+                "attempt": 1,
+                "status": "success",
+                "policy": {
+                    "risk_level": "calculation",
+                    "timeout_ms": 3000,
+                    "idempotency": "deterministic",
+                },
                 "output": {"items": [{"name": "一次性伤残补助金", "amount": 42000}]},
             }
         ],
@@ -94,7 +98,7 @@ def test_workflow_state_json_round_trip():
     assert restored.stop_reason is StopReason.COMPLETE
     assert restored.case_facts["province"] == "四川省"
     assert restored.intent_result["intent"] == "payment_calculation"
-    assert restored.capability_results[0]["tool_name"] == "PaymentCalculationTool"
+    assert restored.capability_results[0]["capability_name"] == "payment.calculate"
     assert restored.final_answer == "参考答案"
 
 

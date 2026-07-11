@@ -38,7 +38,7 @@
 2. 接入后，LangGraph 只负责节点调度、条件路由、中断恢复和必要的有限并行；业务状态、状态合并规则、错误语义和运行证据由项目协议定义。
 3. `StateGraph`、`Command`、LangGraph message、channel 和 checkpoint 类型不得进入 domain、application、Agent、Tool、Prompt、Eval 公共协议。
 4. Agent 保持无状态，只读取项目定义的输入并返回结构化结果，不直接修改共享状态。
-5. Agent 不直接调用底层能力，必须经过统一能力执行网关；现有实现为 `ToolExecutor`，后续演进为框架中立的 `CapabilityGateway` 时须保持治理语义。
+5. Agent 不直接调用底层能力，必须经过统一能力执行网关；当前实现为框架中立的 `CapabilityGateway`，由 `DefaultCapabilityGateway` 直接执行显式注册能力。
 6. Agent 不直接拼接完整 prompt，必须经过 `PromptManager` 和 `ContextManager`。
 7. Prompt 必须版本化、可评测、可回滚；上下文裁剪不得丢失当前请求、已确认关键事实和直接支撑结论的证据。
 8. 工具、Prompt、上下文、模型调用、状态转换、校验和安全守卫必须写入项目自己的 trace。LangGraph/LangSmith 观测不能替代业务 trace。

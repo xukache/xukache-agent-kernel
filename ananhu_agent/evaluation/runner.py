@@ -8,11 +8,11 @@ from typing import Any
 
 from ananhu_agent.evaluation.metrics import (
     score_case,
+    score_capability_success,
     score_citations,
     score_intent,
     score_safety,
     score_slots,
-    score_tool_success,
 )
 from ananhu_agent.storage.jsonl_store import JsonlStore
 from ananhu_agent.schemas import now_cn
@@ -42,8 +42,8 @@ class EvalRunner:
         slot_total = 0
         citation_passed = 0
         citation_total = 0
-        tool_passed = 0
-        tool_total = 0
+        capability_passed = 0
+        capability_total = 0
         unsafe_total = 0
         latency_values: list[float] = []
 
@@ -57,6 +57,7 @@ class EvalRunner:
                         session_id="eval",
                         turn_id=index,
                         user_query=case["query"],
+                        trusted_jurisdiction=case.get("trusted_jurisdiction", {}),
                         created_at=now_cn(),
                     )
                 )
@@ -79,8 +80,8 @@ class EvalRunner:
                 citation_passed += int(score_citations(state, case["expected_citations"]))
 
             if state.capability_results:
-                tool_total += 1
-                tool_passed += int(score_tool_success(state))
+                capability_total += 1
+                capability_passed += int(score_capability_success(state))
 
             unsafe_total += int(not score_safety(state))
             ok = score_case(result.final_answer or "", case["expect_contains"])
@@ -105,7 +106,7 @@ class EvalRunner:
             "intent_accuracy": _rate(intent_passed, intent_total),
             "slot_accuracy": _rate(slot_passed, slot_total),
             "citation_accuracy": _rate(citation_passed, citation_total),
-            "tool_success_rate": _rate(tool_passed, tool_total),
+            "capability_success_rate": _rate(capability_passed, capability_total),
             "unsafe_expression_rate": _rate(unsafe_total, len(rows)),
             "latency_ms_avg": round(sum(latency_values) / len(latency_values), 2)
             if latency_values

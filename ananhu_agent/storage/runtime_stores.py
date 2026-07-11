@@ -8,7 +8,7 @@ from ananhu_agent.storage.jsonl_store import JsonlStore
 class TraceRecorder:
     """trace 事件写入器。
 
-    Orchestrator、ToolExecutor、PromptManager 等运行时组件后续都应通过该封装记录
+    编排器、能力网关、PromptManager 等运行时组件都应通过该封装记录
     TraceEvent，而不是直接操作 JSONL 文件路径。
     """
 

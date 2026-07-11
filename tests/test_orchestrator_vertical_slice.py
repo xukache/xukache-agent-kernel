@@ -17,6 +17,7 @@ def test_native_runtime_answers_payment_question_with_trace(tmp_path):
         session_id="sess_1",
         turn_id=1,
         user_query="四川十级工伤，月工资6000，大概能赔多少钱？",
+        trusted_jurisdiction={"province": "四川省"},
         created_at="2026-07-10T00:00:00+08:00",
     )))
 
@@ -33,15 +34,10 @@ def test_native_runtime_answers_payment_question_with_trace(tmp_path):
     assert "prompt_built" in event_types
     assert "model_started" in event_types
     assert "model_finished" in event_types
-    assert "model_called" in event_types
-    assert "tool_finished" in event_types
+    assert "capability_finished" in event_types
     assert "answer_validated" in event_types
     assert "safety_checked" in event_types
     assert "response_ready" in event_types
-    model_events = [event for event in events if event["event_type"] == "model_called"]
-    assert model_events[0]["payload"]["model_profile"] == "intent_fast"
-    assert model_events[0]["payload"]["model_config"]["provider"] == "fake"
-    assert model_events[0]["payload"]["model_config"]["model"] == "deterministic-intent"
     lifecycle_events = [
         event for event in events
         if event["event_type"] in {"model_started", "model_finished"}

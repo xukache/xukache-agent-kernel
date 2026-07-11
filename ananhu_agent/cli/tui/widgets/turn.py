@@ -1,5 +1,6 @@
 from __future__ import annotations
 
+from textual.css.query import NoMatches
 from textual.containers import Vertical
 from textual.widgets import Button, LoadingIndicator, Markdown, Static
 
@@ -54,7 +55,10 @@ class TurnWidget(Vertical):
         """只更新本轮展示模型，不把 UI 状态回写到工作流。"""
 
         self.inspector_model = model
-        inspector = self.query_one("#run-inspector", RunInspector)
+        try:
+            inspector = self.query_one("#run-inspector", RunInspector)
+        except NoMatches:
+            return
         inspector.model = model
         inspector.refresh_tree()
 
@@ -62,26 +66,41 @@ class TurnWidget(Vertical):
         if self.inspector_manually_expanded and not force:
             return
         self.inspector_collapsed = True
-        self.query_one("#run-inspector", RunInspector).display = False
-        self.query_one("#inspector-toggle", Button).display = True
+        try:
+            self.query_one("#run-inspector", RunInspector).display = False
+            self.query_one("#inspector-toggle", Button).display = True
+        except NoMatches:
+            return
 
     def expand_inspector(self) -> None:
         self.inspector_manually_expanded = True
         self.inspector_collapsed = False
-        self.query_one("#run-inspector", RunInspector).display = True
-        self.query_one("#inspector-toggle", Button).display = False
+        try:
+            self.query_one("#run-inspector", RunInspector).display = True
+            self.query_one("#inspector-toggle", Button).display = False
+        except NoMatches:
+            return
 
     def start_spinner(self) -> None:
-        self.query_one("#run-spinner", RunSpinner).set_running(True)
+        try:
+            self.query_one("#run-spinner", RunSpinner).set_running(True)
+        except NoMatches:
+            return
 
     def stop_spinner(self) -> None:
-        self.query_one("#run-spinner", RunSpinner).set_running(False)
+        try:
+            self.query_one("#run-spinner", RunSpinner).set_running(False)
+        except NoMatches:
+            return
 
     def set_usage_line(self, usage_line: str) -> None:
         """运行结束时仅刷新本轮聚合 usage 的展示文本。"""
 
         self.usage_line = usage_line
-        self.query_one(".turn-usage", Static).update(usage_line)
+        try:
+            self.query_one(".turn-usage", Static).update(usage_line)
+        except NoMatches:
+            return
 
     def on_button_pressed(self, event: Button.Pressed) -> None:
         if event.button.id == "inspector-toggle":

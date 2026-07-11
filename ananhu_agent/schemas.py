@@ -6,6 +6,8 @@ from uuid import uuid4
 
 from pydantic import BaseModel, Field
 
+from ananhu_agent.capabilities.contracts import CapabilityResult
+
 CN_TZ = timezone(timedelta(hours=8))
 
 
@@ -89,48 +91,33 @@ class AgentPlan(BaseModel):
     """编排器为当前轮生成的 Agent 路由决策。"""
 
     route_agents: list[str]
-    required_tools: list[str] = Field(default_factory=list)
+    required_capabilities: list[str] = Field(default_factory=list)
     execution_mode: Literal["sync_serial"] = "sync_serial"
 
 
-class ToolCallRequest(BaseModel):
-    """Agent 发出的工具调用请求。
+class CapabilityCall(BaseModel):
+    """Agent 声明一次能力意图。
 
-    Agent 只能请求工具，实际执行必须经过 ToolExecutor，以集中处理权限、校验、fallback 和 trace。
+    Agent 只提供能力名称、调用身份和业务输入；运行时身份、节点和重试信息由阶段服务补齐。
     """
 
-    tool_call_id: str
-    tool_name: str
+    call_id: str
+    capability_name: str
     called_by: str
     input: dict[str, Any]
-
-
-class ToolCallResult(BaseModel):
-    """ToolExecutor 完成一次工具尝试后返回的归一化结果。"""
-
-    tool_call_id: str
-    tool_name: str
-    called_by: str
-    tool_status: Literal["success", "failed"]
-    tool_error_code: str | None
-    latency_ms: int
-    input: dict[str, Any]
-    output: dict[str, Any]
-    fallback_used: bool = False
-    fallback_reason: str | None = None
 
 
 class AgentMessage(BaseModel):
     """MVP Agent 返回的单条结构化消息。
 
-    编排器消费这些消息，用于合并槽位、执行工具请求、聚合草稿答案和判断是否需要追问。
+    编排器消费这些消息，用于合并槽位、执行能力意图、聚合草稿答案和判断是否需要追问。
     """
 
     agent_name: str
     status: Literal["success", "failed", "need_clarification"]
     content: str
     data: dict[str, Any] = Field(default_factory=dict)
-    tool_calls: list[ToolCallRequest] = Field(default_factory=list)
+    capability_calls: list[CapabilityCall] = Field(default_factory=list)
     missing_slots: list[str] = Field(default_factory=list)
     citations: list[dict[str, Any]] = Field(default_factory=list)
     warnings: list[str] = Field(default_factory=list)
@@ -165,7 +152,7 @@ class TaskState(BaseModel):
     missing_slots: list[str] = Field(default_factory=list)
     route_agents: list[str] = Field(default_factory=list)
     prompt_refs: list[str] = Field(default_factory=list)
-    tool_steps: list[str] = Field(default_factory=list)
+    capability_steps: list[str] = Field(default_factory=list)
     model_attempts: int = 0
     fallback_used: bool = False
     error_message: str | None = None
@@ -179,7 +166,7 @@ class RunReport(BaseModel):
     final_status: str
     final_intent: str | None
     route_agents: list[str]
-    tool_count: int
+    capability_count: int
     model_attempts: int
     prompt_refs: list[str]
     prompt_metadata: dict[str, Any]
@@ -202,7 +189,7 @@ class BadcaseRecord(BaseModel):
     predicted_intent: str | None = None
     issue_type: str
     agent_route: list[str] = Field(default_factory=list)
-    tool_calls: list[str] = Field(default_factory=list)
+    capability_calls: list[str] = Field(default_factory=list)
     actual_answer: str
     expected_answer: str = ""
     correction_note: str = ""
@@ -222,7 +209,7 @@ class AgentContext(BaseModel):
     conversation: ConversationState = Field(default_factory=ConversationState)
     intent_result: IntentResult | None = None
     agent_plan: AgentPlan | None = None
-    tool_results: list[ToolCallResult] = Field(default_factory=list)
+    capability_results: list[CapabilityResult] = Field(default_factory=list)
     agent_outputs: list[AgentMessage] = Field(default_factory=list)
     draft_final_answer: str | None = None
     verification_result: VerificationResult | None = None

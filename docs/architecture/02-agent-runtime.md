@@ -48,9 +48,10 @@ StopReason       框架无关停止语义
 - `WorkflowPhase`、`RunStatus`、`StopReason`：冻结 Native 与后续 LangGraph Runtime 共享的阶段、状态和停止语义。
 - `WorkflowRuntime.invoke()`：async 运行时端口，CLI、EvalRunner 和后续入口通过该端口调用运行时。
 
-可信 jurisdiction 由 `RunRequest.trusted_jurisdiction` 或项目确定性用户文本解析器提供。模型抽取的
-`mentioned_region` 只能进入候选案件事实和会话槽位，不能覆盖 `ctx.request` 中已确认的地区；检索能力只
-读取可信地区。Native 和 LangGraph 复用同一阶段服务，因此不能通过不同运行时绕过该边界。
+可信 jurisdiction 只由上游确认后写入 `RunRequest.trusted_jurisdiction`。模型或用户文本抽取的
+`mentioned_region` 只能进入候选案件事实和会话槽位，不能自动升级为政策适用范围；检索能力只读取
+可信地区，缺少可信地区时返回无可信地区结果。Native 和 LangGraph 复用同一阶段服务，因此不能通过
+不同运行时绕过该边界。
 
 默认组合根为 `create_default_runtime()`，按 `RuntimeSettings.runtime` 装配运行时，默认值为 `langgraph`；`native` 是保留的显式回归选项。
 
@@ -86,7 +87,7 @@ StatePatch
 - `phase` 校验：非法跳转返回结构化失败，不抛框架异常。
 - `fact_updates` 按字段覆盖写入 `case_facts`。
 - `intent_result`、`execution_plan`、答复、校验、安全和终止字段为显式覆盖。
-- `capability_results` 按 `tool_call_id` 合并。
+- `capability_results` 按 `logical_call_id` 合并。
 - `evidence` 按 `evidence_id` 合并。
 
 ## LangGraph 边界
@@ -102,7 +103,7 @@ LangGraph不得定义：
 
 - 案件事实、Evidence、Capability、Response 数据结构。
 - 业务 reducer、路由规则、StopReason 和错误码。
-- Tool 权限、幂等和重试语义。
+- 能力权限、幂等和重试语义。
 - 项目 trace、usage 和 eval schema。
 
 LangGraph专有类型只能存在于 `runtimes/langgraph/` 和组合根。Graph node 应保持薄：读取项目状态、调用 application service、返回项目 `StatePatch`。
@@ -132,14 +133,15 @@ understand
 
 - 阶段服务读取 `WorkflowState`，返回 `StatePatch`。
 - 两种 Runtime 都通过 `reduce_workflow_state()` 应用 patch，不让 CLI/Eval 原地操作大状态对象；LangGraph 节点只返回 patch，独立 `apply_patch` 节点负责调用 reducer。
-- `execute` 阶段把 Agent 生成的工具意图转换为 `CapabilityRequest`，统一经过 `CapabilityGateway`，不绕过 ToolExecutor 治理。
+- `execute` 阶段把 Agent 生成的 `CapabilityCall` 转换为 `CapabilityRequest`，统一经过
+  `DefaultCapabilityGateway`，不允许 Agent 直接调用 KnowledgeGateway 或测算 handler。
 - `TraceEvent` 统一写入实际 `runtime_name`、`node_id`、`logical_call_id` 和 `attempt`。
 - `WorkflowResult.final_state` 仅作为 Eval 和诊断使用的状态快照，CLI 对外仍只展示最终答复、追问或错误信息。
 
 ## Agent 当前协议与目标规则
 
-- 当前 Agent 无状态，读取运行时内部上下文并返回 `AgentMessage` / `ToolCallRequest`；Native 阶段服务负责转换为 `StatePatch` 和 `CapabilityRequest`。
-- Native 阶段服务返回 `StatePatch`，并将工具调用转换为 `CapabilityRequest`；Agent 不直接写 session、case 或 WorkflowState。
+- 当前 Agent 无状态，读取运行时内部上下文并返回 `AgentMessage` / `CapabilityCall`；Native 阶段服务负责转换为 `StatePatch` 和 `CapabilityRequest`。
+- Native 阶段服务返回 `StatePatch`，并将能力意图转换为 `CapabilityRequest`；Agent 不直接写 session、case 或 WorkflowState。
 - 当前和目标输入输出均使用项目 Pydantic/domain model，不使用框架 message。
 - Agent 不能持有底层能力实现，也不能自行选择未经授权的 jurisdiction 或知识库。
 - 新增 Agent 必须证明独立目标、上下文、权限或专项评测价值。
@@ -166,14 +168,14 @@ run_id + node_id + logical_call_id + capability_version
 | `CheckpointEnvelope` | 运行时恢复 | 否 |
 | `TraceEvent` | 过程审计 | 否，不直接用于恢复 |
 
-checkpoint 必须带状态 schema、runtime、Prompt、Tool Registry、知识语料版本。恢复前检查兼容性；不能安全迁移时返回结构化失败，不能静默继续。
+checkpoint 必须带状态 schema、runtime、Prompt、CapabilityRegistry、知识语料版本。恢复前检查兼容性；不能安全迁移时返回结构化失败，不能静默继续。
 
 ## 异步与流式边界
 
 - application service、模型、检索和能力执行采用 async 边界。
 - `WorkflowRuntime` 通过注入的 `RunEventSink` 发布项目定义的实时运行事件；外部流式协议不能直接暴露 LangGraph 事件。
 - 当前 `chat` 使用同一 event loop 的无界 `asyncio.Queue` 消费事件；`ask`、`eval` 可使用 no-op sink。
-- 首个 LangGraph 实现不启用 ToolNode 直连、checkpoint、interrupt、复杂并行、后台队列或多路事件流。
+- 首个 LangGraph 实现不启用框架工具节点直连、checkpoint、interrupt、复杂并行、后台队列或多路事件流。
 
 ## 实时运行事件
 

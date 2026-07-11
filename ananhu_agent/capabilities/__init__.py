@@ -1,4 +1,4 @@
-"""框架中立能力网关协议与适配器。"""
+"""框架中立能力协议。"""
 
 from ananhu_agent.capabilities.contracts import (
     CapabilityError,
@@ -9,7 +9,7 @@ from ananhu_agent.capabilities.contracts import (
     CapabilityResult,
     CapabilityStatus,
 )
-from ananhu_agent.capabilities.tool_executor_gateway import ToolExecutorCapabilityGateway
+from ananhu_agent.capabilities.registry import CapabilityDefinition, CapabilityRegistry
 
 __all__ = [
     "CapabilityError",
@@ -19,5 +19,6 @@ __all__ = [
     "CapabilityRequest",
     "CapabilityResult",
     "CapabilityStatus",
-    "ToolExecutorCapabilityGateway",
+    "CapabilityDefinition",
+    "CapabilityRegistry",
 ]

@@ -19,18 +19,34 @@ class LexicalKnowledgeGateway(KnowledgeGateway):
 
     def __init__(self, corpus_path: Path) -> None:
         self.corpus_path = corpus_path
-        self.documents = load_policy_corpus(corpus_path)
-        self.corpus_version = self.documents[0].corpus_version
+        self.corpus_documents = load_policy_corpus(corpus_path)
+        self.corpus_version = self.corpus_documents[0].corpus_version
 
     async def search(self, request: KnowledgeQuery) -> KnowledgeSearchResult:
-        return self.search_sync(request)
+        return self._search(request)
 
-    def search_sync(self, request: KnowledgeQuery) -> KnowledgeSearchResult:
-        """为现有同步 ToolExecutor 提供同一 gateway 的同步适配。"""
-
+    def _search(self, request: KnowledgeQuery) -> KnowledgeSearchResult:
+        """执行可信元数据过滤和 lexical 召回。"""
+        if not request.jurisdiction.get("province"):
+            return KnowledgeSearchResult(
+                query=request.query,
+                corpus_version=self.corpus_version,
+                applied_filters={
+                    "tenant": request.tenant,
+                    "jurisdiction": request.jurisdiction,
+                    "effective_at": request.effective_at.isoformat()
+                    if request.effective_at
+                    else None,
+                    "review_status": request.review_status,
+                    "audience_role": request.audience_role,
+                    "source_type": request.source_type,
+                    "document_version": request.document_version,
+                },
+                no_result_reason="no_trusted_jurisdiction_match",
+            )
         candidates = [
             document
-            for document in self.documents
+            for document in self.corpus_documents
             if _matches_metadata(document, request)
         ]
         filters = {
@@ -49,17 +65,6 @@ class LexicalKnowledgeGateway(KnowledgeGateway):
                 applied_filters=filters,
                 no_result_reason="no_trusted_jurisdiction_match",
             )
-        if not request.jurisdiction.get("province") and _mentions_local_province(
-            request.query,
-            self.documents,
-        ):
-            return KnowledgeSearchResult(
-                query=request.query,
-                corpus_version=self.corpus_version,
-                applied_filters=filters,
-                no_result_reason="no_trusted_jurisdiction_match",
-            )
-
         scored = [
             (score, document)
             for document in candidates
@@ -162,15 +167,3 @@ def _to_evidence(document: PolicyDocument, score: float) -> EvidenceItem:
 
 def _normalize(value: str) -> str:
     return re.sub(r"\s+", "", value).casefold()
-
-
-def _mentions_local_province(query: str, documents: list[PolicyDocument]) -> bool:
-    normalized_query = _normalize(query)
-    for document in documents:
-        if document.province == "全国":
-            continue
-        province = _normalize(document.province)
-        province_alias = province.removesuffix("省")
-        if province in normalized_query or province_alias in normalized_query:
-            return True
-    return False

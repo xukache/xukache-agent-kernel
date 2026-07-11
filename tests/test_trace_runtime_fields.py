@@ -9,11 +9,11 @@ def test_trace_event_accepts_runtime_node_attempt_and_logical_call_identity():
         session_id="sess_1",
         event_type="capability_finished",
         phase="execute",
-        payload={"tool_name": "PolicyRAGTool"},
+        payload={"capability_name": "knowledge.search"},
         runtime_name="native",
         runtime_version="workflow.v1",
         node_id="execute",
-        logical_call_id="call_policy_rag_1",
+        logical_call_id="call_knowledge_search_1",
         attempt=2,
     )
 
@@ -22,7 +22,7 @@ def test_trace_event_accepts_runtime_node_attempt_and_logical_call_identity():
     assert restored.runtime_name == "native"
     assert restored.runtime_version == "workflow.v1"
     assert restored.node_id == "execute"
-    assert restored.logical_call_id == "call_policy_rag_1"
+    assert restored.logical_call_id == "call_knowledge_search_1"
     assert restored.attempt == 2
 
 

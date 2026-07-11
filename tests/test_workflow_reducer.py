@@ -36,12 +36,17 @@ def test_reducer_applies_patch_with_overwrite_append_and_business_id_merge_rules
         fact_updates={"province": "四川省", "monthly_wage": 6000},
         intent_result={"intent": "payment_calculation", "confidence": 0.9},
         capability_results=[
-            {"tool_call_id": "tool_1", "tool_name": "PaymentCalculationTool", "amount": 42000}
+            {
+                "logical_call_id": "call_1",
+                "capability_name": "payment.calculate",
+                "status": "success",
+                "output": {"amount": 42000},
+            }
         ],
         evidence=[
             {
                 "evidence_id": "ev_1",
-                "source": "PolicyRAGTool",
+                "source": "knowledge.search",
                 "title": "工伤保险条例",
             }
         ],
@@ -54,7 +59,7 @@ def test_reducer_applies_patch_with_overwrite_append_and_business_id_merge_rules
     assert result.state.phase is WorkflowPhase.MERGE_FACTS
     assert result.state.case_facts["province"] == "四川省"
     assert result.state.intent_result["intent"] == "payment_calculation"
-    assert result.state.capability_results[0]["tool_call_id"] == "tool_1"
+    assert result.state.capability_results[0]["logical_call_id"] == "call_1"
     assert result.state.evidence[0]["evidence_id"] == "ev_1"
     assert result.state.applied_patch_ids == ["patch_1"]
 
@@ -69,8 +74,10 @@ def test_reducer_ignores_duplicate_patch_id_without_duplicate_appends():
         node_id="understand",
         logical_call_id="call_understand_1",
         attempt=1,
-        capability_results=[{"tool_call_id": "tool_1", "tool_name": "PolicyRAGTool"}],
-        evidence=[{"evidence_id": "ev_1", "source": "PolicyRAGTool"}],
+        capability_results=[
+            {"logical_call_id": "call_1", "capability_name": "knowledge.search"}
+        ],
+        evidence=[{"evidence_id": "ev_1", "source": "knowledge.search"}],
     )
 
     first = reduce_workflow_state(state, patch)
@@ -80,8 +87,10 @@ def test_reducer_ignores_duplicate_patch_id_without_duplicate_appends():
     assert second.ok is True
     assert second.applied is False
     assert second.error_code is None
-    assert second.state.capability_results == [{"tool_call_id": "tool_1", "tool_name": "PolicyRAGTool"}]
-    assert second.state.evidence == [{"evidence_id": "ev_1", "source": "PolicyRAGTool"}]
+    assert second.state.capability_results == [
+        {"logical_call_id": "call_1", "capability_name": "knowledge.search"}
+    ]
+    assert second.state.evidence == [{"evidence_id": "ev_1", "source": "knowledge.search"}]
     assert second.state.applied_patch_ids == ["patch_1"]
 
 

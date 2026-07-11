@@ -32,6 +32,7 @@ def _request(query: str, *, run_id: str = "run_contract_1") -> RunRequest:
         session_id="contract",
         turn_id=1,
         user_query=query,
+        trusted_jurisdiction={"province": "四川省"},
         created_at="2026-07-10T00:00:00+08:00",
     )
 
@@ -71,7 +72,9 @@ def test_runtime_records_runtime_trace_identity(tmp_path, runtime_name):
     assert events
     assert {event["runtime_name"] for event in events} == {runtime_name}
     assert all(event["node_id"] for event in events)
-    capability_events = [event for event in events if event["event_type"] == "tool_called"]
+    capability_events = [
+        event for event in events if event["event_type"] == "capability_started"
+    ]
     assert capability_events
     assert all(event["logical_call_id"] for event in capability_events)
     assert all(event["attempt"] == 1 for event in capability_events)
@@ -117,19 +120,7 @@ def test_runtime_surfaces_capability_failed_stop_reason(tmp_path, runtime_name):
                 timeout_ms=1,
                 idempotency=CapabilityIdempotency.READ_ONLY_REPEATABLE,
             ),
-            error=CapabilityError(code="tool_timeout", message="tool_timeout"),
-            tool_call_result={
-                "tool_call_id": request.logical_call_id,
-                "tool_name": request.capability_name,
-                "called_by": request.caller,
-                "tool_status": "failed",
-                "tool_error_code": "tool_timeout",
-                "latency_ms": 1,
-                "input": request.input,
-                "output": {},
-                "fallback_used": True,
-                "fallback_reason": "tool_timeout",
-            },
+            error=CapabilityError(code="capability_timeout", message="capability_timeout"),
         )
 
     runtime.capability_gateway.execute = fail_capability
@@ -197,19 +188,7 @@ def test_all_real_runtime_stop_paths_have_visible_messages(tmp_path, monkeypatch
                     timeout_ms=1,
                     idempotency=CapabilityIdempotency.READ_ONLY_REPEATABLE,
                 ),
-                error=CapabilityError(code="tool_timeout", message="tool_timeout"),
-                tool_call_result={
-                    "tool_call_id": request.logical_call_id,
-                    "tool_name": request.capability_name,
-                    "called_by": request.caller,
-                    "tool_status": "failed",
-                    "tool_error_code": "tool_timeout",
-                    "latency_ms": 1,
-                    "input": request.input,
-                    "output": {},
-                    "fallback_used": True,
-                    "fallback_reason": "tool_timeout",
-                },
+                error=CapabilityError(code="capability_timeout", message="capability_timeout"),
             )
 
         runtime.capability_gateway.execute = fail_capability

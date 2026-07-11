@@ -1,29 +1,48 @@
+from ananhu_agent.capabilities.contracts import (
+    CapabilityIdempotency,
+    CapabilityPolicy,
+    CapabilityResult,
+    CapabilityStatus,
+)
 from ananhu_agent.orchestrator.aggregator import build_final_answer
 from ananhu_agent.orchestrator.safety import PolicySafetyGuard
 from ananhu_agent.orchestrator.validators import AnswerValidator
-from ananhu_agent.schemas import AgentContext, ToolCallResult
+from ananhu_agent.schemas import AgentContext
 
 
 def test_final_answer_includes_citation_and_risk_note():
     ctx = AgentContext.new_for_query("sess_1", 1, "上班路上交通事故算工伤吗？")
-    ctx.tool_results.append(
-        ToolCallResult(
-            tool_call_id="tool_1",
-            tool_name="PolicyRAGTool",
-            called_by="DomainConsultationAgent",
-            tool_status="success",
-            tool_error_code=None,
-            latency_ms=1,
-            input={},
+    ctx.capability_results.append(
+        CapabilityResult(
+            request_id=ctx.request.request_id,
+            session_id=ctx.request.session_id,
+            capability_name="knowledge.search",
+            caller="PolicyRAGAgent",
+            node_id="execute",
+            logical_call_id="call_1",
+            attempt=1,
+            status=CapabilityStatus.SUCCESS,
+            policy=CapabilityPolicy(
+                risk_level="read_only",
+                timeout_ms=3000,
+                idempotency=CapabilityIdempotency.READ_ONLY_REPEATABLE,
+            ),
             output={
-                "documents": [
+                "evidences": [
                     {
                         "content": "上下班途中非本人主要责任交通事故应认定为工伤。",
-                        "citation": {"title": "工伤保险条例", "article": "第十四条"},
+                        "citation": {
+                            "title": "工伤保险条例",
+                            "article": "第十四条",
+                            "source_url": "https://example.com/policy",
+                            "document_version": "v1",
+                            "evidence_id": "ev_1",
+                            "province": "四川省",
+                            "city": "",
+                        },
                     }
                 ]
             },
-            fallback_used=False,
         )
     )
 

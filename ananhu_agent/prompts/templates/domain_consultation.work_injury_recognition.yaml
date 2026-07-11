@@ -8,7 +8,7 @@ metadata:
   failure_policy:
     missing_evidence: cannot_answer
     missing_required_slot: ask_clarification
-    tool_failed: return_error_reason
+    capability_failed: return_error_reason
   change_note: MVP 初始版本
 template: |
   [Role / Task]
@@ -23,7 +23,7 @@ template: |
   [Context]
   {{ current_query }}
 
-  [RAG Evidence / Tool Results]
+  [RAG Evidence / Capability Results]
 
   [Output Schema]
   返回结论、依据、适用条件、材料建议、风险提示。

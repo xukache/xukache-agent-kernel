@@ -45,7 +45,7 @@ KnowledgeGateway 的 `EvidenceItem` 至少保留 `evidence_id`、`document_id`�
 
 ## TraceEvent
 
-当前事件覆盖请求、意图、工具、校验、安全和响应主链路。目标事件至少覆盖：
+当前事件覆盖请求、意图、能力、校验、安全和响应主链路。目标事件至少覆盖：
 
 ```text
 request_received
@@ -157,7 +157,8 @@ Badcase 保存最小必要输入、关键状态版本、实际/期望结果、�
 
 ## 可复现性
 
-每个 EvaluationArtifact 记录代码 commit、branch、数据集版本、fixture snapshot、模型配置、Prompt/Tool/语料版本、runtime 版本和每条 case 结果。Fake 与真实模型结果分开报告。
+每个 EvaluationArtifact 记录代码 commit、branch、数据集版本、fixture snapshot、模型配置、
+Prompt/CapabilityRegistry/语料版本、runtime 版本和每条 case 结果。Fake 与真实模型结果分开报告。
 
 Native 和 LangGraph Runtime 运行同一 contract/eval 集时，比较业务结果、关键状态、能力调用和项目 trace 语义，不要求框架内部事件逐字一致。
 

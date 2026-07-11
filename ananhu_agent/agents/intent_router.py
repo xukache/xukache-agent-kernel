@@ -98,7 +98,7 @@ class IntentRouterAgent:
             status="success",
             content=f"识别为 {result['intent']}",
             data=result,
-            tool_calls=[],
+            capability_calls=[],
             missing_slots=result["missing_slots"],
             citations=[],
             warnings=[],

@@ -1,12 +1,12 @@
 from __future__ import annotations
 
-from ananhu_agent.schemas import AgentContext, AgentMessage, ToolCallRequest
+from ananhu_agent.schemas import AgentContext, AgentMessage, CapabilityCall
 
 
 class PolicyRAGAgent:
     """政策检索 Agent。
 
-    只生成 PolicyRAGTool 调用请求，确保政策检索仍通过 ToolExecutor 的权限和 trace 治理。
+    只生成 knowledge.search 能力意图，确保政策检索仍通过 CapabilityGateway 的权限和 trace 治理。
     """
 
     name = "PolicyRAGAgent"
@@ -16,15 +16,17 @@ class PolicyRAGAgent:
             agent_name=self.name,
             status="success",
             content="检索政策依据。",
-            tool_calls=[
-                ToolCallRequest(
-                    tool_call_id=f"{ctx.request.request_id}:policy-rag",
-                    tool_name="PolicyRAGTool",
+            capability_calls=[
+                CapabilityCall(
+                    call_id=f"{ctx.request.request_id}:knowledge-search",
+                    capability_name="knowledge.search",
                     called_by=self.name,
                     input={
                         "query": ctx.request.user_query,
-                        "province": ctx.request.province,
-                        "city": ctx.request.city,
+                        "trusted_jurisdiction": {
+                            "province": ctx.request.province,
+                            "city": ctx.request.city,
+                        },
                         "top_k": 3,
                     },
                 )

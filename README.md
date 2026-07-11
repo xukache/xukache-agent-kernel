@@ -85,7 +85,7 @@ ananhu_agent/
   runtimes/native/ # 显式回归 Native Runtime
   runtimes/langgraph/ # 当前默认 LangGraph Runtime
   storage/         # JSONL 存储和运行证据
-  tools/           # ToolRegistry、ToolExecutor 和业务工具
+  tools/           # 保留的领域 handler；能力治理统一位于 capabilities/
   workflow/        # RunRequest、WorkflowState、StatePatch、Reducer、WorkflowResult
 data/
   eval/            # 离线评测用例

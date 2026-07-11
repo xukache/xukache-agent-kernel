@@ -1,10 +1,16 @@
+from ananhu_agent.capabilities.contracts import (
+    CapabilityIdempotency,
+    CapabilityPolicy,
+    CapabilityResult,
+    CapabilityStatus,
+)
 from ananhu_agent.schemas import (
     AgentContext,
     AgentMessage,
+    CapabilityCall,
     RequestContext,
     RunReport,
     TaskState,
-    ToolCallResult,
     TraceEvent,
 )
 
@@ -20,7 +26,7 @@ def test_agent_context_contains_required_runtime_sections():
 
     assert ctx.request.user_query == "四川十级工伤大概能赔多少钱？"
     assert ctx.intent_result is None
-    assert ctx.tool_results == []
+    assert ctx.capability_results == []
     assert ctx.agent_outputs == []
     assert ctx.final_answer is None
 
@@ -31,7 +37,7 @@ def test_agent_message_is_structured():
         status="success",
         content="识别为待遇测算",
         data={"intent": "payment_calculation"},
-        tool_calls=[],
+        capability_calls=[],
         missing_slots=[],
         citations=[],
         warnings=[],
@@ -41,33 +47,38 @@ def test_agent_message_is_structured():
     assert message.data["intent"] == "payment_calculation"
 
 
-def test_tool_call_result_and_trace_event_are_serializable():
+def test_capability_result_and_trace_event_are_serializable():
     request = RequestContext.new(
         session_id="sess_1",
         turn_id=1,
         user_query="劳动能力鉴定要什么材料？",
     )
-    result = ToolCallResult(
-        tool_call_id="tool_001",
-        tool_name="PolicyRAGTool",
-        called_by="PolicyRAGAgent",
-        tool_status="success",
-        tool_error_code=None,
-        latency_ms=12,
-        input={"query": request.user_query},
-        output={"documents": []},
-        fallback_used=False,
+    result = CapabilityResult(
+        request_id=request.request_id,
+        session_id=request.session_id,
+        capability_name="knowledge.search",
+        caller="PolicyRAGAgent",
+        node_id="execute",
+        logical_call_id="call_001",
+        attempt=1,
+        status=CapabilityStatus.SUCCESS,
+        policy=CapabilityPolicy(
+            risk_level="read_only",
+            timeout_ms=3000,
+            idempotency=CapabilityIdempotency.READ_ONLY_REPEATABLE,
+        ),
+        output={"evidences": []},
     )
     event = TraceEvent.new(
         request_id=request.request_id,
         session_id=request.session_id,
-        event_type="tool_finished",
-        phase="tool",
+        event_type="capability_finished",
+        phase="capability",
         payload=result.model_dump(),
         latency_ms=12,
     )
 
-    assert event.payload["tool_name"] == "PolicyRAGTool"
+    assert event.payload["capability_name"] == "knowledge.search"
     assert event.created_at.endswith("+08:00")
 
 
@@ -85,7 +96,7 @@ def test_task_state_and_run_report_capture_runtime_evidence():
         missing_slots=[],
         route_agents=["PaymentCalculationAgent", "PolicyRAGAgent"],
         prompt_refs=["intent_router.v1"],
-        tool_steps=["PaymentCalculationTool", "PolicyRAGTool"],
+        capability_steps=["payment.calculate", "knowledge.search"],
         model_attempts=1,
         fallback_used=False,
         error_message=None,
@@ -96,7 +107,7 @@ def test_task_state_and_run_report_capture_runtime_evidence():
         final_status="success",
         final_intent="payment_calculation",
         route_agents=["PaymentCalculationAgent", "PolicyRAGAgent"],
-        tool_count=2,
+        capability_count=2,
         model_attempts=1,
         prompt_refs=["intent_router.v1"],
         prompt_metadata={"intent_router.v1": {"version": "v1"}},
@@ -109,4 +120,4 @@ def test_task_state_and_run_report_capture_runtime_evidence():
     )
 
     assert state.current_phase == "response_ready"
-    assert report.tool_count == 2
+    assert report.capability_count == 2

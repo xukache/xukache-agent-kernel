@@ -18,5 +18,5 @@ class DomainConsultationAgent:
             status="success",
             content="需要检索政策依据后回答。",
             data={"needs_policy_evidence": True},
-            tool_calls=[],
+            capability_calls=[],
         )

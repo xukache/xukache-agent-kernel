@@ -17,7 +17,12 @@ def test_cli_ask_outputs_final_answer(tmp_path, monkeypatch):
     monkeypatch.setattr("ananhu_agent.cli.main._cli_settings", _offline_cli_settings)
     result = CliRunner().invoke(
         app,
-        ["ask", "四川十级工伤，月工资6000，大概能赔多少钱？"],
+        [
+            "ask",
+            "四川十级工伤，月工资6000，大概能赔多少钱？",
+            "--province",
+            "四川省",
+        ],
     )
 
     assert result.exit_code == 0

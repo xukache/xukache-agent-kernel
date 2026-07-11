@@ -100,7 +100,7 @@ class OpenAICompatibleModelGateway:
         message = choice.get("message") or {}
         output = _structured_output(payload)
         _validate_structured_output(output, request.output_schema)
-        usage = _usage_from_payload(
+        usage = _usage_from_provider_payload(
             payload.get("usage", {}),
             input_cost_per_million=self._input_cost_per_million,
             output_cost_per_million=self._output_cost_per_million,
@@ -228,7 +228,7 @@ def _validate_structured_output(output: dict[str, Any], schema: dict[str, Any]) 
         ) from exc
 
 
-def _usage_from_payload(
+def _usage_from_provider_payload(
     raw: Any,
     *,
     input_cost_per_million: float | None,
