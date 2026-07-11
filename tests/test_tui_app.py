@@ -3,7 +3,7 @@ import json
 import secrets
 
 import pytest
-from textual.widgets import Checkbox, Input
+from textual.widgets import Checkbox, Input, Static
 
 from ananhu_agent.ports.run_event_sink import (
     ModelFinishedEvent,
@@ -487,6 +487,8 @@ async def test_default_runtime_factory_receives_live_queue_sink(tmp_path):
         for _ in range(8):
             await pilot.pause()
         assert app._events
+        if app._running_task is not None:
+            await app._running_task
 
 
 @pytest.mark.asyncio
@@ -520,3 +522,129 @@ async def test_feedback_good_confirms_and_bad_persists_legacy_badcase_fields(tmp
     assert "region_policy_mismatch" in records
     assert "应核对地方政策" in records
     assert '"request_id"' in records
+
+
+def _assert_tui_regions(app) -> None:
+    """验收屏幕纵向区域不重叠，且主会话区不产生横向滚动。"""
+
+    header = app.query_one("#header").region
+    conversation = app.query_one("#conversation").region
+    input_region = app.query_one("#chat-input").region
+    status = app.query_one("#chat-status").region
+    footer = app.query_one("#footer").region
+
+    assert header.bottom <= conversation.y
+    assert conversation.bottom <= input_region.y
+    assert input_region.bottom <= status.y
+    assert status.bottom <= footer.y
+    assert app.query_one("#conversation").virtual_size.width <= app.screen.size.width
+
+
+def _publish_layout_events(app, request) -> None:
+    """注入深层树和超宽 JSON，覆盖真实检查器的布局边界。"""
+
+    app._apply_event(NodeStartedEvent(
+        run_id=request.run_id,
+        request_id=request.request_id,
+        session_id=request.session_id,
+        node_id="understand",
+        sequence_no=2,
+        public_payload={
+            "phase": "understand",
+            "input_summary": {
+                "中文问题": "四川十级工伤，月工资6000",
+                "long_token": "x" * 120,
+            },
+        },
+    ))
+    app._apply_event(ModelFinishedEvent(
+        run_id=request.run_id,
+        request_id=request.request_id,
+        session_id=request.session_id,
+        node_id="understand",
+        sequence_no=3,
+        public_payload=ModelFinishedPayload(
+            profile="intent_fast",
+            provider="provider",
+            model="model",
+            output_summary={
+                "markdown_table": "| 地区 | 等级 | 金额 |\n| --- | --- | --- |\n| 四川 | 十级 | 6000 |",
+                "deep_json": {"level_1": {"level_2": {"level_3": {"token": "y" * 120}}}},
+            },
+        ),
+    ))
+
+
+@pytest.mark.asyncio
+async def test_80x24_regions_do_not_overlap(tmp_path):
+    from ananhu_agent.cli.tui.app import AnanhuChatApp
+
+    runtime = BarrierRuntime()
+    app = AnanhuChatApp(runtime_factory=lambda _: runtime, runtime_dir=tmp_path)
+    async with app.run_test(size=(80, 24)) as pilot:
+        await pilot.press(*"x" * 120, "enter")
+        await pilot.pause()
+        _assert_tui_regions(app)
+        acceptance_dir = tmp_path / ".ananhu-runtime" / "acceptance"
+        acceptance_dir.mkdir(parents=True)
+        app.save_screenshot(filename="tui-80x24.svg", path=str(acceptance_dir))
+
+
+@pytest.mark.asyncio
+async def test_long_content_does_not_create_page_horizontal_scroll(tmp_path):
+    from ananhu_agent.cli.tui.app import AnanhuChatApp
+
+    runtime = BarrierRuntime()
+    app = AnanhuChatApp(runtime_factory=lambda _: runtime, runtime_dir=tmp_path)
+    async with app.run_test(size=(80, 24)) as pilot:
+        await pilot.press("x", "enter")
+        await pilot.pause()
+        _publish_layout_events(app, runtime.requests[0])
+        await pilot.pause()
+
+        _assert_tui_regions(app)
+        assert app.query_one("#conversation").virtual_size.width <= app.screen.size.width
+
+
+@pytest.mark.asyncio
+async def test_json_detail_has_local_horizontal_scroll(tmp_path):
+    from ananhu_agent.cli.tui.app import AnanhuChatApp
+
+    runtime = BarrierRuntime()
+    app = AnanhuChatApp(runtime_factory=lambda _: runtime, runtime_dir=tmp_path)
+    async with app.run_test(size=(80, 24)) as pilot:
+        await pilot.press("x", "enter")
+        await pilot.pause()
+        _publish_layout_events(app, runtime.requests[0])
+        inspector = app.query_one("#run-inspector")
+        item = inspector.model.item("understand.input")
+        inspector._show_detail(item)
+        await pilot.pause()
+
+        assert str(inspector.query_one("#json-detail").styles.overflow_x) == "auto"
+
+
+@pytest.mark.asyncio
+async def test_resize_during_run_preserves_regions_and_input(tmp_path):
+    from ananhu_agent.cli.tui.app import AnanhuChatApp
+
+    runtime = BarrierRuntime()
+    app = AnanhuChatApp(runtime_factory=lambda _: runtime, runtime_dir=tmp_path)
+    async with app.run_test(size=(80, 24)) as pilot:
+        await pilot.press("x", "enter")
+        await pilot.pause()
+        assert app.input_area.disabled is True
+        _assert_tui_regions(app)
+
+        await pilot.resize_terminal(100, 30)
+        await pilot.pause()
+        _assert_tui_regions(app)
+
+        await pilot.resize_terminal(80, 24)
+        await pilot.pause()
+        _assert_tui_regions(app)
+        assert app.input_area.disabled is True
+        acceptance_dir = tmp_path / ".ananhu-runtime" / "acceptance"
+        acceptance_dir.mkdir(parents=True)
+        app.save_screenshot(filename="tui-resized.svg", path=str(acceptance_dir))
+        runtime.release.set()

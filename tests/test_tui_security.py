@@ -3,11 +3,23 @@ from __future__ import annotations
 import asyncio
 import json
 import secrets
+import subprocess
+from pathlib import Path
+
+import pytest
+from pydantic import SecretStr
 
 from ananhu_agent.cli.tui.presentation import sanitize
 from ananhu_agent.models.observable_gateway import ObservableModelGateway, TransientSanitizer
 from ananhu_agent.ports.model_gateway import ModelRequest, ModelResult, ModelUsage
-from ananhu_agent.ports.run_event_sink import NoOpRunEventSink
+from ananhu_agent.ports.run_event_sink import (
+    ModelFinishedEvent,
+    ModelFinishedPayload,
+    NodeStartedEvent,
+    NoOpRunEventSink,
+    RunFinishedEvent,
+    RunTransientPayload,
+)
 from ananhu_agent.runtime import create_default_runtime
 from ananhu_agent.storage.runtime_stores import (
     BadcaseStore,
@@ -132,3 +144,89 @@ def test_non_sensitive_environment_values_are_preserved() -> None:
     clean = sanitize({"HOME": "/home/xukai", "LANG": "zh_CN.UTF-8"})
 
     assert clean == {"HOME": "/home/xukai", "LANG": "zh_CN.UTF-8"}
+
+
+@pytest.mark.asyncio
+async def test_runtime_random_canary_never_leaks_to_screen_logs_or_artifacts(
+    tmp_path: Path, caplog
+) -> None:
+    from ananhu_agent.cli.tui.app import AnanhuChatApp
+
+    canary = secrets.token_urlsafe(32)
+
+    class CanaryRuntime:
+        def __init__(self) -> None:
+            self.events = asyncio.Queue()
+
+        async def invoke(self, request):
+            await self.events.put(NodeStartedEvent(
+                run_id=request.run_id,
+                request_id=request.request_id,
+                session_id=request.session_id,
+                node_id="understand",
+                sequence_no=1,
+                public_payload={"phase": "understand", "input_summary": {"query": "safe"}},
+                transient_payload=RunTransientPayload(prompt=canary),
+            ))
+            await self.events.put(ModelFinishedEvent(
+                run_id=request.run_id,
+                request_id=request.request_id,
+                session_id=request.session_id,
+                node_id="understand",
+                sequence_no=2,
+                public_payload=ModelFinishedPayload(
+                    profile="intent_fast",
+                    provider="provider",
+                    model="model",
+                    output_summary={
+                        "tool_result": {"token": canary},
+                        "endpoint": f"https://user:{canary}@provider.example/v1",
+                    },
+                ),
+                transient_payload=RunTransientPayload(reasoning_content=canary),
+            ))
+            await self.events.put(RunFinishedEvent(
+                run_id=request.run_id,
+                request_id=request.request_id,
+                session_id=request.session_id,
+                sequence_no=3,
+                public_payload={"status": "failed", "stop_reason": "capability_failed"},
+            ))
+            raise RuntimeError(f"provider error token={canary}")
+
+    runtime = CanaryRuntime()
+    app = AnanhuChatApp(runtime_factory=lambda _: runtime, runtime_dir=tmp_path)
+    async with app.run_test(size=(80, 24)) as pilot:
+        await pilot.press("x", "enter")
+        await pilot.pause()
+        await pilot.pause()
+        if app._running_task is not None:
+            await app._running_task
+        screen_export = app.export_screenshot()
+
+    sanitized = sanitize({
+        "prompt": canary,
+        "secret": SecretStr(canary),
+        "headers": {"Authorization": f"Bearer {canary}"},
+        "url": f"https://user:{canary}@provider.example/v1?access_token={canary}",
+        "tool_result": {"token": canary},
+        "error": RuntimeError(f"provider error token={canary}"),
+    }, configured_secrets={canary})
+    persisted = "\n".join(
+        path.read_text(encoding="utf-8", errors="replace")
+        for path in tmp_path.rglob("*")
+        if path.is_file()
+    )
+    git_scan = subprocess.run(
+        ["git", "grep", "-n", "--fixed-strings", canary, "--"],
+        cwd=Path(__file__).resolve().parents[1],
+        capture_output=True,
+        text=True,
+        check=False,
+    )
+
+    assert canary not in screen_export
+    assert canary not in json.dumps(sanitized, ensure_ascii=False)
+    assert canary not in caplog.text
+    assert canary not in persisted
+    assert git_scan.returncode == 1

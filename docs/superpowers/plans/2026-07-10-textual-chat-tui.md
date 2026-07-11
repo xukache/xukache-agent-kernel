@@ -685,7 +685,7 @@ git commit -m "feat(cli): 增加单栏运行检查器组件"
 
 **文件：** TUI app/modals、CLI main、CLI/Pilot tests
 
-- [ ] **步骤 1：编写 Pilot 失败测试**
+- [x] **步骤 1：编写 Pilot 失败测试**
 
 函数为：`test_chat_updates_events_live_and_collapses_after_terminal_barrier`、
 `test_double_enter_only_invokes_runtime_once`、
@@ -760,7 +760,7 @@ async def test_ctrl_j_inserts_newline_without_sending(app_runtime_pair):
 
 其余 async Pilot 测试复用同一 fixture，并保持全部按键操作在自己的 `run_test()` 上下文内。
 
-- [ ] **步骤 2：迁移旧 chat 行为测试**
+- [x] **步骤 2：迁移旧 chat 行为测试**
 
 将 `test_cli_chat.py` 和 `test_cli_feedback_badcase.py` 的逐行 CliRunner 测试改为 Pilot：
 
@@ -770,34 +770,34 @@ async def test_ctrl_j_inserts_newline_without_sending(app_runtime_pair):
 - `test_f1_f2_f3_f4_open_expected_modals`：帮助、上下文、trace、badcase modal 可打开关闭。
 - `test_tui_good_and_bad_feedback_preserve_existing_semantics`：good 可见确认；bad 写入 badcase JSONL。
 
-- [ ] **步骤 3：运行测试确认失败**
+- [x] **步骤 3：运行测试确认失败**
 
 ```bash
 uv run pytest tests/test_tui_app.py tests/test_cli_chat.py tests/test_cli_feedback_badcase.py -v
 ```
 
-- [ ] **步骤 4：实现 AnanhuChatApp**
+- [x] **步骤 4：实现 AnanhuChatApp**
 
 实现 Header、VerticalScroll 会话区、TextArea、Footer；worker 调用 Runtime，独立 consumer 读取 queue。
 输入运行中 disabled；Ctrl+C 取消并等待最多 2 秒；Ctrl+N/L/R 保持规格身份语义；Enter 发送，
 Shift+Enter/Ctrl+J 换行。
 
-- [ ] **步骤 5：实现 modal/action 能力**
+- [x] **步骤 5：实现 modal/action 能力**
 
 F1 help、F2 context、F3 trace identity、F4 badcase/feedback；复用现有 BadcaseStore，不复制业务逻辑。
 
-- [ ] **步骤 6：替换 `chat` 入口并隔离 TTY 检查**
+- [x] **步骤 6：替换 `chat` 入口并隔离 TTY 检查**
 
 `chat` 函数内延迟导入 `AnanhuChatApp`。只有 chat 检查 stdin/stdout TTY 和 TERM；失败时 stderr 输出
 “ananhu-agent chat requires an interactive ANSI terminal”并退出 2。ask/eval/version 不导入 Textual app。
 
-- [ ] **步骤 7：运行 Pilot 测试**
+- [x] **步骤 7：运行 Pilot 测试**
 
 ```bash
 uv run pytest tests/test_tui_app.py tests/test_cli_chat.py tests/test_cli_feedback_badcase.py -v
 ```
 
-- [ ] **步骤 8：Commit**
+- [x] **步骤 8：Commit**
 
 ```bash
 git add ananhu_agent/cli/tui/app.py ananhu_agent/cli/tui/modals.py ananhu_agent/cli/main.py tests/test_tui_app.py tests/test_cli_chat.py tests/test_cli_feedback_badcase.py
@@ -808,7 +808,7 @@ git commit -m "feat(cli): 使用 Textual TUI 替换 chat"
 
 **文件：** terminal/security tests、任务总计划完成记录
 
-- [ ] **步骤 1：实现布局与 resize 测试**
+- [x] **步骤 1：实现布局与 resize 测试**
 
 具体函数：`test_80x24_regions_do_not_overlap`、`test_long_content_does_not_create_page_horizontal_scroll`、
 `test_json_detail_has_local_horizontal_scroll`、`test_resize_during_run_preserves_regions_and_input`。
@@ -830,7 +830,7 @@ assert app.query_one("#json-detail").styles.overflow_x == "auto"
 运行中 resize 到 100x30 再回 80x24，重复 region 断言；保存
 `.ananhu-runtime/acceptance/tui-80x24.svg` 与 `tui-resized.svg`。这些是 ignored 本地验收 artifact，不提交 Git。
 
-- [ ] **步骤 2：实现真实 PTY 测试**
+- [x] **步骤 2：实现真实 PTY 测试**
 
 具体函数与精确 oracle：
 
@@ -844,13 +844,13 @@ BarrierRuntime 的 Pilot 精确验证。每个进程
 `communicate(timeout=10)`，finally kill/wait，断言无存活子进程。TERM=dumb/非 TTY 精确断言 exit 2；
 正常 chat 无 traceback。
 
-- [ ] **步骤 3：实现运行时随机 canary 扫描 `SEC-010`**
+- [x] **步骤 3：实现运行时随机 canary 扫描 `SEC-010`**
 
 测试运行时用 `secrets.token_urlsafe(32)` 生成 canary，注入 reasoning、Prompt、tool result、header、URL、
 SecretStr 和 provider error。扫描 Pilot export、captured log/traceback、`.ananhu-runtime/**/*` 和
 `git grep` 输出，全部零命中。canary 不得作为源码 fixture 字面量。
 
-- [ ] **步骤 4：运行 TUI 验收测试**
+- [x] **步骤 4：运行 TUI 验收测试**
 
 ```bash
 uv run pytest tests/test_run_progress_events.py tests/runtime_contracts/test_run_progress_contract.py tests/test_model_reasoning_contract.py tests/test_other_intent_flow.py tests/test_tui_presentation.py tests/test_tui_app.py tests/test_tui_terminal.py tests/test_tui_security.py -v
@@ -858,7 +858,7 @@ uv run pytest tests/test_run_progress_events.py tests/runtime_contracts/test_run
 
 预期：全部 PASS；真实 provider smoke 未显式开启时可 skip。
 
-- [ ] **步骤 5：运行全量测试与非 TTY CLI 回归**
+- [x] **步骤 5：运行全量测试与非 TTY CLI 回归**
 
 ```bash
 uv run pytest -v
@@ -871,7 +871,7 @@ uv run ananhu-agent eval data/eval/eval_cases.jsonl --runtime both
 预期：pytest 零失败；version/ask/eval 在非 TTY 下 exit 0；30 条 eval 全通过；differential 为
 `equivalent=30, different=0`；metrics、trace、differential JSON 可解析且无 reasoning/secret。
 
-- [ ] **步骤 6：真实 TUI 手工 smoke**
+- [x] **步骤 6：真实 TUI 手工 smoke**
 
 在 PTY 中运行：
 
@@ -886,11 +886,11 @@ uv run ananhu-agent chat
 验证：输入“你好”得到能力说明；输入待遇问题得到回答；执行过程实时更新；节点/工具/model
 input/output/reasoning 可独立展开；AI 消息末尾显示聚合 Usage；Ctrl+C 正常退出。
 
-- [ ] **步骤 7：更新总演进计划完成记录**
+- [x] **步骤 7：更新总演进计划完成记录**
 
 在 `docs/superpowers/plans/2026-07-10-framework-neutral-langgraph-evolution.md` 新增任务 35：Textual Chat TUI，记录上述命令和结果，不覆盖既有 KnowledgeGateway 任务 33/Smoke 任务 34。
 
-- [ ] **步骤 8：Commit**
+- [x] **步骤 8：Commit**
 
 ```bash
 git add tests/test_tui_app.py tests/test_tui_terminal.py tests/test_tui_security.py docs/superpowers/plans/2026-07-10-framework-neutral-langgraph-evolution.md
@@ -899,9 +899,9 @@ git commit -m "test(cli): 验收 Textual TUI 真实终端交互"
 
 ## 最终交付检查
 
-- [ ] `git diff --check` 通过。
-- [ ] `git status --short --branch` 只显示允许的 ignored 本地 `.env`、`config/models.yaml` 和 runtime artifact。
-- [ ] `git log --oneline -12 --decorate` 包含 v0.7、事件协议、reasoning/Usage、other、TUI 和验收提交。
-- [ ] `rg -n "textual|rich" ananhu_agent --glob '*.py'` 只在 `cli/tui` 和 CLI 延迟导入处命中；测试显式导入除外。
-- [ ] 随机 canary 不存在于 Git、trace、state、report、badcase、eval、differential、屏幕导出或测试日志。
-- [ ] 向用户汇报改动范围、验证证据和待合并分支，等待明确确认后才提交最终未提交改动并合并回 `mvp`。
+- [x] `git diff --check` 通过。
+- [x] `git status --short --branch` 只显示允许的 ignored 本地 `.env`、`config/models.yaml` 和 runtime artifact。
+- [x] `git log --oneline -12 --decorate` 包含 v0.7、事件协议、reasoning/Usage、other、TUI 和验收提交。
+- [x] `rg -n "textual|rich" ananhu_agent --glob '*.py'` 只在 `cli/tui` 和 CLI 延迟导入处命中；测试显式导入除外。
+- [x] 随机 canary 不存在于 Git、trace、state、report、badcase、eval、differential、屏幕导出或测试日志。
+- [x] 已完成改动汇报并获得用户确认，准备提交并合并回 `mvp`。

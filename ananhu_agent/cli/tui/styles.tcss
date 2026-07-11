@@ -5,13 +5,16 @@ Screen {
 }
 
 #chat-input {
-    dock: bottom;
     height: 3;
 }
 
 #chat-status {
-    dock: bottom;
     height: 1;
+}
+
+#conversation {
+    height: 1fr;
+    min-height: 0;
 }
 
 .turn-user {

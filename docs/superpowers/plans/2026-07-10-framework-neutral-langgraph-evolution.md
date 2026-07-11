@@ -50,6 +50,7 @@
 - [x] 任务 32：接入真实 ModelGateway
 - [ ] 任务 33：建立真实 KnowledgeGateway 与政策基线
 - [ ] 任务 34：运行真实咨询 Smoke Eval
+- [ ] 任务 35：验收 Textual Chat TUI（v0.7）
 
 状态维护规则：任务提交并合并到 `mvp` 后，在下一次文档同步中同时更新本看板、对应正文标题和架构 changelog。
 
@@ -293,6 +294,26 @@ provider 声明的环境变量名解析，不进入 profile、trace、fixture �
 **验证命令：** `ANANHU_REAL_MODEL_SMOKE=1 uv run ananhu-agent eval data/eval/real_smoke_cases.jsonl --runtime both`
 
 **验收标准：** 两个 runtime 使用相同真实能力；指标按机制分层；失败可定位；不把 smoke 结果描述为生产质量。
+
+### - [ ] 任务 35：验收 Textual Chat TUI（v0.7）
+
+**目标：** 在真实 80×24/resize/PTY 环境下验证 Textual Chat TUI 的布局、退出、脱敏和双运行时回归，
+确保 v0.7 的交互入口可以作为后续真实 KnowledgeGateway 和 Smoke Eval 的验收载体。
+
+**涉及模块：** `ananhu_agent/cli/tui`、TUI Pilot/PTY 测试、安全 canary、v0.7 验收产物。
+
+**验证命令：**
+
+- `uv run pytest tests/test_run_progress_events.py tests/runtime_contracts/test_run_progress_contract.py tests/test_model_reasoning_contract.py tests/test_other_intent_flow.py tests/test_tui_presentation.py tests/test_tui_app.py tests/test_tui_terminal.py tests/test_tui_security.py -v`
+- `uv run pytest -v`
+- `uv run ananhu-agent version`
+- `uv run ananhu-agent ask "四川十级工伤，月工资6000，大概能赔多少钱？"`
+- `uv run ananhu-agent eval data/eval/eval_cases.jsonl`
+- `uv run ananhu-agent eval data/eval/eval_cases.jsonl --runtime both`
+- 真实 `.env` 配置下 PTY 启动、输入咨询、Ctrl+C 退出，屏幕无 traceback。
+
+**当前结果：** 任务分支已完成上述实现与验证，待用户确认后提交并合并到 `mvp`；合并后将本项改为
+`[x]`，并保留 `tui-80x24.svg`、`tui-resized.svg` 作为 ignored 本地验收产物。
 
 ## 3. 条件任务：Checkpoint 与恢复
 

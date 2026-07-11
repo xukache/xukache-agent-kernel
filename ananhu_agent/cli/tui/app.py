@@ -102,11 +102,11 @@ class AnanhuChatApp(App[None]):
         return runtime_factory(self.runtime_dir, event_sink=event_sink)
 
     def compose(self) -> ComposeResult:
-        yield Header()
+        yield Header(id="header")
         yield VerticalScroll(id="conversation")
         yield ChatInput(id="chat-input", placeholder="输入工伤咨询问题")
         yield Static("就绪", id="chat-status")
-        yield Footer()
+        yield Footer(id="footer")
 
     def on_mount(self) -> None:
         self.input_area = self.query_one("#chat-input", TextArea)
