@@ -11,6 +11,7 @@ from ananhu_agent.ports.model_gateway import ModelErrorCode, ModelGatewayError
 
 def test_model_router_returns_configured_profile():
     settings = RuntimeSettings(
+        _env_file=None,
         models={
             "intent_fast": {
                 "provider": "fake",
@@ -27,9 +28,13 @@ def test_model_router_returns_configured_profile():
 
 
 def test_model_router_builds_gateway_from_provider_neutral_profile():
-    assert isinstance(ModelRouter(RuntimeSettings()).gateway_for("intent_fast"), FakeModelGateway)
+    assert isinstance(
+        ModelRouter(RuntimeSettings(_env_file=None)).gateway_for("intent_fast"),
+        FakeModelGateway,
+    )
 
     router = ModelRouter(RuntimeSettings(
+        _env_file=None,
         model_api_key="contract-secret",
         model_base_url="https://model.example.test/v1",
         models={
@@ -47,6 +52,7 @@ def test_model_router_builds_gateway_from_provider_neutral_profile():
 
 def test_model_router_rejects_real_provider_without_secret():
     router = ModelRouter(RuntimeSettings(
+        _env_file=None,
         model_base_url="https://model.example.test/v1",
         models={
             "intent_fast": {

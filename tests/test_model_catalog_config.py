@@ -87,6 +87,7 @@ profiles:
 
 def test_catalog_falls_back_to_legacy_runtime_settings() -> None:
     settings = RuntimeSettings(
+        _env_file=None,
         model_api_key=SecretStr("legacy-secret"),
         model_base_url="https://model.example.test/v1",
         models={

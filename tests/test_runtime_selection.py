@@ -8,7 +8,8 @@ from ananhu_agent.runtimes.langgraph.runtime import LangGraphWorkflowRuntime
 from ananhu_agent.runtimes.native.runtime import NativeWorkflowRuntime
 
 
-def test_default_runtime_is_langgraph(tmp_path):
+def test_default_runtime_is_langgraph(tmp_path, monkeypatch):
+    monkeypatch.chdir(tmp_path)
     runtime = create_default_runtime(tmp_path)
 
     assert isinstance(runtime, LangGraphWorkflowRuntime)
@@ -17,13 +18,14 @@ def test_default_runtime_is_langgraph(tmp_path):
 def test_runtime_setting_can_explicitly_select_native(tmp_path):
     runtime = create_default_runtime(
         tmp_path,
-        RuntimeSettings(runtime_dir=tmp_path, runtime="native"),
+        RuntimeSettings(_env_file=None, runtime_dir=tmp_path, runtime="native"),
     )
 
     assert isinstance(runtime, NativeWorkflowRuntime)
 
 
 def test_runtime_can_be_selected_from_environment(tmp_path, monkeypatch):
+    monkeypatch.chdir(tmp_path)
     monkeypatch.setenv("ANANHU_RUNTIME", "native")
 
     runtime = create_default_runtime(tmp_path)
@@ -34,11 +36,19 @@ def test_runtime_can_be_selected_from_environment(tmp_path, monkeypatch):
 def test_both_runtime_compositions_use_project_model_gateway(tmp_path):
     native = create_default_runtime(
         tmp_path / "native",
-        RuntimeSettings(runtime="native", runtime_dir=tmp_path / "native"),
+        RuntimeSettings(
+            _env_file=None,
+            runtime="native",
+            runtime_dir=tmp_path / "native",
+        ),
     )
     langgraph = create_default_runtime(
         tmp_path / "langgraph",
-        RuntimeSettings(runtime="langgraph", runtime_dir=tmp_path / "langgraph"),
+        RuntimeSettings(
+            _env_file=None,
+            runtime="langgraph",
+            runtime_dir=tmp_path / "langgraph",
+        ),
     )
 
     assert isinstance(native.intent_agent.model_gateway, ObservableModelGateway)
