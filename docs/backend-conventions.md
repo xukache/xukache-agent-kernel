@@ -38,6 +38,9 @@ ANANHU_REAL_MODEL_SMOKE=1 ANANHU_REAL_MODEL="provider-model" \
 API key 不得写入 `ANANHU_MODELS`、代码、trace 或测试 fixture。未设置
 `ANANHU_REAL_MODEL_SMOKE=1` 时真实 smoke 必须 skip。
 
+`RuntimeSettings` 会自动读取项目当前工作目录的 UTF-8 `.env`；已导出的 shell 环境变量优先，可用于
+部署时覆盖本地 `.env`。`.env` 只保存环境变量或模型目录路径，不提交 API key。
+
 ## 目标模块边界
 
 ```text

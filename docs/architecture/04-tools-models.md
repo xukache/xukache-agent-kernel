@@ -89,6 +89,8 @@ tool_call_result
 默认 `FakeModelGateway` 保持离线回归确定性。真实适配器实现 OpenAI-compatible
 `/chat/completions` 最小子集，profile 使用 `provider=openai_compatible`；API key、base URL 和
 显式 smoke 开关由环境配置提供，不写入 profile、trace 或 artifact。无 key 的常规测试必须 skip。
+`RuntimeSettings` 自动读取项目当前工作目录的 UTF-8 `.env`；已导出的 shell 环境变量优先于 `.env`，
+部署环境可以覆盖本地配置而无需修改文件。
 
 模型目录使用 `providers + profiles` 两层结构。`providers` 保存 OpenAI-compatible 协议、base URL 和
 API key 环境变量名；`profiles` 保存业务模型档位并引用 provider。Prompt metadata 和阶段服务只选择
