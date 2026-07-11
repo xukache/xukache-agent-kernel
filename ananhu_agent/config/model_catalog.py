@@ -1,6 +1,5 @@
 from __future__ import annotations
 
-import os
 import re
 from pathlib import Path
 from typing import Any, Literal
@@ -92,11 +91,11 @@ def load_model_catalog(settings: RuntimeSettings) -> ModelCatalog:
     """目录配置优先；未配置时把 v0.5 设置转换为同一目录协议。"""
 
     if settings.model_catalog is not None:
-        return _load_yaml_catalog(settings.model_catalog)
+        return _load_yaml_catalog(settings.model_catalog, settings=settings)
     return _legacy_catalog(settings)
 
 
-def _load_yaml_catalog(path: Path) -> ModelCatalog:
+def _load_yaml_catalog(path: Path, *, settings: RuntimeSettings) -> ModelCatalog:
     try:
         raw = yaml.safe_load(path.read_text(encoding="utf-8")) or {}
     except (OSError, yaml.YAMLError) as exc:
@@ -111,7 +110,7 @@ def _load_yaml_catalog(path: Path) -> ModelCatalog:
             raise TypeError("providers and profiles must be mappings")
 
         providers = {
-            name: _provider_from_yaml(name, value)
+            name: _provider_from_yaml(name, value, settings=settings)
             for name, value in providers_raw.items()
         }
         profiles = {
@@ -129,10 +128,15 @@ def _load_yaml_catalog(path: Path) -> ModelCatalog:
     return catalog
 
 
-def _provider_from_yaml(name: str, value: dict[str, Any] | None) -> ProviderConfig:
+def _provider_from_yaml(
+    name: str,
+    value: dict[str, Any] | None,
+    *,
+    settings: RuntimeSettings,
+) -> ProviderConfig:
     provider = ProviderConfig(name=name, **(value or {}))
     if provider.api_key_env:
-        secret = os.getenv(provider.api_key_env)
+        secret = settings.model_environment_value(provider.api_key_env)
         if secret:
             provider = provider.model_copy(update={"api_key": SecretStr(secret)})
     return provider

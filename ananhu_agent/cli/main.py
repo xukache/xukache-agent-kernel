@@ -7,6 +7,7 @@ from typing import Annotated
 from uuid import uuid4
 
 import typer
+from dotenv import dotenv_values
 
 from ananhu_agent import __version__
 from ananhu_agent.config.settings import RuntimeSettings
@@ -34,7 +35,10 @@ def version() -> None:
 def ask(query: str) -> None:
     """Ask one work injury consultation question."""
     runtime_dir = Path(os.getenv("ANANHU_RUNTIME_DIR", ".ananhu-runtime"))
-    runtime: WorkflowRuntime = create_default_runtime(runtime_dir)
+    runtime: WorkflowRuntime = create_default_runtime(
+        runtime_dir,
+        _cli_settings(runtime_dir),
+    )
     result = asyncio.run(runtime.invoke(_run_request("cli", 1, query)))
     typer.echo(visible_result_message(result))
     typer.echo(f"Trace: {runtime_dir / 'traces.jsonl'}")
@@ -54,7 +58,7 @@ def eval_command(
         raise typer.BadParameter("runtime 必须是 native、langgraph 或 both")
     selected_runtime: WorkflowRuntime = create_default_runtime(
         runtime_dir,
-        RuntimeSettings(runtime_dir=runtime_dir, runtime=runtime) if runtime else None,
+        _cli_settings(runtime_dir, runtime=runtime),
     )
 
     from ananhu_agent.evaluation.runner import EvalRunner
@@ -79,11 +83,11 @@ def _run_differential_eval(cases: Path, runtime_dir: Path) -> None:
     runner = RuntimeDifferentialRunner(
         native_runtime=create_default_runtime(
             native_dir,
-            RuntimeSettings(runtime_dir=native_dir, runtime="native"),
+            _cli_settings(native_dir, runtime="native"),
         ),
         langgraph_runtime=create_default_runtime(
             langgraph_dir,
-            RuntimeSettings(runtime_dir=langgraph_dir, runtime="langgraph"),
+            _cli_settings(langgraph_dir, runtime="langgraph"),
         ),
         native_trace=TraceRecorder(native_dir / "traces.jsonl"),
         langgraph_trace=TraceRecorder(langgraph_dir / "traces.jsonl"),
@@ -118,10 +122,47 @@ def chat() -> None:
     from ananhu_agent.cli.tui.app import AnanhuChatApp
 
     runtime_dir = Path(os.getenv("ANANHU_RUNTIME_DIR", ".ananhu-runtime"))
+    settings = _cli_settings(runtime_dir)
+
+    def runtime_factory(
+        base_path: Path,
+        *,
+        event_sink=None,
+    ) -> WorkflowRuntime:
+        """为每个 TUI run 复用 CLI 已加载的非敏感配置投影。"""
+
+        return create_default_runtime(
+            base_path,
+            settings.model_copy(update={"runtime_dir": base_path}),
+            event_sink=event_sink,
+        )
+
     AnanhuChatApp(
-        runtime_factory=create_default_runtime,
+        runtime_factory=runtime_factory,
         runtime_dir=runtime_dir,
     ).run()
+
+
+def _cli_settings(
+    runtime_dir: Path,
+    *,
+    runtime: str | None = None,
+) -> RuntimeSettings:
+    """仅外部 CLI 入口自动读取本地 dotenv，核心 Runtime 保持显式可测。"""
+
+    # 模型目录的 api_key_env 需要读取密钥；Pydantic 的 _env_file 只负责构造
+    # Settings。这里将 dotenv 限定在当前 Settings 私有映射，避免污染进程环境。
+    dotenv = {
+        name: value
+        for name, value in dotenv_values(".env", encoding="utf-8").items()
+        if value is not None
+    }
+    values: dict[str, object] = {"runtime_dir": runtime_dir}
+    if runtime is not None:
+        values["runtime"] = runtime
+    settings = RuntimeSettings(_env_file=".env", **values)
+    settings.set_dotenv_values(dotenv)
+    return settings
 
 
 def _new_chat_session_id() -> str:

@@ -3,7 +3,7 @@ from __future__ import annotations
 from pathlib import Path
 from typing import Any, Literal
 
-from pydantic import Field, SecretStr
+from pydantic import Field, PrivateAttr, SecretStr
 from pydantic_settings import BaseSettings, SettingsConfigDict
 
 
@@ -30,10 +30,21 @@ class RuntimeSettings(BaseSettings):
             }
         }
     )
+    # 仅 CLI 组合根注入的 dotenv 值；使用私有属性，避免密钥进入 settings 序列化结果。
+    _dotenv_values: dict[str, str] = PrivateAttr(default_factory=dict)
 
-    model_config = SettingsConfigDict(
-        env_prefix="ANANHU_",
-        env_file=".env",
-        env_file_encoding="utf-8",
-        extra="ignore",
-    )
+    model_config = SettingsConfigDict(env_prefix="ANANHU_", extra="ignore")
+
+    def set_dotenv_values(self, values: dict[str, str]) -> None:
+        """保存 CLI 本地 dotenv 值，不修改进程级环境变量。"""
+
+        self._dotenv_values = values
+
+    def model_environment_value(self, name: str) -> str | None:
+        """shell 环境优先，其次读取仅属于当前 CLI 配置的 dotenv 值。"""
+
+        import os
+
+        if name in os.environ:
+            return os.environ[name]
+        return self._dotenv_values.get(name)

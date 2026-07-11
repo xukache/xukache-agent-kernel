@@ -11,7 +11,9 @@
 - 新增取消状态与 `user_cancelled`、ObservableModelGateway、显式 reasoning 瞬态路径和 Usage reported 口径。
 - CapabilityRequest 补充 run 身份；`other` 采用双运行时等价的确定性无工具非空回复路径。
 - reasoning 原文禁止进入业务 trace、状态、报告、badcase、eval 和 differential artifact。
-- `RuntimeSettings` 自动读取当前工作目录的 UTF-8 `.env`，但已导出的 shell 环境变量继续拥有更高优先级。
+- CLI 组合根读取当前工作目录的 UTF-8 `.env` 并将 provider 密钥保存于当前 Settings 私有映射；
+  `RuntimeSettings` 保持显式且不修改进程环境，避免离线 Runtime 与测试受本机配置污染。已导出的
+  shell 环境变量继续拥有更高优先级。
 
 ## v0.6 - 2026-07-10
 
