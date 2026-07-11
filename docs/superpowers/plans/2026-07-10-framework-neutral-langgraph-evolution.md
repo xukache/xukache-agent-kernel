@@ -50,7 +50,7 @@
 - [x] 任务 32：接入真实 ModelGateway
 - [ ] 任务 33：建立真实 KnowledgeGateway 与政策基线
 - [ ] 任务 34：运行真实咨询 Smoke Eval
-- [ ] 任务 35：验收 Textual Chat TUI（v0.7）
+- [x] 任务 35：验收 Textual Chat TUI（v0.7）
 
 状态维护规则：任务提交并合并到 `mvp` 后，在下一次文档同步中同时更新本看板、对应正文标题和架构 changelog。
 
@@ -312,8 +312,8 @@ provider 声明的环境变量名解析，不进入 profile、trace、fixture �
 - `uv run ananhu-agent eval data/eval/eval_cases.jsonl --runtime both`
 - 真实 `.env` 配置下 PTY 启动、输入咨询、Ctrl+C 退出，屏幕无 traceback。
 
-**当前结果：** 任务分支已完成上述实现与验证，待用户确认后提交并合并到 `mvp`；合并后将本项改为
-`[x]`，并保留 `tui-80x24.svg`、`tui-resized.svg` 作为 ignored 本地验收产物。
+**当前结果：** 已提交并合并到 `mvp`；完整测试、TUI 验收和真实配置 PTY smoke 均通过。
+`tui-80x24.svg`、`tui-resized.svg` 作为 ignored 本地验收产物保留。
 
 ## 3. 条件任务：Checkpoint 与恢复
 
