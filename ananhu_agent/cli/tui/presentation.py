@@ -168,9 +168,13 @@ def format_usage_line(results: Iterable[ModelResult] | UsageSummary, elapsed_ms:
 
     latency_ms = summary.latency_ms or elapsed_ms
     speed = summary.output_tokens / (latency_ms / 1000) if latency_ms > 0 else 0
+    token_breakdown = (
+        f"in {summary.input_tokens} · out {summary.output_tokens}"
+        f"{detail_suffix}"
+    )
     return (
-        f"{summary.calls} calls · Σ {summary.total_tokens} tokens · "
-        f"⚡ {speed:.1f} tok/s{detail_suffix}{inconsistent_suffix}"
+        f"{summary.calls} calls · {token_breakdown} · Σ {summary.total_tokens} tokens · "
+        f"⚡ {speed:.1f} tok/s{inconsistent_suffix}"
     )
 
 

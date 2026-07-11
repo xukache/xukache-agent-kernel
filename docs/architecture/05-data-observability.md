@@ -107,7 +107,9 @@ reasoning 和详细 JSON。Trace sink 必须逐类调用显式 `to_trace_event()
 `ModelUsage.reported` 明确区分 provider 报告的零值和未报告。任一成功 provider 调用未报告时，本轮
 聚合显示 `tokens unknown`，不得用其余已知调用生成貌似完整的合计；Fake 使用
 `reported=False, usage_source=fake` 且不触发 provider unknown。总耗时覆盖完整 Runtime，模型输出速度
-只基于完整已报告的成功调用计算。
+只基于完整已报告的成功调用计算。Textual 的单轮可见摘要使用同一聚合口径，完整 provider usage 显示
+`in <input_tokens> · out <output_tokens> · cache <cache_tokens> · Σ <total_tokens>`；没有 cache 时省略
+该字段，unknown、Fake 与 inconsistent 状态不得渲染为貌似完整的分项。
 
 reasoning 原文不进入 UsageRecord、TraceEvent、RunReport、TaskState、SessionState、badcase、eval 或
 differential artifact。安全测试必须用 canary 扫描序列化、repr、异常、日志和所有持久化产物零命中；

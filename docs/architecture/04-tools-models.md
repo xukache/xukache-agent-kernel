@@ -118,7 +118,9 @@ OpenAI-compatible adapter 只接受字符串类型的 `message.reasoning_content
 `ModelUsage.reported` 区分 provider 明确报告的零值与未报告 usage。单轮 token 只聚合成功且
 `reported=True` 的 ModelResult；任一成功 provider 调用未报告时合计为 `tokens unknown` 且速度为 `--`。
 Fake 固定为 `reported=False, usage_source=fake`，纯 Fake 轮次显示 `fake · 0 tokens`。失败且无
-ModelResult 的尝试不计 token；provider total 与分项不一致时保留原值并标记 inconsistent。
+ModelResult 的尝试不计 token；provider total 与分项不一致时保留原值并标记 inconsistent。Textual
+单轮 usage 行在完整 provider usage 可用时展示 `in`、`out`、可选 `cache`、`Σ total` 和输出速度；
+`cache` 是 provider 单独报告的缓存命中字段，不参与替代 input/output/total 的含义。
 
 ## 实时 Capability 事件
 

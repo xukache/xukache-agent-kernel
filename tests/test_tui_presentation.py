@@ -98,6 +98,8 @@ def _sample_run_events():
 def test_single_reported_provider_usage_status_line() -> None:
     line = format_usage_line([_provider_result(100, 20, reported=True, latency_ms=1000)], 6100)
 
+    assert "in 100" in line
+    assert "out 20" in line
     assert "Σ 120 tokens" in line
     assert "20.0 tok/s" in line
 
@@ -119,6 +121,8 @@ def test_mixed_unreported_provider_usage_is_unknown() -> None:
     line = format_usage_line(results, 6100)
 
     assert "tokens unknown" in line
+    assert "in " not in line
+    assert "out " not in line
     assert "⚡ --" in line
 
 
@@ -132,7 +136,10 @@ def test_cache_tokens_are_shown_in_model_detail() -> None:
     ])
 
     assert summary.details[0].cache_tokens == 25
-    assert "cache 25" in format_usage_line(summary, 6100)
+    line = format_usage_line(summary, 6100)
+    assert "in 100" in line
+    assert "out 20" in line
+    assert "cache 25" in line
 
 
 def test_failed_attempt_without_result_is_not_counted() -> None:
