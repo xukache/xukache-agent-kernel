@@ -48,7 +48,7 @@
 - [x] 任务 30：接入最小串行 LangGraph Runtime
 - [x] 任务 31：双运行时差分验收
 - [x] 任务 32：接入真实 ModelGateway
-- [ ] 任务 33：建立真实 KnowledgeGateway 与政策基线
+- [x] 任务 33：建立真实 KnowledgeGateway 与政策基线
 - [ ] 任务 34：运行真实咨询 Smoke Eval
 - [x] 任务 35：验收 Textual Chat TUI（v0.7）
 
@@ -267,7 +267,9 @@ Agent 和 Prompt 只选择 `model_profile`。
 **事实源状态：** 已发布 v0.6 模型目录架构；目录优先、v0.5 环境变量兼容；密钥只通过
 provider 声明的环境变量名解析，不进入 profile、trace、fixture 或 artifact。
 
-### - [ ] 任务 33：建立真实 KnowledgeGateway 与政策基线
+### - [x] 任务 33：建立真实 KnowledgeGateway 与政策基线
+
+**状态：** 已完成，待随任务分支提交并合并到 `mvp`。
 
 **目标：** 建立带可信元数据和引用的政策检索基线，暂不因技术展示引入向量库。
 
@@ -295,7 +297,7 @@ provider 声明的环境变量名解析，不进入 profile、trace、fixture �
 
 **验收标准：** 两个 runtime 使用相同真实能力；指标按机制分层；失败可定位；不把 smoke 结果描述为生产质量。
 
-### - [ ] 任务 35：验收 Textual Chat TUI（v0.7）
+### - [x] 任务 35：验收 Textual Chat TUI（v0.7）
 
 **目标：** 在真实 80×24/resize/PTY 环境下验证 Textual Chat TUI 的布局、退出、脱敏和双运行时回归，
 确保 v0.7 的交互入口可以作为后续真实 KnowledgeGateway 和 Smoke Eval 的验收载体。

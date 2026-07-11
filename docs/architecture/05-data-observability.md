@@ -39,6 +39,10 @@ producer
 
 当前已在 `ananhu_agent/workflow/contracts.py` 为 `RunRequest`、`WorkflowState` 和 `WorkflowResult` 增加 `schema_version`、`run_id`、`request_id`、`session_id`、`case_id` 和 `message_id`。`TraceEvent` 已包含可选 `run_id`、`runtime_name`、`runtime_version`、`node_id`、`attempt` 和 `logical_call_id`；当前 Runtime、Model 与 Capability 链路按项目 trace schema 写入相关字段。后续 usage、Prompt、知识语料和公式版本必须继续与同一运行证据关联。
 
+KnowledgeGateway 的 `EvidenceItem` 至少保留 `evidence_id`、`document_id`、`document_version`、
+`source_url`、`effective_from/effective_to`、`review_status`、`evidence_hash`、`corpus_version`、
+`retrieval_method` 和 lexical score。EvidenceItem 是答案引用的事实来源，不用 TraceEvent 或模型摘要替代。
+
 ## TraceEvent
 
 当前事件覆盖请求、意图、工具、校验、安全和响应主链路。目标事件至少覆盖：
@@ -142,7 +146,7 @@ Badcase 保存最小必要输入、关键状态版本、实际/期望结果、�
 |---|---|
 | 路由 | intent、复合需求、流程选择准确率 |
 | 案件事实 | 抽取、确认、冲突发现、过期复用率 |
-| RAG | 地区/时效过滤、Recall、MRR/NDCG、引用支持率 |
+| RAG | 地区/时效/审核过滤、Recall@K、MRR、引用支持率、无结果安全率 |
 | 测算 | 输入准确、公式版本、结果误差、缺失输入处理 |
 | 答复 | 事实一致性、不确定性披露、安全违规率 |
 | Context | token、关键证据保留率、裁剪原因 |
@@ -156,6 +160,10 @@ Badcase 保存最小必要输入、关键状态版本、实际/期望结果、�
 每个 EvaluationArtifact 记录代码 commit、branch、数据集版本、fixture snapshot、模型配置、Prompt/Tool/语料版本、runtime 版本和每条 case 结果。Fake 与真实模型结果分开报告。
 
 Native 和 LangGraph Runtime 运行同一 contract/eval 集时，比较业务结果、关键状态、能力调用和项目 trace 语义，不要求框架内部事件逐字一致。
+
+任务 33 新增 `RAGEvalRunner` 和 `rag-eval.v1` artifact。专项报告必须单独记录检索总数、Recall@K、
+MRR、引用支持率、可信过滤率、无结果率和每条 case 的 Evidence ID；`fabrication_allowed` 固定为
+`false`。无结果是安全 miss，不得通过生成模型补齐法规依据。
 
 ## 双运行时差分验收
 

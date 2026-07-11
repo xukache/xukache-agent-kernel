@@ -9,9 +9,10 @@
 - CLI 作为开发和验收入口。
 - `NativeWorkflowRuntime`、MVP Agent、CapabilityGateway 和 Runtime contract tests。
 - Prompt、上下文、工具、模型 profile、session 和 JSONL 运行证据。
-- fake model、fixture policy RAG、确定性测算和 30 条以上 eval cases。
+- fake model、`policy-corpus.v1` KnowledgeGateway lexical baseline、确定性测算和 30 条以上 eval cases。
 
-当前实现是可回归的离线 harness，不等同于真实模型和生产知识库已经可用。
+当前实现是可回归的离线 harness；政策语料包含审核、有效期、来源和版本元数据，但仍不等同于生产
+级持续更新知识库或真实模型已经可用。
 
 ## 目标分层
 

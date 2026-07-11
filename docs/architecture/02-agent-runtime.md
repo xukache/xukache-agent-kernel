@@ -48,6 +48,10 @@ StopReason       框架无关停止语义
 - `WorkflowPhase`、`RunStatus`、`StopReason`：冻结 Native 与后续 LangGraph Runtime 共享的阶段、状态和停止语义。
 - `WorkflowRuntime.invoke()`：async 运行时端口，CLI、EvalRunner 和后续入口通过该端口调用运行时。
 
+可信 jurisdiction 由 `RunRequest.trusted_jurisdiction` 或项目确定性用户文本解析器提供。模型抽取的
+`mentioned_region` 只能进入候选案件事实和会话槽位，不能覆盖 `ctx.request` 中已确认的地区；检索能力只
+读取可信地区。Native 和 LangGraph 复用同一阶段服务，因此不能通过不同运行时绕过该边界。
+
 默认组合根为 `create_default_runtime()`，按 `RuntimeSettings.runtime` 装配运行时，默认值为 `langgraph`；`native` 是保留的显式回归选项。
 
 ## StatePatch 与 Reducer

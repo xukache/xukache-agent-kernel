@@ -4,8 +4,8 @@
 
 ## 文档状态
 
-- 当前阶段：双运行时和 Provider/Profile 模型目录已稳定，正在引入框架中立实时事件与 Textual Chat TUI。
-- 当前架构版本：v0.7，完整快照见 `architecture/versions/v0.7-textual-chat-tui.md`。
+- 当前阶段：双运行时、Provider/Profile 模型目录、Textual Chat TUI 和 KnowledgeGateway lexical baseline 已稳定，正在准备真实咨询 Smoke Eval。
+- 当前架构版本：v0.8，完整快照见 `architecture/versions/v0.8-knowledge-gateway-policy-baseline.md`。
 - 当前运行时：默认 `LangGraphWorkflowRuntime`，通过 `WorkflowRuntime` 端口调用；可显式选择 `NativeWorkflowRuntime`。
 - 演进方向：先完成可观测的 Textual Chat TUI，再扩展真实知识能力。
 - 核心原则：领域、应用、Agent、Capability、Trace 和 Eval 协议不依赖 LangGraph。

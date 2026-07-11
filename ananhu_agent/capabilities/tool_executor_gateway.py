@@ -11,6 +11,7 @@ from ananhu_agent.capabilities.contracts import (
     CapabilityResult,
     CapabilityStatus,
 )
+from ananhu_agent.ports.knowledge_gateway import KnowledgeGateway
 from ananhu_agent.ports.run_event_sink import (
     CapabilityFailedEvent,
     CapabilityFailedPayload,
@@ -36,9 +37,11 @@ class ToolExecutorCapabilityGateway(CapabilityGateway):
         self,
         tool_executor: ToolExecutor,
         event_sink: RunEventSink | None = None,
+        knowledge_gateway: KnowledgeGateway | None = None,
     ) -> None:
         self.tool_executor = tool_executor
         self.event_sink = event_sink or NoOpRunEventSink()
+        self.knowledge_gateway = knowledge_gateway
         # 任务 28 的最小幂等存储：同一进程内相同 logical_call_id 只执行一次底层工具。
         # 后续接入持久化幂等记录时，需要把 run_id、capability_version 纳入键。
         self._results_by_logical_call_id: dict[tuple[str, str], CapabilityResult] = {}

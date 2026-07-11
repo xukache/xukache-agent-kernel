@@ -135,8 +135,6 @@ class NativeStageServices:
         active_slots, slot_metadata = merge_slots(self.ctx.conversation.active_slots, revised.slots)
         self.ctx.intent_result = revised
         self.ctx.conversation.active_slots = active_slots
-        self.ctx.request.province = active_slots.get("province", self.ctx.request.province)
-        self.ctx.request.city = active_slots.get("city", self.ctx.request.city)
         self._record(state, "intent_revised", "merge_facts", revised.model_dump())
         self._record(
             state,

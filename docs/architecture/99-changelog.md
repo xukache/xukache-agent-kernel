@@ -4,6 +4,16 @@
 
 本文记录架构文档和重大设计决策变化。凡是影响系统模块边界、核心数据模型、运行时、消息 / 事件、状态机、Agent 编排、Prompt、Tool、模型策略或观测诊断的变更，都必须在此记录。
 
+## v0.8 - 2026-07-11
+
+- 新增框架中立 `KnowledgeGateway`、`KnowledgeQuery`、`KnowledgeSearchResult` 和 `EvidenceItem`。
+- 建立 `policy-corpus.v1` 政策基线，包含 tenant、jurisdiction、有效期、审核状态、受众、来源类型、
+  文档版本、来源 URL、证据 hash 和语料版本。
+- `LexicalKnowledgeGateway` 在 lexical 召回前执行可信元数据过滤；暂不引入向量库、fusion 或 reranker。
+- `PolicyRAGTool` 保留为 ToolExecutor 兼容入口，Native/LangGraph 通过组合根复用同一 KnowledgeGateway。
+- 模型抽取地区不能覆盖可信检索范围；RAG 专项 eval 独立记录 Recall@K、MRR、引用支持率、
+  可信过滤率和无结果安全率。
+
 ## v0.7 - 2026-07-10
 
 - `ananhu-agent chat` 直接替换为单栏 Textual TUI；旧逐行命令能力迁移为 action/modal，非交互命令保持兼容。

@@ -2,24 +2,25 @@
 
 > 本文件是稳定入口，不再承载可被覆盖的完整架构正文。
 >
-> 当前有效版本：[`v0.7-textual-chat-tui.md`](docs/architecture/versions/v0.7-textual-chat-tui.md)
+> 当前有效版本：[`v0.8-knowledge-gateway-policy-baseline.md`](docs/architecture/versions/v0.8-knowledge-gateway-policy-baseline.md)
 
 ## 当前版本
 
 | 字段 | 内容 |
 |---|---|
-| 架构版本 | v0.7 |
-| 发布日期 | 2026-07-10 |
-| 基线 | v0.6 Provider/Profile 模型目录 |
-| 技术路线 | 框架中立业务内核 + 双运行时 + RunProgressEvent + Textual Chat TUI |
-| 完整正文 | `docs/architecture/versions/v0.7-textual-chat-tui.md` |
-| 演进计划 | `docs/superpowers/plans/2026-07-10-textual-chat-tui.md` |
+| 架构版本 | v0.8 |
+| 发布日期 | 2026-07-11 |
+| 基线 | v0.7 Textual Chat TUI |
+| 技术路线 | 框架中立业务内核 + 双运行时 + KnowledgeGateway + lexical policy baseline |
+| 完整正文 | `docs/architecture/versions/v0.8-knowledge-gateway-policy-baseline.md` |
+| 演进计划 | `docs/superpowers/plans/2026-07-11-knowledge-gateway-policy-baseline.md` |
 
 ## 版本索引
 
 | 版本 | 状态 | 文档 | 说明 |
 |---|---|---|---|
-| v0.7 | 当前有效 | `docs/architecture/versions/v0.7-textual-chat-tui.md` | 框架中立实时运行事件与 Textual Chat TUI |
+| v0.8 | 当前有效 | `docs/architecture/versions/v0.8-knowledge-gateway-policy-baseline.md` | KnowledgeGateway、可信政策语料和 lexical RAG baseline |
+| v0.7 | 已归档 | `docs/architecture/versions/v0.7-textual-chat-tui.md` | 框架中立实时运行事件与 Textual Chat TUI |
 | v0.6 | 已归档 | `docs/architecture/versions/v0.6-model-catalog.md` | Provider/Profile 模型目录与按模型档位路由 |
 | v0.5 | 已归档 | `docs/architecture/versions/v0.5-real-model-gateway.md` | 框架中立 ModelGateway 与 OpenAI-compatible provider |
 | v0.4 | 已归档 | `docs/architecture/versions/v0.4-runtime-differential.md` | Native/LangGraph 双运行时差分验收 |

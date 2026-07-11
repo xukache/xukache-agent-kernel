@@ -9,6 +9,7 @@ from ananhu_agent.agents.intent_router import IntentRouterAgent
 from ananhu_agent.agents.payment_calculation import PaymentCalculationAgent
 from ananhu_agent.agents.policy_rag import PolicyRAGAgent
 from ananhu_agent.capabilities.contracts import CapabilityGateway
+from ananhu_agent.context.slot_rules import extract_user_jurisdiction
 from ananhu_agent.models.model_router import ModelRouter
 from ananhu_agent.ports.run_event_sink import (
     NodeFailedEvent,
@@ -403,12 +404,15 @@ def _model_usage_summary(ctx: AgentContext) -> dict:
 
 
 def _context_from_request(request: RunRequest) -> AgentContext:
+    trusted_jurisdiction = dict(request.trusted_jurisdiction)
+    if not trusted_jurisdiction:
+        trusted_jurisdiction = extract_user_jurisdiction(request.user_query)
     ctx = AgentContext.new_for_query(
         session_id=request.session_id,
         turn_id=request.turn_id,
         user_query=request.user_query,
-        province=request.trusted_jurisdiction.get("province"),
-        city=request.trusted_jurisdiction.get("city"),
+        province=trusted_jurisdiction.get("province"),
+        city=trusted_jurisdiction.get("city"),
     )
     ctx.request.request_id = request.request_id
     ctx.request.created_at = request.created_at

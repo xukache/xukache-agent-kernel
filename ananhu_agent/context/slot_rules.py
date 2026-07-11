@@ -44,6 +44,19 @@ def merge_slots(
     return merged, metadata
 
 
+def extract_user_jurisdiction(user_query: str) -> dict[str, str]:
+    """从用户原文确定性解析地区，避免模型槽位决定政策适用边界。"""
+
+    normalized = user_query.replace(" ", "")
+    for province in _PROVINCES:
+        if province in normalized:
+            return {"province": f"{province}省"}
+    for alias, normalized_name in _PROVINCE_ALIASES.items():
+        if alias in normalized:
+            return {"province": normalized_name}
+    return {}
+
+
 def _normalize_province(value: str) -> str:
     """将模型常见省级简称归一为政策元数据使用的行政区全称。"""
 

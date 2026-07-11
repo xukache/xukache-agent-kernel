@@ -133,6 +133,10 @@ ModelResult 的尝试不计 token；provider total 与分项不一致时保留�
 
 ## KnowledgeGateway
 
+当前实现为 `KnowledgeGateway` 端口和 `LexicalKnowledgeGateway`，通过 `policy-corpus.v1` JSONL
+语料提供离线可回放的真实政策基线。`PolicyRAGTool` 仍是旧 `ToolExecutor` 能力名，但其 handler
+只做协议兼容，实际检索复用组合根注入的 KnowledgeGateway；Native 与 LangGraph 可注入同一个实例。
+
 检索前必须使用可信元数据过滤：
 
 ```text
@@ -149,26 +153,26 @@ tenant
 
 ```text
 metadata filter
-  -> BM25/lexical
-  -> vector retrieval
-  -> fusion
-  -> reranker
+  -> lexical baseline
+  -> EvidenceItem
   -> citation validator
 ```
 
-向量检索只是候选召回方式。TopK 和阈值必须由 eval 数据校准，不能作为未经验证的常量宣称正确。
+当前 lexical baseline 只使用语料声明的关键词、标题和条款短语，先由 RAG eval 校准 Recall@K、MRR、
+可信过滤和引用支持率；向量检索、融合和 reranker 暂不启用，也不能把未来目标流程描述为当前能力。
 
 ## EvidenceItem
 
 政策证据至少包含：
 
-- 文档 ID、标题、条款和原文片段。
+- `evidence_id`、文档 ID、标题、条款和原文片段。
 - jurisdiction、效力层级、生效/失效时间。
 - review status、document version、source URL。
 - 召回渠道、原始分数、融合/重排分数。
-- 证据 hash 和语料版本。
+- 证据 hash、语料版本、lexical score 和 retrieval method。
 
-答案中的结论必须能回指 Evidence ID。资源或证据失败时，不生成承诺“已为你找到”的邀请文案。
+`KnowledgeSearchResult.no_result_reason` 显式区分可信范围不匹配和 lexical 无命中；答案中的结论必须能
+回指 Evidence ID。资源或证据失败时，不生成承诺“已为你找到”的邀请文案。
 
 ## 待遇辅助测算
 

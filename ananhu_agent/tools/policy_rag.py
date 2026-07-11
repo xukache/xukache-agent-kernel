@@ -1,39 +1,26 @@
 from __future__ import annotations
 
-import json
 from pathlib import Path
 from typing import Any
 
+from ananhu_agent.infrastructure.knowledge.lexical_gateway import LexicalKnowledgeGateway
+from ananhu_agent.ports.knowledge_gateway import KnowledgeQuery
 
-def search_policy(payload: dict[str, Any]) -> dict[str, Any]:
-    """基于本地 fixture 的确定性政策检索。
 
-    MVP 阶段先用关键词和地区过滤保证可回放；后续替换为向量检索时仍保持相同输出协议。
+DEFAULT_CORPUS_PATH = Path("data/policies/policy_corpus.v1.jsonl")
+
+
+def search_policy(
+    payload: dict[str, Any],
+    *,
+    gateway: LexicalKnowledgeGateway | None = None,
+) -> dict[str, Any]:
+    """兼容旧 PolicyRAGTool 输入，同时复用 KnowledgeGateway。
+
+    现有 ToolExecutor 是同步 handler，因此这里调用同一 gateway 的同步适配；
+    Native/LangGraph 不直接依赖该函数。
     """
 
-    query = payload["query"]
-    province = payload.get("province")
-    top_k = int(payload.get("top_k", 3))
-    fixture_path = Path(payload.get("fixture_path", "data/policies/policy_fixtures.jsonl"))
-
-    rows = [
-        json.loads(line)
-        for line in fixture_path.read_text(encoding="utf-8").splitlines()
-        if line.strip()
-    ]
-    scored: list[tuple[int, dict[str, Any]]] = []
-    for row in rows:
-        region_match = row["province"] in ("全国", province, None, "")
-        keyword_score = sum(1 for keyword in row["keywords"] if keyword in query)
-        if region_match and keyword_score > 0:
-            scored.append((keyword_score, row))
-
-    documents = [
-        {
-            "id": row["id"],
-            "content": row["content"],
-            "citation": {"title": row["title"], "article": row["article"]},
-        }
-        for _, row in sorted(scored, key=lambda item: item[0], reverse=True)[:top_k]
-    ]
-    return {"documents": documents}
+    fixture_path = Path(payload.get("fixture_path", DEFAULT_CORPUS_PATH))
+    gateway = gateway or LexicalKnowledgeGateway(fixture_path)
+    return gateway.search_sync(KnowledgeQuery.from_payload(payload)).to_tool_payload()

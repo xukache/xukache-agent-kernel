@@ -38,6 +38,12 @@ def score_citations(state: WorkflowState, expected_citations: list[str]) -> bool
     )
 
 
+def score_evidence_support(evidence_ids: list[str], expected_ids: list[str]) -> bool:
+    """评估检索结果是否包含全部标注证据，供 RAG 专项 eval 使用。"""
+
+    return all(expected in evidence_ids for expected in expected_ids)
+
+
 def score_tool_success(state: WorkflowState) -> bool:
     """评估本轮实际发生的工具调用是否全部成功。"""
 
