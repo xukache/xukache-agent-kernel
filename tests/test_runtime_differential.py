@@ -93,6 +93,24 @@ def test_differential_runner_writes_dataset_artifact(tmp_path):
     assert (tmp_path / "runtime-differential.json").exists()
 
 
+def test_differential_runner_preserves_trusted_jurisdiction(tmp_path):
+    runner = _runner(tmp_path)
+    report = runner.run_cases(
+        [
+            {
+                "id": "case_1",
+                "query": "十级工伤，月工资6000，大概能赔多少钱？",
+                "trusted_jurisdiction": {"province": "四川省"},
+            }
+        ]
+    )
+
+    assert report.total == 1
+    assert report.equivalent == 1
+    native_trace = (tmp_path / "native" / "traces.jsonl").read_text(encoding="utf-8")
+    assert '"trusted_jurisdiction": {"province": "四川省"' in native_trace
+
+
 def test_trace_normalization_preserves_business_document_id(tmp_path):
     recorder = TraceRecorder(tmp_path / "traces.jsonl")
     recorder.record(

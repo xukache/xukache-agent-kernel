@@ -22,6 +22,7 @@ uv run ananhu-agent version
 uv run ananhu-agent ask "四川十级工伤，月工资6000，大概能赔多少钱？"
 uv run ananhu-agent eval data/eval/eval_cases.jsonl
 uv run ananhu-agent eval data/eval/eval_cases.jsonl --runtime both
+ANANHU_REAL_MODEL_SMOKE=1 uv run ananhu-agent eval data/eval/real_smoke_cases.jsonl --runtime both
 uv run pytest -v
 ```
 
@@ -75,6 +76,9 @@ ANANHU_REAL_MODEL_SMOKE=1 \
 ANANHU_REAL_MODEL="provider-model" \
 uv run pytest tests/test_model_gateway_contract.py -v
 ```
+
+任务 34 的真实咨询 Smoke 场景和验收记录见
+`data/eval/real_smoke_cases.jsonl` 与 `docs/evaluation/2026-07-12-real-smoke.md`。
 
 ## 项目结构
 

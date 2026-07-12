@@ -65,6 +65,15 @@ def eval_command(
 ) -> None:
     """Run local eval cases."""
     runtime_dir = Path(os.getenv("ANANHU_RUNTIME_DIR", ".ananhu-runtime"))
+    if (
+        cases.name == "real_smoke_cases.jsonl"
+        and os.getenv("ANANHU_REAL_MODEL_SMOKE") != "1"
+    ):
+        typer.echo(
+            "真实 Smoke Eval 必须显式设置 ANANHU_REAL_MODEL_SMOKE=1",
+            err=True,
+        )
+        raise typer.Exit(code=2)
     if runtime == "both":
         _run_differential_eval(cases, runtime_dir)
         return
