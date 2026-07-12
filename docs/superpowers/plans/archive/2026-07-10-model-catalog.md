@@ -775,7 +775,7 @@ git commit -m "chore(model): 增加模型目录示例配置"
 ## 任务 5：完整回归与差分验收
 
 **文件：**
-- 修改：`docs/superpowers/plans/2026-07-10-framework-neutral-langgraph-evolution.md`
+- 修改：`docs/superpowers/plans/archive/2026-07-10-framework-neutral-langgraph-evolution.md`
 
 - [ ] **步骤 1：运行模型相关测试**
 
@@ -819,7 +819,7 @@ uv run ananhu-agent eval data/eval/eval_cases.jsonl
 
 - [ ] **步骤 5：更新任务计划状态**
 
-在 `docs/superpowers/plans/2026-07-10-framework-neutral-langgraph-evolution.md` 中为任务 33 增加完成记录：
+在 `docs/superpowers/plans/archive/2026-07-10-framework-neutral-langgraph-evolution.md` 中为任务 33 增加完成记录：
 
 ```markdown
 ### 任务 33：Provider/Profile 模型目录
@@ -839,7 +839,7 @@ uv run ananhu-agent eval data/eval/eval_cases.jsonl
 运行：
 
 ```bash
-git add docs/superpowers/plans/2026-07-10-framework-neutral-langgraph-evolution.md
+git add docs/superpowers/plans/archive/2026-07-10-framework-neutral-langgraph-evolution.md
 git commit -m "docs(plan): 标记模型目录任务完成"
 ```
 

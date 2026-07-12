@@ -17,7 +17,7 @@
 | `RunSnapshot` | 目标 | 这次运行当前到哪里 |
 | `CheckpointEnvelope` | 条件目标 | 运行时如何恢复 |
 | `UsageRecord` | 当前模型字段已实现，能力字段待增强 | 消耗了哪些模型、token 和能力资源 |
-| `EvaluationArtifact` | 目标增强 | 如何复现完整评测上下文 |
+| `EvaluationArtifact` | 当前已实现 `evaluation.v1` | 如何复现完整评测上下文 |
 
 这些对象使用不同生命周期，不得用 trace 直接恢复，也不得用 checkpoint 替代审计。
 
@@ -159,6 +159,10 @@ Badcase 保存最小必要输入、关键状态版本、实际/期望结果、�
 
 每个 EvaluationArtifact 记录代码 commit、branch、数据集版本、fixture snapshot、模型配置、
 Prompt/CapabilityRegistry/语料版本、runtime 版本和每条 case 结果。Fake 与真实模型结果分开报告。
+
+`evaluation.v1` 逐 case 记录运行时、状态、停止原因、模型 profile/provider/model、检索能力和 Evidence
+ID、引用断言、安全结果、Usage、端到端延迟及失败分类。真实 Smoke 使用独立数据集和产物，不与 Fake
+离线 eval 合并通过率；provider 超时、响应格式错误和运行时异常必须落入结构化 badcase。
 
 Native 和 LangGraph Runtime 运行同一 contract/eval 集时，比较业务结果、关键状态、能力调用和项目 trace 语义，不要求框架内部事件逐字一致。
 

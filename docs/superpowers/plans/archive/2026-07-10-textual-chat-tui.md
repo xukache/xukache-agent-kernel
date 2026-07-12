@@ -893,12 +893,12 @@ input/output/reasoning 可独立展开；AI 消息末尾显示聚合 Usage；Ctr
 
 - [x] **步骤 7：更新总演进计划完成记录**
 
-在 `docs/superpowers/plans/2026-07-10-framework-neutral-langgraph-evolution.md` 新增任务 35：Textual Chat TUI，记录上述命令和结果，不覆盖既有 KnowledgeGateway 任务 33/Smoke 任务 34。
+在 `docs/superpowers/plans/archive/2026-07-10-framework-neutral-langgraph-evolution.md` 新增任务 35：Textual Chat TUI，记录上述命令和结果，不覆盖既有 KnowledgeGateway 任务 33/Smoke 任务 34。
 
 - [x] **步骤 8：Commit**
 
 ```bash
-git add tests/test_tui_app.py tests/test_tui_terminal.py tests/test_tui_security.py docs/superpowers/plans/2026-07-10-framework-neutral-langgraph-evolution.md
+git add tests/test_tui_app.py tests/test_tui_terminal.py tests/test_tui_security.py docs/superpowers/plans/archive/2026-07-10-framework-neutral-langgraph-evolution.md
 git commit -m "test(cli): 验收 Textual TUI 真实终端交互"
 ```
 

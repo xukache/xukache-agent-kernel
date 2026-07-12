@@ -41,3 +41,20 @@ def test_cli_eval_both_outputs_runtime_differential_artifact(tmp_path, monkeypat
     assert result.exit_code == 0
     assert "Runtime differential:" in result.output
     assert (tmp_path / "runtime-differential.json").exists()
+    assert (tmp_path / "evaluation.json").exists()
+
+
+def test_cli_real_smoke_requires_explicit_opt_in(tmp_path, monkeypatch):
+    monkeypatch.delenv("ANANHU_REAL_MODEL_SMOKE", raising=False)
+    monkeypatch.setenv("ANANHU_RUNTIME_DIR", str(tmp_path))
+    monkeypatch.setattr("ananhu_agent.cli.main._cli_settings", _offline_cli_settings)
+    cases = tmp_path / "real_smoke_cases.jsonl"
+    cases.write_text(
+        '{"id":"case_1","query":"劳动能力鉴定需要准备哪些材料？","expect_contains":[]}\n',
+        encoding="utf-8",
+    )
+
+    result = CliRunner().invoke(app, ["eval", str(cases)])
+
+    assert result.exit_code == 2
+    assert "ANANHU_REAL_MODEL_SMOKE=1" in result.output

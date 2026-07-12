@@ -7,7 +7,7 @@
 
 | 状态 | 计划 | 说明 |
 |---|---|---|
-| 进行中 | [`2026-07-10-framework-neutral-langgraph-evolution.md`](2026-07-10-framework-neutral-langgraph-evolution.md) | 当前唯一有效计划；任务 34“真实咨询 Smoke Eval”尚未完成 |
+| 待提交合并 | [`2026-07-10-framework-neutral-langgraph-evolution.md`](2026-07-10-framework-neutral-langgraph-evolution.md) | 任务 34 实现与真实验收已完成；提交并合并后归档 |
 
 计划中的任务只有在对应提交已经合并到 `mvp` 后才标记为 `[x]`。未完成任务不得归档。
 
