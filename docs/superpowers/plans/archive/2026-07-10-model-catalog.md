@@ -1,5 +1,11 @@
 # 多 Provider 模型目录实现计划
 
+> **执行状态（2026-07-12）：已替代，只读，不可执行。**
+>
+> 本文原计划未按复选框逐项执行；模型目录能力已由 v0.6 架构和代码事实源落地，相关提交为
+> `246f592`、`60e4066`。后续不要根据本文创建任务分支。
+> 正文中的未勾选步骤是原计划未按原路径执行的历史记录，不是当前待办。
+>
 > **面向 AI 代理的工作者：** 必需子技能：使用 superpowers:subagent-driven-development（推荐）或 superpowers:executing-plans 逐任务实现此计划。步骤使用复选框（`- [ ]`）语法来跟踪进度。
 
 **目标：** 实现 `providers + profiles` 两层模型目录，让不同 Agent/Prompt 可以通过 `model_profile` 路由到不同 OpenAI-compatible provider。

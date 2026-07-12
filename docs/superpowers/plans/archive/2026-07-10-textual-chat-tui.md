@@ -1,5 +1,10 @@
 # Textual Chat TUI 实现计划
 
+> **执行状态（2026-07-12）：已完成并合并到 `mvp`，只读，不可执行。**
+>
+> 主要验收提交：`b529dac`、`d1892fb`。
+> 正文中的复选框保留原始执行记录；当前是否可执行以本文顶部状态和计划索引为准。
+>
 > **面向 AI 代理的工作者：** 必需子技能：使用 superpowers:subagent-driven-development（推荐）或 superpowers:executing-plans 逐任务实现此计划。步骤使用复选框（`- [ ]`）语法来跟踪进度。
 
 **目标：** 用单栏 Textual TUI 直接替换 `ananhu-agent chat`，实时展示框架中立节点/模型/工具事件、可折叠输入输出、provider 显式 reasoning、`other` 兜底和本轮聚合 Usage。

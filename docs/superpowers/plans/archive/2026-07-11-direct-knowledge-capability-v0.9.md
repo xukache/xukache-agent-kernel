@@ -2,7 +2,11 @@
 
 > **面向 AI 代理的工作者：** 必需子技能：使用 `pm-workflow:subagent-driven-development`（推荐）或 `pm-workflow:executing-plans` 逐任务实现此计划。步骤使用复选框（`- [ ]`）语法来跟踪进度。
 
-> **执行状态（2026-07-11）：** 任务 1-9 的代码迁移、文档迁移、反向验证和三轮修订已完成；当前唯一未执行项是用户授权后的最终提交/合并。Native/LangGraph 复用同一 CapabilityGateway 实现和注册协议，但各自保持独立实例与幂等缓存。
+> **执行状态（2026-07-12）：已完成并合并到 `mvp`，只读，不可执行。**
+>
+> 任务 1-9 的代码迁移、文档迁移、反向验证和三轮修订已完成，最终合并提交为
+> `35d1045`。Native/LangGraph 复用同一 CapabilityGateway 实现和注册协议，但各自保持独立实例与幂等缓存。
+> 正文中的复选框保留原始执行记录；当前是否可执行以本文顶部状态和计划索引为准。
 
 **目标：** 在 v0.9 中删除 `PolicyRAGTool`、`search_policy()`、旧 `documents` 输出和 `ToolExecutor` 兼容适配，把政策检索直接改造成 `knowledge.search` 能力，同时让 Native/LangGraph 继续通过同一 CapabilityGateway 实现和注册协议执行，并保持治理、证据、trace、幂等和差分验收语义一致。
 
@@ -147,7 +151,7 @@ v0.8 的历史正文必须保持只读。它明确记录了 `PolicyRAGTool` 兼�
 
 ### 任务 1：冻结 v0.9 能力协议和旧符号删除测试
 
-**状态：已完成（代码和测试已落地，未提交）。**
+**状态：已完成（代码和测试已落地，已随 v0.9 合并提交）。**
 
 **文件：**
 - 创建：`tests/test_direct_capability_migration.py`
@@ -247,7 +251,7 @@ uv run pytest tests/test_direct_capability_migration.py -q
 
 ### 任务 2：建立显式 CapabilityRegistry，迁移治理语义
 
-**状态：已完成（代码和测试已落地，未提交）。**
+**状态：已完成（代码和测试已落地，已随 v0.9 合并提交）。**
 
 **文件：**
 - 创建：`ananhu_agent/capabilities/registry.py`
@@ -335,7 +339,7 @@ uv run pytest tests/test_capability_registry.py -q
 
 ### 任务 3：直接实现 DefaultCapabilityGateway
 
-**状态：已完成（代码和测试已落地，未提交）。**
+**状态：已完成（代码和测试已落地，已随 v0.9 合并提交）。**
 
 **文件：**
 - 创建：`ananhu_agent/capabilities/default_gateway.py`
@@ -448,7 +452,7 @@ uv run pytest tests/test_default_capability_gateway.py -v
 
 ### 任务 4：把 KnowledgeGateway 接入 `knowledge.search`
 
-**状态：已完成（代码和测试已落地，未提交）。**
+**状态：已完成（代码和测试已落地，已随 v0.9 合并提交）。**
 
 **文件：**
 - 修改：`ananhu_agent/ports/knowledge_gateway.py`
@@ -536,7 +540,7 @@ uv run pytest tests/test_knowledge_gateway_contract.py tests/test_policy_corpus_
 
 ### 任务 5：迁移 Agent、阶段服务和双运行时
 
-**状态：已完成（代码和测试已落地，未提交）。**
+**状态：已完成（代码和测试已落地，已随 v0.9 合并提交）。**
 
 **文件：**
 - 修改：`ananhu_agent/agents/policy_rag.py`
@@ -660,7 +664,7 @@ uv run pytest tests/test_business_agents.py tests/test_workflow_reducer.py tests
 
 ### 任务 6：迁移答案治理、badcase、CLI 和 TUI
 
-**状态：已完成（代码和测试已落地，未提交）。**
+**状态：已完成（代码和测试已落地，已随 v0.9 合并提交）。**
 
 **文件：**
 - 修改：`ananhu_agent/orchestrator/aggregator.py`
@@ -788,7 +792,7 @@ uv run pytest tests/test_answer_governance.py tests/test_answer_governance_exten
 
 ### 任务 7：删除旧实现、旧测试和旧静态引用
 
-**状态：已完成（代码和测试已落地，未提交）。**
+**状态：已完成（代码和测试已落地，已随 v0.9 合并提交）。**
 
 **文件：**
 - 删除：`ananhu_agent/tools/policy_rag.py`
@@ -861,7 +865,7 @@ uv run pytest -q
 
 ### 任务 8：补齐反向路径、差分验证和真实 provider 边界
 
-**状态：已完成（反向路径和离线差分已验证，未提交）。**
+**状态：已完成（反向路径和离线差分已验证，已随 v0.9 合并提交）。**
 
 **文件：**
 - 修改：`tests/test_direct_capability_migration.py`
@@ -869,7 +873,7 @@ uv run pytest -q
 - 修改：`tests/test_knowledge_gateway_contract.py`
 - 修改：`tests/runtime_contracts/test_native_runtime_contract.py`
 - 修改：`data/eval/rag_cases.jsonl` 或对应无结果 fixture（仅在现有数据不足时）
-- 修改：`docs/superpowers/plans/2026-07-11-direct-knowledge-capability-v0.9.md`
+- 修改：`docs/superpowers/plans/archive/2026-07-11-direct-knowledge-capability-v0.9.md`
 
 - [x] **步骤 1：补齐负向测试。**
 
@@ -939,7 +943,7 @@ RAG 指标不低于 v0.8 baseline；差分不允许出现 capability 名称、�
 
 ### 任务 9：发布 v0.9 架构版本并同步事实源
 
-**状态：已完成（当前事实源已同步，未提交）。**
+**状态：已完成（当前事实源已同步，已随 v0.9 合并提交）。**
 
 **文件：**
 - 创建：`docs/architecture/versions/v0.9-direct-knowledge-capability.md`
@@ -1269,7 +1273,7 @@ VERDICT:
 计划完成并保存到：
 
 ```text
-docs/superpowers/plans/2026-07-11-direct-knowledge-capability-v0.9.md
+docs/superpowers/plans/archive/2026-07-11-direct-knowledge-capability-v0.9.md
 ```
 
 本计划阶段只创建任务分支和计划文档，不提交、不推送、不合并；实现分支完成后仍按项目规范等待用户确认，再执行 commit 和合并。

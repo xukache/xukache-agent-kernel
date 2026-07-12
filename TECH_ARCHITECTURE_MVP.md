@@ -13,7 +13,7 @@
 | 基线 | v0.8 KnowledgeGateway policy baseline |
 | 技术路线 | 框架中立业务内核 + 双运行时 + CapabilityGateway + KnowledgeGateway lexical baseline |
 | 完整正文 | `docs/architecture/versions/v0.9-direct-knowledge-capability.md` |
-| 演进计划 | `docs/superpowers/plans/2026-07-11-direct-knowledge-capability-v0.9.md` |
+| 演进计划 | `docs/superpowers/plans/README.md` |
 
 ## 版本索引
 
