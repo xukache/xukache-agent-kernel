@@ -2,7 +2,7 @@
 
 > 状态：模块 1 已确认；整体设计仍按模块逐项确认。
 >
-> 分支：`mvp-agent-kernel-rebuild-task-36`
+> 架构主分支：`architecture`
 >
 > 基线：新 Kernel 重构起点
 

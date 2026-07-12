@@ -38,7 +38,7 @@ Runtime
 
 ## 分支规则
 
-- 当前任务分支：`mvp-agent-kernel-rebuild-task-36`。
+- 当前架构主分支：`architecture`。
 - 新任务从当前重构分支创建。
 - 未经用户明确确认，不合并或推送到 `mvp`、`main` 或其他分支。
 
