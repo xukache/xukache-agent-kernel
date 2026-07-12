@@ -4,20 +4,20 @@
 >
 > 分支：`mvp-agent-kernel-rebuild-task-36`
 >
-> 基线：`mvp` / v0.9
+> 基线：新 Kernel 重构起点
 
 ## 目标
 
-重建一个简洁、通用、可组合的 Agent Kernel。第一阶段只稳定通用内核，不迁移现有工伤业务逻辑，也不保留旧业务协议兼容层。
+从空白起点建立一个简洁、通用、可组合的 Agent Kernel。第一阶段只稳定通用内核，不引入业务、不兼容旧项目、不迁移旧代码。
 
 ## 已确认原则
 
 1. 通用内核与业务应用完全分离。
 2. 核心只保留少量稳定原语，不为每个阶段、能力或状态再创造一套平行名词。
 3. Agent、Workflow、Tool、Memory、Model、Runtime 是第一阶段的核心原语。
-4. 工伤认定、政策检索、待遇测算、jurisdiction、Evidence 等全部属于后续业务层。
-5. 旧 `AgentContext`、`CapabilityCall`、`CapabilityGateway`、`StageService` 等概念不得原样迁移为新的核心抽象。
-6. LangGraph 只能作为 Runtime Adapter，不能进入核心协议。
+4. 工伤认定、政策检索、待遇测算等全部属于后续业务层。
+5. 旧项目的代码、文档、计划和协议不作为新 Kernel 的设计来源。
+6. 任何第三方运行时只能作为 Runtime Adapter，不能进入核心协议。
 
 ## 核心原语
 
@@ -67,21 +67,21 @@ ananhu_agent/
   interfaces/
 ```
 
-`applications/` 第一阶段保持为空，不提前放入工伤领域模块。
+`applications/` 第一阶段保持为空，不提前放入业务模块。
 
 ## 核心禁止项
 
 `core/` 不得依赖：
 
-- 工伤业务词汇。
-- 政策、赔偿、地区和 Evidence 类型。
-- LangGraph、Provider SDK、CLI 或 Textual。
-- 当前项目的 `schemas.py` 聚合协议。
-- 具体 JSONL、HTTP 或模型供应商实现。
+- 任何具体业务词汇。
+- 任何具体 Provider SDK 或运行时框架。
+- CLI、TUI、HTTP 等接口实现。
+- 旧项目的聚合协议和数据模型。
+- 具体存储格式或模型供应商实现。
 
 ## 模块 1 验收标准
 
 - 可以只阅读 `core/` 解释 Agent Kernel，不需要了解工伤业务。
-- 核心原语之间只有明确依赖，不出现 AgentContext、CapabilityCall、StageService 等平行核心概念。
+- 核心原语之间只有明确依赖，不出现无法归属的平行核心概念。
 - 后续业务应用只能通过组合 Agent、Workflow、Tool、Memory 和 Model 接入。
 - Runtime Adapter 可以替换，不改变核心原语的公共协议。
