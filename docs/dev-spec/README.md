@@ -17,8 +17,8 @@ docs/dev-spec/versions/
 
 ```text
 docs/dev-spec/versions/
-  v0.5-agent-kernel.md
-  v0.6-work-injury-application.md
+  v0.4-clean-kernel-baseline.md
+  v0.15-kernel-design-baseline.md
 ```
 
 ## 什么时候新增版本文档
@@ -32,6 +32,8 @@ docs/dev-spec/versions/
 - 新增会影响测试、迁移或兼容性的功能。
 
 只修改错别字、链接或不改变语义的表达时，直接更新 `DEV_SPEC.md` 即可。
+
+同一设计或架构里程碑内的多个模块确认，合并记录在一份版本增量文档中，不为每个模块单独创建版本。只有形成新的独立变更基线时，才递增版本号。
 
 ## 版本文档要求
 
@@ -72,4 +74,11 @@ docs/superpowers/plans/
 
 ## 当前版本
 
-当前开发规格版本为 `v0.4`，处于新 Kernel 重构起点，尚未建立新的架构版本。下一份版本增量文档应在第一个经过确认的 Kernel 版本或架构版本建立时创建。
+当前开发规格版本为 `v0.15`，六个 Core 原语、Execution、支撑协议、Applications 和 Interfaces 边界均已确认，已完成一次对抗性完整规格审查修订，待用户审查。当前尚未建立新的架构版本；架构版本应在第一条 Kernel 纵向切片和 Contract Tests 通过后创建。
+
+## 版本索引
+
+| 版本 | 主题 | 状态 |
+|---|---|---|
+| `v0.4` | 全新 Kernel 清理与重构基线 | 已归档基线 |
+| `v0.15` | Core、Execution、支撑协议、Application 和 Interface 的完整设计基线 | 待用户审查 |
