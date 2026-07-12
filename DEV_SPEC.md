@@ -1543,8 +1543,8 @@ RuntimeResult != AgentResult != WorkflowResult != ToolResult
 
 | ID | 任务 | 状态 | 主要出口 |
 |---|---|---|---|
-| A1 | 完成开发规格逐章确认 | [~] | 第 1-10 章一致 |
-| A2 | 确认公共类型表达策略 | [ ] | Python 类型与序列化规则 |
+| A1 | 完成开发规格逐章确认 | [x] | 第 1-7 章一致 |
+| A2 | 确认公共类型表达策略 | [~] | Python 类型与序列化规则 |
 | A3 | 确认物理目录与公开导入路径 | [ ] | 可实施目录设计 |
 | A4 | 建立 uv、pytest 与 Architecture Test 基座 | [ ] | 可运行工程 |
 | A5 | 建立真实对话证据基座 | [ ] | RD 执行和证据入口 |
@@ -1630,7 +1630,7 @@ RuntimeResult != AgentResult != WorkflowResult != ToolResult
 
 | 阶段 | 总任务 | 已完成 | 进行中 | 进度 |
 |---|---:|---:|---:|---:|
-| A | 5 | 0 | 1 | 0% |
+| A | 5 | 1 | 1 | 20% |
 | B | 6 | 0 | 0 | 0% |
 | C | 5 | 0 | 0 | 0% |
 | D | 6 | 0 | 0 | 0% |
@@ -1638,7 +1638,7 @@ RuntimeResult != AgentResult != WorkflowResult != ToolResult
 | F | 8 | 0 | 0 | 0% |
 | G | 6 | 0 | 0 | 0% |
 | H | 5 | 0 | 0 | 0% |
-| **总计** | **47** | **0** | **1** | **0%** |
+| **总计** | **47** | **1** | **1** | **2%** |
 
 只有 `[x]` 计入完成进度；`[~]`、`[!]` 和测试状态 `BLOCKED`、`NOT RUN` 均不计入。
 
@@ -1651,9 +1651,10 @@ RuntimeResult != AgentResult != WorkflowResult != ToolResult
 ##### A1：完成开发规格逐章确认
 
 - 学习问题：完整规格如何避免模块设计、测试和排期互相冲突。
-- 前置依赖：第 1-6 章已确认。
-- 交付：第 1-10 章完整审查结果和当前事实源。
+- 前置依赖：第 1-7 章已确认。
+- 交付：第 1-7 章完整审查结果和当前事实源。
 - 验收：章节职责不重叠，版本、索引、链接和门禁一致。
+- 证据：[`A1 规格确认与实现准入记录`](docs/superpowers/specs/2026-07-13-agent-kernel-implementation-admission-a1.md)。
 - 关联：[`docs/superpowers/specs/README.md`](docs/superpowers/specs/README.md) 中的实现准入门禁 1-6。
 
 ##### A2：确认公共类型表达策略

@@ -15,6 +15,8 @@
 | 系统架构表达与第五章 | 已确认 | [`2026-07-12-agent-kernel-system-architecture-presentation-design.md`](2026-07-12-agent-kernel-system-architecture-presentation-design.md) |
 | 学习实施路线与第六章 | 已确认 | [`2026-07-12-agent-kernel-learning-roadmap-design.md`](2026-07-12-agent-kernel-learning-roadmap-design.md) |
 | 完整 Agent 系统演进路线与第七章 | 已确认 | [`2026-07-13-agent-system-evolution-roadmap-design.md`](2026-07-13-agent-system-evolution-roadmap-design.md) |
+| A1 开发规格确认与实现准入 | 已完成 | [`2026-07-13-agent-kernel-implementation-admission-a1.md`](2026-07-13-agent-kernel-implementation-admission-a1.md) |
+| A2 公共类型表达策略 | 进行中 | 待逐项确认 |
 
 ## 模块确认记录模板
 
