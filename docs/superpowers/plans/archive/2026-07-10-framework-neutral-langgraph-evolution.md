@@ -289,7 +289,7 @@ provider 声明的环境变量名解析，不进入 profile、trace、fixture �
 
 **验收标准：** 模型提及地区不能改变可信范围；证据可追溯；无结果不编造；两个 runtime 复用同一 gateway。
 
-### - [ ] 任务 34：运行真实咨询 Smoke Eval
+### - [x] 任务 34：运行真实咨询 Smoke Eval
 
 **目标：** 组合真实 ModelGateway 和 KnowledgeGateway，验证最小咨询链路并暴露真实失败。
 
