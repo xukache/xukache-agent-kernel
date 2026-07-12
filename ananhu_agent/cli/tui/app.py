@@ -11,7 +11,8 @@ from textual.app import App, ComposeResult
 from textual.binding import Binding
 from textual.containers import VerticalScroll
 from textual.css.query import NoMatches
-from textual.widgets import Footer, Header, Markdown, Static, TextArea
+from textual.widgets import Footer, Header, Markdown, OptionList, Static, TextArea
+from textual.widgets.option_list import Option
 
 from ananhu_agent.cli.main import _run_request
 from ananhu_agent.cli.tui.modals import FeedbackModal, InformationModal
@@ -34,14 +35,42 @@ from ananhu_agent.storage.runtime_stores import BadcaseStore, TraceRecorder
 from ananhu_agent.workflow.contracts import RunStatus, StopReason, WorkflowResult, WorkflowRuntime
 
 
+CHAT_COMMANDS = (
+    ("/help", "查看命令说明"),
+    ("/new", "开始新的咨询会话"),
+    ("/context", "查看当前上下文摘要"),
+    ("/trace", "查看最近 trace 路径"),
+    ("/badcase", "记录 badcase 候选"),
+    ("/feedback bad", "提交负向反馈"),
+    ("/feedback good", "提交正向反馈"),
+    ("/exit", "退出会话"),
+)
+
+
 class ChatInput(TextArea):
-    """输入框在本地消费 Enter，避免 TextArea 抢占后应用收不到发送动作。"""
+    """输入框处理发送、命令候选导航和多行输入。"""
 
     def on_key(self, event) -> None:
         if event.key == "enter":
             event.prevent_default()
             event.stop()
-            self.app.send_message()
+            self.app.submit_input()
+        elif event.key == "escape" and self.app.command_palette_visible:
+            event.prevent_default()
+            event.stop()
+            self.app.hide_command_palette()
+        elif event.key == "up" and self.app.command_palette_visible:
+            event.prevent_default()
+            event.stop()
+            self.app.query_one("#command-palette", OptionList).action_cursor_up()
+        elif event.key == "down" and self.app.command_palette_visible:
+            event.prevent_default()
+            event.stop()
+            self.app.query_one("#command-palette", OptionList).action_cursor_down()
+        elif event.key == "tab" and self.app.command_palette_visible:
+            event.prevent_default()
+            event.stop()
+            self.app.complete_selected_command()
         elif event.key in {"shift+enter", "ctrl+j"}:
             event.prevent_default()
             event.stop()
@@ -85,6 +114,7 @@ class AnanhuChatApp(App[None]):
         self._turns: dict[str, TurnWidget] = {}
         self._turn_widget_count = 0
         self._terminal_barriers: dict[str, asyncio.Event] = {}
+        self._conversation_history: list[dict[str, int | str]] = []
 
     def _create_runtime(self, runtime_factory: Callable[..., WorkflowRuntime]) -> WorkflowRuntime:
         """默认组合根同时保留业务 trace 和 UI 消费的实时队列。"""
@@ -106,6 +136,7 @@ class AnanhuChatApp(App[None]):
         yield Header(id="header")
         yield VerticalScroll(id="conversation")
         yield ChatInput(id="chat-input", placeholder="输入工伤咨询问题")
+        yield OptionList(id="command-palette", markup=False)
         yield Static("就绪", id="chat-status")
         yield Footer(id="footer")
 
@@ -114,6 +145,88 @@ class AnanhuChatApp(App[None]):
         queue = getattr(self.runtime, "events", self._event_queue)
         self._consumer_task = asyncio.create_task(self._consume_events(queue))
         self.input_area.focus()
+
+    def on_text_area_changed(self, event: TextArea.Changed) -> None:
+        if event.text_area is self.input_area:
+            self._refresh_command_palette()
+
+    @property
+    def command_palette_visible(self) -> bool:
+        try:
+            return bool(self.query_one("#command-palette", OptionList).display)
+        except NoMatches:
+            return False
+
+    def _refresh_command_palette(self) -> None:
+        query = self.input_area.text.strip().lower()
+        palette = self.query_one("#command-palette", OptionList)
+        if not query.startswith("/"):
+            self.hide_command_palette()
+            return
+
+        matches = [
+            (command, description)
+            for command, description in CHAT_COMMANDS
+            if command.startswith(query)
+        ]
+        palette.set_options(
+            Option(f"{command}  {description}", id=command)
+            for command, description in matches
+        )
+        palette.display = bool(matches)
+        palette.highlighted = 0 if matches else None
+
+    def hide_command_palette(self) -> None:
+        try:
+            palette = self.query_one("#command-palette", OptionList)
+        except NoMatches:
+            return
+        palette.display = False
+        palette.clear_options()
+        palette.highlighted = None
+
+    def complete_selected_command(self) -> None:
+        palette = self.query_one("#command-palette", OptionList)
+        option = palette.highlighted_option
+        if option is None or option.id is None:
+            return
+        self.input_area.text = option.id
+        self.input_area.focus()
+
+    def submit_input(self) -> None:
+        query = self.input_area.text.strip()
+        if not query:
+            return
+        if query.startswith("/"):
+            if self._execute_command(query):
+                self.input_area.clear()
+                self.hide_command_palette()
+            else:
+                self.query_one("#chat-status", Static).update(
+                    f"未识别命令：{query}，输入 / 查看可用命令"
+                )
+            return
+        self.send_message()
+
+    def _execute_command(self, query: str) -> bool:
+        command = " ".join(query.lower().split())
+        if command == "/help":
+            self.action_help()
+        elif command == "/new":
+            self.action_new_session()
+        elif command == "/context":
+            self.action_context()
+        elif command == "/trace":
+            self.action_trace()
+        elif command in {"/badcase", "/feedback", "/feedback bad"}:
+            self.action_feedback()
+        elif command == "/feedback good":
+            self.query_one("#chat-status", Static).update("已收到正向反馈")
+        elif command == "/exit":
+            self.exit(return_code=0)
+        else:
+            return False
+        return True
 
     async def on_unmount(self) -> None:
         for task in (self._running_task, self._consumer_task):
@@ -148,7 +261,9 @@ class AnanhuChatApp(App[None]):
         try:
             result = await self.runtime.invoke(request)
             self.latest_result = result
-            await turn.query_one("#assistant-message", Markdown).update(visible_result_message(result))
+            answer = visible_result_message(result)
+            self._record_conversation_turn(request.turn_id, request.user_query, answer)
+            await turn.query_one("#assistant-message", Markdown).update(answer)
             turn.set_usage_line(format_usage_line_from_events(self._events.get(request.run_id, [])))
             if (
                 not self._events.get(request.run_id)
@@ -174,6 +289,20 @@ class AnanhuChatApp(App[None]):
                     self.input_area.focus()
                 except NoMatches:
                     pass
+
+    def _record_conversation_turn(self, turn_id: int, query: str, answer: str) -> None:
+        """记录当前 TUI session 的展示摘要，不修改 Runtime 会话协议。"""
+
+        self._conversation_history = [
+            item for item in self._conversation_history
+            if item["turn_id"] != turn_id
+        ]
+        self._conversation_history.append({
+            "turn_id": turn_id,
+            "user_query": query,
+            "assistant_answer": answer,
+        })
+        self._conversation_history.sort(key=lambda item: int(item["turn_id"]))
 
     async def _consume_events(self, queue: asyncio.Queue) -> None:
         while True:
@@ -214,6 +343,7 @@ class AnanhuChatApp(App[None]):
         self.turn_id = 0
         self.latest_result = None
         self.latest_request = None
+        self._conversation_history = []
         self.action_clear()
 
     def action_clear(self) -> None:
@@ -246,7 +376,11 @@ class AnanhuChatApp(App[None]):
         self.exit(return_code=0)
 
     def action_help(self) -> None:
-        self.push_screen(InformationModal("帮助", "Enter 发送；Shift+Enter 或 Ctrl+J 换行。"))
+        self.push_screen(InformationModal(
+            "帮助",
+            "Enter 发送；Shift+Enter 或 Ctrl+J 换行。\n"
+            "输入 / 显示命令；上下键选择，Tab 补全，Esc 收起候选。",
+        ))
 
     def action_context(self) -> None:
         if self.latest_result is None:
@@ -256,6 +390,7 @@ class AnanhuChatApp(App[None]):
             content = json.dumps({
                 "session_id": self.latest_result.session_id,
                 "phase": state.phase.value if state else None,
+                "history": self._conversation_history,
                 "case_facts": state.case_facts if state else {},
             }, ensure_ascii=False, indent=2)
         self.push_screen(InformationModal("上下文", content))

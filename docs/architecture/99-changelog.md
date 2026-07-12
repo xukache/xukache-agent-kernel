@@ -13,6 +13,9 @@
   `CapabilityResult.output["evidences"]` 进入 WorkflowState 和最终答案。
 - Native/LangGraph 继续复用同一阶段服务、能力协议、reducer 和评测数据；离线差分结果为 30/30
   equivalent、0 different。
+- 后续 TUI 修订保持 v0.9 架构边界不变：新增 slash command 候选面板，修正多轮 TurnWidget
+  的内容高度和详情按钮收起路径，并让 `/context` 展示当前进程内的已完成轮次摘要；这些内容只属于
+  CLI 展示层，不改变 Runtime memory、可信 jurisdiction 或 Prompt 输入协议。
 
 ## v0.8 - 2026-07-11
 

@@ -24,6 +24,20 @@ class RunSpinner(LoadingIndicator):
 class TurnWidget(Vertical):
     """单轮会话按用户、检查器、答复和 usage 的稳定顺序组合。"""
 
+    DEFAULT_CSS = """
+    TurnWidget {
+        width: 1fr;
+        height: auto;
+        overflow: hidden hidden;
+    }
+    TurnWidget > #inspector-toggle {
+        width: 3;
+        height: 1;
+        min-width: 3;
+        padding: 0;
+    }
+    """
+
     def __init__(
         self,
         user_message: str,
@@ -68,7 +82,10 @@ class TurnWidget(Vertical):
         self.inspector_collapsed = True
         try:
             self.query_one("#run-inspector", RunInspector).display = False
-            self.query_one("#inspector-toggle", Button).display = True
+            button = self.query_one("#inspector-toggle", Button)
+            button.display = True
+            button.label = "+"
+            button.tooltip = "展开运行详情"
         except NoMatches:
             return
 
@@ -77,7 +94,10 @@ class TurnWidget(Vertical):
         self.inspector_collapsed = False
         try:
             self.query_one("#run-inspector", RunInspector).display = True
-            self.query_one("#inspector-toggle", Button).display = False
+            button = self.query_one("#inspector-toggle", Button)
+            button.display = True
+            button.label = "-"
+            button.tooltip = "收起运行详情"
         except NoMatches:
             return
 
@@ -104,4 +124,7 @@ class TurnWidget(Vertical):
 
     def on_button_pressed(self, event: Button.Pressed) -> None:
         if event.button.id == "inspector-toggle":
-            self.expand_inspector()
+            if self.inspector_collapsed:
+                self.expand_inspector()
+            else:
+                self.collapse_inspector(force=True)

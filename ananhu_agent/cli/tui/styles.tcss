@@ -8,6 +8,13 @@ Screen {
     height: 3;
 }
 
+#command-palette {
+    display: none;
+    height: auto;
+    max-height: 8;
+    border: round $panel;
+}
+
 #chat-status {
     height: 1;
 }

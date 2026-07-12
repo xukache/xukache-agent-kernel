@@ -256,21 +256,25 @@ AI 消息完整输出后显示本轮所有模型调用的聚合数据：
 - TUI 启动配置错误时显示全宽脱敏错误面板，只允许退出；首版不支持配置热重载。
 - `chat` 在非 TTY 或 `TERM=dumb` 下以退出码 2 明确报错，不回退旧逐行模式。
 
-## 9. 旧 Chat 能力迁移
+## 9. Chat 命令与能力迁移
 
-旧逐行交互不保留，但已有业务能力迁移为 TUI action/modal：
+旧逐行 shell 交互循环不保留，但已有业务能力迁移为 TUI action/modal，并在输入框保留
+轻量 slash command 候选面板：
 
 | 旧命令 | TUI 行为 |
 |---|---|
-| `/help` | `F1` 打开快捷键帮助 |
-| `/new` | `Ctrl+N` 新会话 |
-| `/context` | `F2` 打开当前会话上下文摘要 |
-| `/trace` | 执行树常驻；`F3` 显示 trace 文件和关联 ID |
-| `/badcase` | `F4` 打开 badcase 表单 |
-| `/feedback good|bad` | 回答操作栏的反馈按钮/快捷键打开确认或 badcase 表单 |
+| `/help` | 输入 `/` 后候选；`F1` 打开帮助 |
+| `/new` | 输入 `/` 后候选；`Ctrl+N` 新会话 |
+| `/context` | 输入 `/` 后候选；`F2` 打开当前 session 上下文和已完成轮次摘要 |
+| `/trace` | 输入 `/` 后候选；执行树常驻，`F3` 显示 trace 文件和关联 ID |
+| `/badcase` | 输入 `/` 后候选；`F4` 打开反馈/badcase 表单 |
+| `/feedback good|bad` | 输入 `/` 后候选；反馈按钮/快捷键打开确认或 badcase 表单 |
+| `/exit` | 输入 `/` 后候选；退出 chat |
 
-`Ctrl+N` 重置 session 和 turn；`Ctrl+L` 只清空屏幕，不修改 session、turn 或持久化数据；重试保留
-request ID 并更换 run ID。现有会话复用、turn 递增、feedback 和 badcase 语义必须迁移到 Pilot 测试。
+输入 `/` 后上下键只移动候选，`Tab` 将候选补全到输入框，`Enter` 提交当前输入，`Esc` 收起候选。
+`Ctrl+N` 和 `/new` 重置 session 和 turn；`Ctrl+L` 只清空屏幕，不修改 session、turn 或持久化数据；
+`F2`/`/context` 的历史摘要只存在当前 TUI 进程内，不改变 Runtime memory 协议；重试保留 request ID
+并更换 run ID。现有会话复用、turn 递增、feedback、badcase 和命令面板语义必须迁移到 Pilot 测试。
 
 ## 10. 组件边界
 

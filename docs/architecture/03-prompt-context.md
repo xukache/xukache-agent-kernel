@@ -109,3 +109,15 @@ provider 显式返回的 `reasoning_content` 不属于 Prompt、上下文、记�
 WorkflowState、TaskState、RunReport、SessionState、trace、badcase、eval 和 differential artifact 不得
 保存、解析或依赖 reasoning 原文；新会话、清屏和退出时释放内存。该变化不改变 Prompt eval 口径，
 但必须增加 reasoning 持久化零命中与 secret canary 测试。
+
+## TUI 会话上下文查看
+
+`F2` 或 `/context` 是展示层检查器，不是新的 Runtime memory 来源，也不改变
+`WorkflowState`、`SessionState` 或 Prompt 输入。它显示两部分：
+
+- 当前轮 `case_facts` 和阶段。
+- 当前 `chat` 进程内已完成轮次的用户问题与可见回答摘要。
+
+展示历史按 `turn_id` 去重，重试同一轮不会制造重复记录。`Ctrl+L` 只清屏，不清除当前
+session 的展示历史；`Ctrl+N`、`/new` 和重启 `chat` 会创建新的 session。TUI 展示历史只存在
+当前进程内，不替代 `SessionStateStore`、`TaskStateStore` 或业务 trace 的持久化职责。

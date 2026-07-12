@@ -342,6 +342,71 @@ async def test_manual_expansion_survives_normal_completion(tmp_path):
 
 
 @pytest.mark.asyncio
+async def test_completed_turns_keep_content_height_in_tall_terminal(tmp_path):
+    from ananhu_agent.cli.tui.app import AnanhuChatApp
+
+    runtime = BarrierRuntime()
+    app = AnanhuChatApp(runtime_factory=lambda _: runtime, runtime_dir=tmp_path)
+    async with app.run_test(size=(100, 50)) as pilot:
+        for query in ("第一轮", "第二轮", "第三轮"):
+            await pilot.press(*query, "enter")
+            await pilot.pause()
+            runtime.release.set()
+            await app._running_task
+            await pilot.pause()
+
+        turns = list(app.query("TurnWidget"))
+        assert len(turns) == 3
+        assert max(turn.region.height for turn in turns) <= 10
+
+
+@pytest.mark.asyncio
+async def test_slash_opens_command_palette_and_help_is_local(tmp_path):
+    from ananhu_agent.cli.tui.app import AnanhuChatApp
+
+    runtime = BarrierRuntime()
+    app = AnanhuChatApp(runtime_factory=lambda _: runtime, runtime_dir=tmp_path)
+    async with app.run_test() as pilot:
+        await pilot.press("/")
+        await pilot.pause()
+
+        palette = app.query_one("#command-palette")
+        assert palette.display is True
+        assert palette.option_count >= 5
+
+        await pilot.press("h", "e", "l", "p", "enter")
+        await pilot.pause()
+
+        assert runtime.requests == []
+        assert app.screen.__class__.__name__.endswith("Modal")
+        assert "帮助" in str(app.screen.query_one(".modal-title").render())
+
+
+@pytest.mark.asyncio
+async def test_inspector_toggle_can_expand_and_collapse(tmp_path):
+    from ananhu_agent.cli.tui.app import AnanhuChatApp
+
+    runtime = BarrierRuntime()
+    app = AnanhuChatApp(runtime_factory=lambda _: runtime, runtime_dir=tmp_path)
+    async with app.run_test() as pilot:
+        await pilot.press("h", "i", "enter")
+        await pilot.pause()
+        turn = app.query_one("#turn-1")
+        runtime.release.set()
+        await pilot.pause()
+        await pilot.pause()
+
+        await pilot.click("#inspector-toggle")
+        assert turn.inspector_collapsed is False
+        assert str(turn.query_one("#inspector-toggle").label) == "-"
+
+        turn.query_one("#inspector-toggle").press()
+        await pilot.pause()
+        assert turn.inspector_collapsed is True
+        assert str(turn.query_one("#inspector-toggle").label) == "+"
+
+
+@pytest.mark.asyncio
 async def test_failed_path_forces_expansion_over_manual_collapse(tmp_path):
     from ananhu_agent.cli.tui.app import AnanhuChatApp
 
@@ -481,6 +546,30 @@ async def test_help_context_trace_and_feedback_modals_open_and_close(tmp_path):
             await pilot.press("escape")
             await pilot.pause()
             assert not app.screen.__class__.__name__.endswith("Modal")
+
+
+@pytest.mark.asyncio
+async def test_context_modal_shows_all_completed_turns(tmp_path):
+    from ananhu_agent.cli.tui.app import AnanhuChatApp
+
+    runtime = BarrierRuntime()
+    app = AnanhuChatApp(runtime_factory=lambda _: runtime, runtime_dir=tmp_path)
+    async with app.run_test() as pilot:
+        for query in ("第一轮问题", "第二轮问题"):
+            await pilot.press(*query, "enter")
+            await pilot.pause()
+            runtime.release.set()
+            await app._running_task
+            await pilot.pause()
+
+        await pilot.press("f2")
+        await pilot.pause()
+        content = str(app.screen.query_one("#modal-information").render())
+
+        assert '"history"' in content
+        assert "第一轮问题" in content
+        assert "第二轮问题" in content
+        assert '"case_facts"' in content
 
 
 @pytest.mark.asyncio

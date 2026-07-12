@@ -44,6 +44,15 @@ uv run ananhu-agent eval data/eval/eval_cases.jsonl --runtime both
 uv run ananhu-agent version
 ```
 
+### Chat 交互
+
+- 输入 `/` 打开命令候选列表。
+- 上下键移动候选，`Tab` 补全到输入框，`Enter` 提交当前输入，`Esc` 收起候选。
+- `F1` 帮助、`F2` 上下文、`F3` trace、`F4` 反馈。
+- `Ctrl+N` 新会话、`Ctrl+L` 清屏、`Ctrl+R` 重试、`Ctrl+C` 取消或退出。
+- `/context` 显示当前 session 的当前事实和本次 chat 进程内已完成轮次摘要。
+- `/new` 会重置 session；重启 `chat` 也会创建新的 session。
+
 运行证据默认写入 `.ananhu-runtime/`，包括 trace、运行报告和 badcase 记录。双运行时差分额外写入 `runtime-differential.json`。
 
 ## 真实模型配置
