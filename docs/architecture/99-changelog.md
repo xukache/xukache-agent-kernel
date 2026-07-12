@@ -14,6 +14,7 @@
 | 2026-07-11 | v0.9 | 后续 TUI 修订保持 v0.9 架构边界不变：新增 slash command 候选面板，修正多轮 TurnWidget 的内容高度和详情按钮收起路径，并让 `/context` 展示当前进程内的已完成轮次摘要；这些内容只属于 CLI 展示层，不改变 Runtime memory、可信 jurisdiction 或 Prompt 输入协议。 |
 | 2026-07-12 | v0.9 | 归档已完成的 CLI MVP、Textual Chat TUI、KnowledgeGateway 和 v0.9 直接能力计划；模型目录计划标记为已替代。后续执行入口统一为 `docs/superpowers/plans/README.md`，当前仅保留任务 34“真实咨询 Smoke Eval”作为未完成计划。 |
 | 2026-07-12 | v0.9 | 任务 34 已完成真实咨询 Smoke Eval 验收准备：新增 8 条真实场景、`evaluation.v1` 逐 case 产物和 provider 失败分类；Native/LangGraph 均完成执行，但严格差分为 0/8 equivalent。待提交合并后归档计划，不将结果描述为生产质量。 |
+| 2026-07-12 | v0.9 | 任务 34 已提交并合并到 `mvp`；真实 Smoke 评测计划已勾选并归档为只读，后续计划入口恢复为空。 |
 | 2026-07-11 | v0.8 | 新增框架中立 `KnowledgeGateway`、`KnowledgeQuery`、`KnowledgeSearchResult` 和 `EvidenceItem`。 |
 | 2026-07-11 | v0.8 | 建立 `policy-corpus.v1` 政策基线，包含 tenant、jurisdiction、有效期、审核状态、受众、来源类型、文档版本、来源 URL、证据 hash 和语料版本。 |
 | 2026-07-11 | v0.8 | `LexicalKnowledgeGateway` 在 lexical 召回前执行可信元数据过滤；暂不引入向量库、fusion 或 reranker。 |

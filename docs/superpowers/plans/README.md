@@ -7,7 +7,7 @@
 
 | 状态 | 计划 | 说明 |
 |---|---|---|
-| 待提交合并 | [`2026-07-10-framework-neutral-langgraph-evolution.md`](2026-07-10-framework-neutral-langgraph-evolution.md) | 任务 34 实现与真实验收已完成；提交并合并后归档 |
+| 暂无 | - | 当前计划已完成；后续开发需创建新的版本化计划 |
 
 计划中的任务只有在对应提交已经合并到 `mvp` 后才标记为 `[x]`。未完成任务不得归档。
 
@@ -19,6 +19,7 @@
 | 已完成，只读 | [`2026-07-10-textual-chat-tui.md`](archive/2026-07-10-textual-chat-tui.md) | Textual Chat TUI 已验收并合并 |
 | 已完成，只读 | [`2026-07-11-knowledge-gateway-policy-baseline.md`](archive/2026-07-11-knowledge-gateway-policy-baseline.md) | KnowledgeGateway 与政策基线已合并 |
 | 已完成，只读 | [`2026-07-11-direct-knowledge-capability-v0.9.md`](archive/2026-07-11-direct-knowledge-capability-v0.9.md) | v0.9 直接能力改造已合并 |
+| 已完成，只读 | [`2026-07-10-framework-neutral-langgraph-evolution.md`](archive/2026-07-10-framework-neutral-langgraph-evolution.md) | 任务 34 真实咨询 Smoke Eval 已合并 |
 
 ## 已被替代
 

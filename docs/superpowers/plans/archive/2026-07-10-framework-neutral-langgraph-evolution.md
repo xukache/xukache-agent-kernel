@@ -1,10 +1,10 @@
 # 框架中立 LangGraph 演进计划
 
-> **执行状态（2026-07-12）：任务 34 的实现与真实验收已完成，待提交并合并到 `mvp`。**
+> **执行状态（2026-07-12）：任务 34 的实现与真实验收已完成，并已合并到 `mvp`。**
 >
 > 任务 34 已使用真实 OpenAI-compatible provider 执行 8 条 Smoke 场景；Native/LangGraph
 > 均生成 `evaluation.v1` 和 badcase 产物。结果见 `docs/evaluation/2026-07-12-real-smoke.md`。
-> 本次严格差分为 0/8 equivalent，不能将结果描述为生产质量。合并后再将本文归档为只读。
+> 本次严格差分为 0/8 equivalent，不能将结果描述为生产质量。本文现归档为只读。
 >
 > **面向 AI 代理的工作者：** 使用 `superpowers:subagent-driven-development` 或 `superpowers:executing-plans` 逐任务执行。每个任务必须从 `mvp` 创建独立分支，完成后等待用户确认，再提交并合并。
 
@@ -55,7 +55,7 @@
 - [x] 任务 31：双运行时差分验收
 - [x] 任务 32：接入真实 ModelGateway
 - [x] 任务 33：建立真实 KnowledgeGateway 与政策基线
-- [ ] 任务 34：运行真实咨询 Smoke Eval（实现与验收完成，待提交合并）
+- [x] 任务 34：运行真实咨询 Smoke Eval
 - [x] 任务 35：验收 Textual Chat TUI（v0.7）
 
 状态维护规则：任务提交并合并到 `mvp` 后，在下一次文档同步中同时更新本看板、对应正文标题和架构 changelog。
@@ -303,7 +303,7 @@ provider 声明的环境变量名解析，不进入 profile、trace、fixture �
 
 **验收标准：** 两个 runtime 使用相同真实能力；指标按机制分层；失败可定位；不把 smoke 结果描述为生产质量。
 
-**事实源状态：** 已执行 8 条真实场景，待提交并合并后勾选。Native/LangGraph 均使用相同 provider、profile 和
+**事实源状态：** 已执行 8 条真实场景并合并到 `mvp`。Native/LangGraph 均使用相同 provider、profile 和
 KnowledgeGateway；安全通过率均为 100%，答案关键片段通过率均为 7/8。一个复合场景发生
 `timeout_error`，已写入分类 badcase。严格差分为 0/8 equivalent，真实模型非确定性差异已记录，
 不作为生产质量结论。
