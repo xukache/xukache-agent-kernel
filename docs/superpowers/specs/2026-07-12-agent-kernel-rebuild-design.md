@@ -1,12 +1,12 @@
 # Agent Kernel 重构设计记录
 
-> 状态：六个 Core 原语、Execution 执行层、支撑协议、Applications 和 Interfaces 已确认；进入完整规格审查。
+> 状态：六个 Core 原语、Execution 执行层、支撑协议、Applications 和 Interfaces 已确认；全章已按参考规格细化，进入 v0.16 规格审查。
 >
 > 架构主分支：`architecture`
 >
 > 基线：新 Kernel 重构起点
 
-本记录对应当前完整规格 `DEV_SPEC v0.15`。本轮对抗性审查已完成修订，当前仍待用户审查，不代表已经进入代码实现。
+本记录对应当前完整规格 `DEV_SPEC v0.16`。第 1-10 章的结构和内容已完成细化，当前仍待用户审查，不代表已经进入代码实现。
 
 ## 目标
 
@@ -235,3 +235,30 @@ Interface 负责输入转换、Application 调用、事件转发、结果序列�
 Interface 不负责 Agent、Workflow、Tool、Memory、Model 或业务规则。
 Interface 不能绕过 Application 直接拼装 Kernel。
 ```
+
+## 全章规格结构修订记录
+
+本次修订将实现路径收敛为：
+
+```text
+Core 协议
+  -> 真实 Model Smoke
+  -> 真实 Agent 闭环
+  -> Runtime / Execution / Workflow 控制
+  -> Contract / Integration / Architecture Tests
+  -> 第一个架构版本
+  -> 业务 Application
+  -> Interface
+```
+
+关键调整：
+
+- 第 1 章增加项目目标、非目标、完成定义和设计原则。
+- 第 2 章增加能力验收视图和关键取舍。
+- 第 3 章按 Runtime、Adapter、Execution、配置、观测和真实模型拆分技术选型。
+- 第 4 章按 TDD、Unit、Contract、Architecture、Integration、Real Model、E2E、Eval 和 CI/CD 拆分测试。
+- 第 5 章按架构图、目录、Core 模块、执行流程、配置、扩展和纵向切片展开。
+- 第 6 章按排期原则、阶段总览、A-H 进度跟踪和门禁展开。
+- 第 7 章补充 Application、Provider、Interface、Observability、Evals 和生产化演进路径。
+- 第 8-10 章补充模块确认模板、实现准入、阅读顺序和版本索引。
+- 第一条纵向切片继续使用 `tests/integration/real_model_fixture`，真实 Model Smoke 前置，真实 Agent 闭环通过前不建立业务 Application。

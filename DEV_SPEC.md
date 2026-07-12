@@ -1,6 +1,6 @@
 # Agent Kernel Developer Specification
 
-> 版本：0.15 — Agent Kernel 完整设计规格基线
+> 版本：0.16 — Agent Kernel 执行链路与实现排期基线
 >
 > 状态：设计完成，待用户审查；当前分支不继承旧项目事实源
 >
@@ -44,11 +44,19 @@ Kernel 只提供 Agent 应用需要的稳定能力和执行边界，不包含工
 
 ### 1.3 设计理念
 
-#### 核心优先
+#### 1.3.1 核心优先 (Core First)
 
 先稳定通用 Agent 能力，再建立业务应用。第一阶段不迁移旧工伤业务，也不保留旧业务协议兼容层。
 
-#### 少量原语
+实施判断标准：
+
+| 判断问题 | 必须满足的结果 |
+|---|---|
+| 能否脱离业务解释？ | 可以只阅读 Kernel 说明该能力 |
+| 能否替换实现？ | 替换 Provider、存储或运行时不改业务协议 |
+| 能否独立验收？ | 有独立输入、输出、错误和测试证据 |
+
+#### 1.3.2 少量原语 (Minimal Primitives)
 
 核心只保留六个原语：
 
@@ -63,13 +71,61 @@ Runtime
 
 其他内容只能作为支撑协议或实现细节存在，不能继续扩张成一套平行的核心名词体系。
 
-#### 组合优于继承
+新增名词前必须回答：
+
+1. 该职责是否已经由六个 Core 原语表达。
+2. 该名称是否只是实现细节或测试概念。
+3. 新名称是否会改变依赖方向或状态边界。
+
+无法证明必要性时，不新增。
+
+#### 1.3.3 组合优于继承 (Composition over Inheritance)
 
 Agent 组合 Model、Tool 和 Memory；Workflow 组合 Agent、Tool 和步骤；Application 组合 Kernel 能力完成业务。
 
-#### 依赖方向单一
+组合规则：
+
+```text
+Application = 业务配置 + Kernel 原语组合
+Workflow = Agent / Tool / Function Step 组合
+Agent = Instructions + Model + Tool + Memory 组合
+```
+
+业务不通过继承修改 Kernel 行为。
+
+#### 1.3.4 依赖方向单一 (One-Way Dependency)
 
 Kernel 不依赖业务。业务、接口和适配器依赖 Kernel 的公开协议。
+
+禁止方向：
+
+```text
+Kernel -X-> Application
+Kernel -X-> Interface
+Kernel -X-> Provider SDK
+Core -X-> 具体存储
+```
+
+#### 1.3.5 真实效果优先 (Real-Model Validation)
+
+模型相关验收必须通过真实 Model Provider：
+
+- 不使用模拟模型、固定文本替身或静默降级。
+- 真实模型调用记录模型标识、usage、延迟、事件和错误。
+- 真实模型不可用时测试失败或阻塞，不伪造通过。
+
+#### 1.3.6 文档即工程契约 (Specification as Contract)
+
+每个设计决策必须同时说明：
+
+```text
+目标
+边界
+输入 / 输出
+错误
+验证方法
+后续扩展
+```
 
 ### 1.4 当前范围
 
@@ -90,6 +146,28 @@ Kernel 不依赖业务。业务、接口和适配器依赖 Kernel 的公开协�
 - 具体模型供应商和 Prompt 内容。
 - CLI、TUI、HTTP API 的具体实现。
 - 具体代码目录内部实现。
+
+#### 1.4.1 当前交付目标
+
+本阶段完成后必须得到：
+
+| 目标 | 可观察结果 |
+|---|---|
+| Kernel 可运行 | 真实 Model、Agent、Tool、Memory、Runtime 闭环可执行 |
+| Kernel 可替换 | Model、Memory、Tool、Runtime Adapter 可替换 |
+| Kernel 可解释 | Events、Result、usage 和错误可追踪 |
+| Kernel 可测试 | Contract、Integration、Architecture Tests 可重复执行 |
+| Kernel 可扩展 | 业务只通过 Application 组合，不修改 Core |
+
+#### 1.4.2 明确非目标
+
+以下内容不属于当前 Kernel 基线：
+
+- 工伤业务规则和业务数据模型。
+- RAG、MCP、向量数据库和知识库实现。
+- 生产级多租户、分布式调度和远程 Runtime。
+- 完整 CLI、TUI、HTTP 或 Web Dashboard。
+- 以“多 Agent 数量”作为展示目标。
 
 ### 1.5 新项目清理策略
 
@@ -113,6 +191,16 @@ Kernel
   -> 被不同 Interface 调用
   -> 被不同 Adapter 承载
 ```
+
+#### 1.6.1 第一阶段完成定义
+
+第一阶段不是“代码目录创建完成”，而是以下证据全部存在：
+
+1. 真实 Model Smoke 通过。
+2. Agent 真实闭环通过。
+3. Tool Call、Memory、Streaming、Cancellation 有可观察证据。
+4. Workflow 顺序、分支、暂停恢复和幂等测试通过。
+5. Core 依赖检查通过。
 
 ---
 
@@ -532,134 +620,461 @@ Interface 不能绕过 Application 直接拼接 Agent、Tool 或 Model。
 
 这些能力必须有明确的归属和非目标，不能因为暂未实现而继续悬空，也不能为了对齐参考项目而提前进入 Kernel。
 
+### 2.17 核心能力验收视图
+
+| 能力主题 | 核心问题 | 第一阶段证据 |
+|---|---|---|
+| 智能执行 | Agent 能否使用真实 Model 完成任务？ | K-001、K-002 |
+| 流程控制 | Workflow 能否稳定推进、暂停和恢复？ | K-004、K-005 |
+| 外部动作 | Tool 是否结构化、可校验、可取消和可幂等？ | K-003 |
+| 上下文 | Memory 是否跨运行保存且作用域隔离？ | K-006 |
+| 运行治理 | Runtime 是否正确处理事件、取消和流式？ | K-008 |
+| 架构边界 | Core 是否不依赖外部层？ | K-009 |
+| 端到端效果 | 真实模型闭环是否可复核？ | K-010 |
+
+### 2.18 设计取舍
+
+本项目明确选择：
+
+| 选择 | 原因 |
+|---|---|
+| 真实 Model 优先 | 只有真实调用才能验证 Agent、Tool Call 和输出结构 |
+| In-memory Memory 起步 | 缩小第一条切片范围，不冻结生产存储 |
+| 无副作用 Tool 起步 | 验证 Tool 协议、权限和错误，不引入业务外部系统 |
+| Runtime 先单进程 | 先验证生命周期语义，再考虑远程或分布式 |
+| Application 延后 | 防止业务需求反向污染 Kernel |
+| 事件而非日志拼接 | 让 Streaming、Trace、Eval 和 Interface 共用运行证据 |
+
 ---
 
 ## 3. 技术选型
 
-### 3.1 选型原则
+### 3.1 技术选型原则
 
 技术选型服从 Kernel 边界，而不是反过来让某个框架决定 Kernel：
 
-- Python 3.11。
-- 使用 `uv` 管理环境、依赖和命令。
-- 使用异步边界承载模型、工具、记忆和运行时调用。
-- 优先选择轻量、可替换、易测试的实现。
-- 不在 Kernel 公共协议中暴露第三方 SDK 类型。
+| 原则 | 具体要求 |
+|---|---|
+| 运行环境 | Python 3.11，使用 `uv` 管理环境、依赖和命令 |
+| 异步边界 | Model、Tool、Memory、Runtime 的外部调用保留异步能力 |
+| 供应商隔离 | Provider SDK 只能存在于 Adapter |
+| 先小后大 | 单进程、内存存储和一个真实 Model 先验证语义 |
+| 可测试 | 每个协议有结构化输入、输出、错误和验收证据 |
+| 可替换 | 替换实现不改变 Core 公共语义 |
 
-### 3.2 Kernel 与 Adapter
+### 3.2 Kernel Runtime 设计
 
-Kernel 只定义稳定协议，Adapter 负责连接具体技术：
+#### 3.2.1 Agent 调用协议
+
+Agent 不直接依赖 Provider，而是构造统一的 `ModelRequest`：
+
+```text
+ModelRequest
+  -> instructions
+  -> input
+  -> context
+  -> memory_items
+  -> tool_schemas
+  -> output_schema
+  -> runtime_metadata
+```
+
+Model Adapter 返回统一的 `ModelResponse`：
+
+```text
+ModelResponse
+  -> text / structured_output
+  -> tool_calls
+  -> usage
+  -> finish_reason
+  -> provider_metadata
+  -> error
+```
+
+Provider 具体字段只能进入 `provider_metadata` 或 Adapter 内部，不能进入 Agent、Workflow 或 Application 公共协议。
+
+#### 3.2.2 Workflow 状态协议
+
+Workflow 状态只服务流程恢复：
+
+```text
+WorkflowState
+  -> workflow_id
+  -> run_id
+  -> current_step
+  -> completed_steps
+  -> step_results
+  -> branch_values
+  -> pause_reason
+  -> resume_token
+```
+
+状态规则：
+
+- 已完成步骤必须可识别。
+- 有副作用的步骤必须有幂等键。
+- 暂停恢复不能依赖 Memory 或 Trace 反推当前步骤。
+- 业务事实通过 Application 数据模型传递，不写入 Core Workflow State。
+
+### 3.3 Adapter 与具体实现
+
+Kernel 只定义协议，Adapter 负责连接具体技术：
 
 ```text
 Kernel Protocol
   -> Model Adapter
   -> Memory Adapter
-  -> Runtime Adapter
   -> Tool Adapter
+  -> Runtime Adapter
 ```
 
-Adapter 可以替换具体库、服务或存储，但不能把供应商概念泄漏到 Kernel。
+#### 3.3.1 Model Provider Adapter
 
-### 3.3 Runtime 选择
+第一条切片接入真实模型：
 
-Runtime 的具体实现暂按以下顺序处理：
+| 配置 | 当前值 |
+|---|---|
+| 模型选择 | `ANANHU_REAL_MODEL` |
+| 当前模型 | `doubao-seed-2-0-mini-260428` |
+| Smoke 开关 | `ANANHU_REAL_MODEL_SMOKE` |
+| 替换边界 | `Model Protocol` |
 
-先实现一个最小 Runtime 验证 Kernel 语义，再通过 Adapter 接入其他工作流运行时。任何具体运行时都不能进入 Agent、Tool、Workflow、Memory 或 Model 的公共协议。
+Adapter 必须负责：
 
-### 3.4 暂不提前决定的内容
+- Provider 认证和请求格式转换。
+- 超时、错误和 usage 归一化。
+- Tool Schema 和结构化输出转换。
+- 流式增量转换为 Kernel Events。
+- 记录模型标识和 Provider 元信息。
 
-在模块逐项确认前，不提前冻结：
+#### 3.3.2 Memory Adapter
 
-- 生产环境的 Model Provider 组合和多 Provider 路由策略；第一条纵向切片使用当前真实模型配置。
-- 具体 Memory 存储。
-- 具体 Tool 注册方式。
-- 具体 Workflow 编排库。
-- 具体 Trace 存储。
-- 具体 CLI、TUI 或 HTTP 框架。
+第一条切片采用 In-memory Adapter：
 
-### 3.5 第一条纵向切片的实现基线
+| 操作 | 要求 |
+|---|---|
+| `read` | 按 scope 读取上下文 |
+| `write` | 写入带来源和时间的记忆项 |
+| `search` | 在同一 scope 内查询相关项 |
+| 隔离 | 不同 session / user / application scope 不串数据 |
+| 替换 | 不改变 Agent 对 Memory Protocol 的调用 |
 
-为了让规格可以直接驱动第一轮实现，第一条纵向切片固定采用最小实现：
+#### 3.3.3 Tool Adapter
+
+第一条切片采用一个无副作用结构化 Tool，验证：
+
+```text
+输入 Schema
+  -> 权限检查
+  -> 执行
+  -> 输出 Schema
+  -> 错误和幂等证据
+```
+
+Tool Adapter 不处理自然语言，不决定 Workflow 路由，不读取 Provider SDK 配置。
+
+#### 3.3.4 Runtime Adapter
+
+第一条切片采用单进程本地 Runtime：
+
+- 保存 Run 生命周期状态。
+- 依次发出 started、step、tool、stream、completed / failed / cancelled Events。
+- 支持取消和最小暂停恢复。
+- 不暴露具体工作流库类型。
+
+### 3.4 Execution 执行支撑
+
+#### 3.4.1 Context
+
+Context 只表示当前运行：
+
+```text
+run_id
+parent_run_id
+input
+metadata
+deadline
+cancellation
+```
+
+Context 不替代 Memory、Workflow State、Trace 或业务数据。
+
+#### 3.4.2 Retry 与幂等
+
+Retry 只适用于明确可重试的临时错误：
+
+| 错误 | 默认策略 |
+|---|---|
+| Provider 临时网络错误 | 有上限重试 |
+| Provider 限流 | 按错误信息和退避策略重试 |
+| Tool 超时 | 只有 Tool 声明幂等时重试 |
+| Schema / 权限错误 | 不重试 |
+| 取消错误 | 不重试 |
+
+每次重试必须记录 attempt、原因、延迟和最终结果。
+
+#### 3.4.3 Cancellation、Streaming 和 Hooks
+
+- Cancellation 向 Model、Tool、Memory 和 Workflow 传播。
+- Streaming 只发送增量事件，不修改最终结果语义。
+- Hooks 只观察或扩展生命周期，不接管 Core 职责。
+- Guardrails 在输入、Model 输出和 Tool 调用前后执行。
+
+### 3.5 配置管理与切换流程
+
+配置由外层读取、校验和注入：
+
+```text
+环境变量 / 配置文件
+  -> Adapter Config
+  -> Schema 校验
+  -> 创建 Model / Memory / Tool / Runtime Adapter
+  -> 注入 Application 或测试 Fixture
+```
+
+当前最小配置：
+
+```text
+ANANHU_REAL_MODEL=doubao-seed-2-0-mini-260428
+ANANHU_REAL_MODEL_SMOKE=0|1
+```
+
+切换流程：
+
+1. 修改模型标识或 Adapter 配置。
+2. 校验凭证、依赖和网络。
+3. 开启真实 Smoke。
+4. 记录模型标识、usage、延迟和错误。
+5. 通过后再进入 Agent Integration。
+
+### 3.6 可观测性与评估接入
+
+第一阶段不建立 Dashboard，但必须保留运行证据：
+
+```text
+Runtime
+  -> Events Collector
+      -> run_id
+      -> event_type
+      -> timestamp
+      -> component
+      -> provider / method
+      -> duration
+      -> usage
+      -> error
+```
+
+Evals 在 Application 之前只验证 Kernel 契约和真实纵向切片；业务质量评估在 Application 建立后独立维护。
+
+### 3.7 第一条纵向切片技术基线
 
 | 能力 | 第一阶段选择 | 替换边界 |
 |---|---|---|
-| Model | 真实 Model Provider Adapter；通过 `ANANHU_REAL_MODEL` 选择，当前配置为 `doubao-seed-2-0-mini-260428` | Model Protocol |
+| Model | 真实 Model Provider Adapter | Model Protocol |
 | Memory | In-memory Adapter | Memory Protocol |
-| Tool | 一个无副作用结构化 Tool | Tool Protocol |
+| Tool | 无副作用结构化 Tool | Tool Protocol |
 | Runtime | 单进程本地 Runtime | Runtime Protocol |
 | Interface | 程序化测试入口 | Interface Protocol |
-| Observability | 内存事件收集器 | Events / Trace Adapter |
+| Observability | 内存 Events Collector | Events / Trace Adapter |
 
-真实模型是第一条纵向切片的必选依赖；`In-memory Memory` 和无副作用 Tool 只用于缩小验证范围，不代表模型调用可以被模拟。Provider 仍通过 Adapter 接入，不进入 Kernel 公共协议。
-
-### 3.6 真实模型测试规则
-
-- 真实模型测试必须实际发起 Provider 调用，不允许模拟模型、固定文本替身或静默降级。
-- `ANANHU_REAL_MODEL` 固定本轮测试使用的模型标识，运行结果必须记录模型标识、usage、延迟、请求结果和错误分类。
-- `ANANHU_REAL_MODEL_SMOKE=1` 才允许执行需要网络和凭证的真实模型 Smoke / Integration 测试；未开启时测试必须明确报告未执行原因。
-- 凭证、Provider 配置或网络不可用时，真实模型测试必须失败或标记为阻塞，不能改用模拟模型伪造通过。
-- 断言优先检查结构化结果、Tool Call、事件顺序、usage、错误语义和取消传播，不对自然语言具体措辞做脆弱的全文匹配。
-- 真实模型测试使用固定、低成本、可重复的输入，并设置超时、重试上限和费用边界。
+真实模型是必选依赖；其他最小实现只用于缩小系统范围，不模拟模型行为。
 
 ---
 
 ## 4. 测试方案
 
-### 4.1 测试目标
+### 4.1 测试理念：测试驱动开发 (TDD)
 
-测试首先证明 Kernel 的语义稳定，再证明不同 Adapter 能够实现相同语义，最后才验证业务应用是否正确组合 Kernel。
+测试不是实现完成后的附加步骤，而是每个 Core 协议的行为说明：
 
-### 4.2 Kernel 单元测试
+- 先写输入、输出、错误和边界测试，再实现最小代码。
+- 单元测试保持快速，真实模型测试单独标记并记录成本。
+- 测试失败必须暴露真实错误，不通过替代输出掩盖失败。
+- 每个任务必须关联至少一个验收 ID 和一个可复核证据。
 
-分别验证：
-
-```text
-Agent
-Workflow
-Tool
-Memory
-Model
-Runtime
-```
-
-Kernel 纯协议和边界测试不得依赖工伤业务或具体界面；Agent、Model、Tool Call、Streaming 和第一条纵向切片必须通过真实 Model Adapter 做集成验收，不允许用模拟模型替代。
-
-### 4.3 Adapter Contract Test
-
-所有 Adapter 通过同一份 Kernel contract：
+测试金字塔：
 
 ```text
-不同 Model Adapter
-不同 Memory Adapter
-不同 Runtime Adapter
-不同 Tool Backend
+             E2E / Application
+          Real Model Integration
+       Contract / Architecture Tests
+             Unit Tests
 ```
 
-Contract Test 关注行为一致性，不关注内部实现方式。
+### 4.2 测试分层策略
 
-### 4.4 组合测试
+#### 4.2.1 Core 单元测试 (Unit Tests)
 
-验证 Kernel 原语组合后的基本语义：
+目标：验证不依赖业务、Provider 和外部界面的确定性逻辑。
 
-- Agent 调用 Model、Tool 和 Memory。
-- Workflow 调度 Agent、Tool 和步骤。
-- Runtime 执行、暂停、恢复、取消和失败。
-- 运行结果和运行过程保持可追踪。
+| 模块 | 测试重点 | 典型用例 |
+|---|---|---|
+| Agent | 请求组装、结果解析、Tool Call 状态 | 缺少输入、非法 Tool Call、结构化结果 |
+| Workflow | 顺序、分支、暂停位置、幂等键 | 分支选择、重复恢复、错误终止 |
+| Tool | Schema、权限、超时、错误映射 | 缺字段、权限拒绝、取消传播 |
+| Memory | scope、读写、搜索、序列化 | 同 scope 可读、跨 scope 隔离 |
+| Model | Request / Response Schema | Tool Call 解析、usage 归一化、错误转换 |
+| Runtime | 生命周期、事件顺序、只结束一次 | complete、failed、cancelled、resume |
 
-### 4.5 架构测试
+Core 单元测试不得依赖工伤业务、具体界面或 Provider SDK。
 
-自动检查以下约束：
+#### 4.2.2 Adapter Contract Tests
 
-- `core/` 不导入 `applications/`。
-- `core/` 不导入具体工作流运行时。
-- `core/` 不导入具体 Provider SDK。
-- `core/` 不导入 CLI、TUI 或 HTTP 框架。
+所有 Adapter 必须通过同一份公开协议合同：
+
+| Adapter | 必须证明 |
+|---|---|
+| Model Adapter | 请求、结构化输出、Tool Call、usage 和错误语义稳定 |
+| Memory Adapter | read / write / search、scope 隔离和序列化稳定 |
+| Tool Adapter | 输入校验、输出 Schema、超时、取消和幂等稳定 |
+| Runtime Adapter | 生命周期、事件顺序、暂停恢复和取消稳定 |
+
+合同测试不验证内部实现，只验证公开行为。
+
+#### 4.2.3 Architecture Tests
+
+自动检查：
+
+- `agent_kernel/` 不导入 `applications/`、`interfaces/`。
+- Core 不导入具体 Provider SDK、数据库驱动或工作流框架。
+- Adapter 只能实现 Kernel Protocol，不能把实现类型泄漏到 Core。
 - Application 只能依赖 Kernel 公开协议。
-- 旧聚合协议不成为新 Kernel 的共享入口。
+- `tests/integration/real_model_fixture/` 不得被 Core 反向导入。
+- 旧项目协议不成为新 Kernel 的共享入口。
 
-### 4.6 业务验收
+#### 4.2.4 Kernel Integration Tests
 
-业务 Eval 在 `applications/` 建立后单独维护，不反向污染 Kernel 测试。
+目标：验证多个 Core 协同后的运行链路：
+
+| 场景 | 操作 | 预期结果 |
+|---|---|---|
+| Agent + Memory | 写入记忆后执行 Agent | Agent 读取到同 scope 上下文 |
+| Agent + Tool | Model 返回 Tool Call | Tool 执行后结果回到 Model |
+| Runtime + Agent | 启动并完成一次 Run | 结果和 Events 一致 |
+| Workflow + Agent | 执行多个步骤 | 顺序、分支和结果正确 |
+| Cancellation | 运行中主动取消 | 下游收到取消且只结束一次 |
+
+#### 4.2.5 真实模型 Smoke / Integration
+
+目标：验证真实效果，不验证固定文本：
+
+1. 校验 `ANANHU_REAL_MODEL` 和 Provider 凭证。
+2. 使用固定、低成本、可重复输入。
+3. 真实发送 Model Request。
+4. 验证结构化输出、usage、Tool Call 或错误。
+5. 验证 Events 顺序、延迟和取消传播。
+6. 保存模型标识、请求摘要、结果摘要和错误证据。
+
+约束：
+
+- `ANANHU_REAL_MODEL_SMOKE=1` 才执行网络测试。
+- 未开启时必须明确显示“未执行”，不能显示“通过”。
+- Provider 不可用时必须失败或阻塞，不使用模拟输出。
+- 不对自然语言全文做脆弱匹配，优先断言 Schema、状态和事件。
+
+#### 4.2.6 End-to-End Tests
+
+第一阶段只覆盖 Kernel 端到端场景：
+
+**场景 1：真实 Agent 闭环**
+
+- 启动程序化测试入口。
+- 加载真实 Model Adapter、In-memory Memory 和无副作用 Tool。
+- 发送固定输入。
+- 验证 Model -> Tool -> Memory -> Result 的完整链路。
+
+**场景 2：Workflow 暂停恢复**
+
+- 执行到明确暂停点。
+- 保存 Workflow State。
+- 恢复 Run。
+- 验证已完成副作用步骤不重复。
+
+**场景 3：运行取消和流式**
+
+- 启动一个可观察的长运行。
+- 接收增量 Events。
+- 发送取消。
+- 验证下游终止、事件顺序和最终状态。
+
+业务 Application、CLI、HTTP 和 Dashboard 的 E2E 在后续阶段独立维护。
+
+### 4.3 Kernel 质量评估
+
+质量评估不以主观“看起来能跑”为准，至少记录：
+
+| 评估维度 | 指标或证据 |
+|---|---|
+| 协议稳定性 | Contract Tests 通过率 |
+| 真实模型效果 | 结构化结果成功率、Tool Call 成功率 |
+| 运行可靠性 | 取消成功率、只结束一次、错误分类 |
+| 上下文正确性 | Memory scope 隔离、恢复位置正确 |
+| 可观测性 | Events 完整率、usage 和延迟记录完整率 |
+| 回归情况 | Golden Inputs 的结果结构和关键状态无回归 |
+
+业务质量指标在 Application 建立后增加，不把业务指标硬编码进 Kernel。
+
+### 4.4 性能与压力测试（可选）
+
+当前项目是单进程 Kernel 验证阶段，性能测试不是发布门禁，但保留基准入口：
+
+| 测试类型 | 验证点 | 工具或方法 | 优先级 |
+|---|---|---|---|
+| Model 延迟 | Provider P50 / P95 | Events 时间戳 | 中 |
+| Runtime 开销 | 非 Model 部分耗时 | 本地 benchmark | 中 |
+| Memory 性能 | read / write / search 延迟 | pytest benchmark | 低 |
+| 并发取消 | 多 Run 取消传播 | asyncio 场景测试 | 低 |
+| 长运行内存 | Events 和 Context 是否泄漏 | memory profiler | 低 |
+
+性能数据不能替代正确性测试。
+
+### 4.5 测试工具链与 CI/CD
+
+本地测试命令统一通过 `uv`：
+
+```bash
+uv run pytest -q tests/contract tests/architecture
+uv run pytest -q tests/integration
+ANANHU_REAL_MODEL_SMOKE=1 uv run pytest -q tests/integration/real_model_fixture
+```
+
+CI 分层：
+
+1. 每次提交：文档检查、静态检查、Unit、Contract、Architecture Tests。
+2. 具备凭证的受控环境：Real Model Smoke / Integration。
+3. 合并前：完整 Kernel Integration 和 E2E。
+4. 定期任务：真实模型成本、延迟和 Golden Input 回归。
+
+真实模型凭证不能写入仓库；CI 没有凭证时只能报告“未执行”，不能标记真实模型验收通过。
+
+### 4.6 测试失败处理和证据
+
+每次失败至少记录：
+
+```text
+test_id
+run_id
+model_id
+provider
+input_summary
+expected
+actual
+events
+usage
+latency
+error_type
+retry_count
+```
+
+失败分类：
+
+| 类别 | 处理 |
+|---|---|
+| 协议失败 | 阻塞合并，先修复契约 |
+| 架构依赖失败 | 阻塞实现，先修复边界 |
+| 真实模型配置失败 | 标记阻塞，不改用替代模型 |
+| Provider 临时失败 | 按 Retry 规则重试，记录最终结果 |
+| 断言失败 | 生成 badcase，保留输入和运行证据 |
 
 ### 4.7 Kernel 验收矩阵
 
@@ -682,156 +1097,327 @@ Contract Test 关注行为一致性，不关注内部实现方式。
 
 ## 5. 系统架构与模块设计
 
-### 5.1 总体分层
+### 5.1 整体架构图
+
+系统由外到内分为 Interface、Application、Runtime、Execution、Core 和 Adapter。配置链路与执行链路必须分开：
 
 ```text
-Interface
-  -> Application
-      -> Workflow
-          -> Agent
-              -> Model
-              -> Tool
-              -> Memory
-      -> Runtime
+┌──────────────────────────────────────────────────────────────┐
+│ Interface / Programmatic Test Entry                         │
+│ 输入转换、事件转发、结果序列化、错误映射                      │
+└──────────────────────────────┬───────────────────────────────┘
+                               │
+┌──────────────────────────────▼───────────────────────────────┐
+│ Application / Test Fixture                                  │
+│ 组装 Agent、Workflow、Tool、Memory、Model，不实现 Runtime     │
+└──────────────────────────────┬───────────────────────────────┘
+                               │
+┌──────────────────────────────▼───────────────────────────────┐
+│ Runtime                                                      │
+│ 创建 Run，协调 Execution，执行 Agent 或 Workflow              │
+└──────────────────────────────┬───────────────────────────────┘
+                               │
+┌──────────────────────────────▼───────────────────────────────┐
+│ Execution                                                    │
+│ Context、Hooks、Guardrails、Retry、Cancellation、Streaming    │
+└───────────────┬──────────────────┬───────────────────────────┘
+                │                  │
+       ┌────────▼────────┐ ┌───────▼────────┐
+       │ Agent / Workflow│ │ Events / Result│
+       └───┬─────┬───────┘ └────────────────┘
+           │     │
+     ┌─────▼─┐ ┌─▼────┐ ┌────────┐
+     │ Model │ │ Tool │ │ Memory │
+     └───────┘ └──────┘ └────────┘
 
-Adapter
-  -> 实现 Kernel 协议
+Adapter 只实现上述协议，Provider、存储和运行时框架不能进入 Core。
 ```
 
-依赖方向保持为：
+依赖方向固定为：
 
 ```text
-Interface / Application / Adapter
-  -> Kernel
+Interface -> Application / Test Fixture -> Kernel
+Adapter -> Kernel Protocol
+Runtime -> Execution -> Agent / Workflow -> Model / Tool / Memory
 ```
 
-Kernel 不反向依赖上层。
+### 5.2 目录结构与交付清单
 
-### 5.2 目标目录
-
-目录只表达层次，不提前表达业务名词：
+目录结构必须能直接对应实施任务：
 
 ```text
 src/
   agent_kernel/
-    core/
-      agent/
-      workflow/
-      tool/
-      memory/
-      model/
-      runtime/
-    adapters/
-      model/
-      memory/
-      runtime/
-      tool/
-  applications/
-  interfaces/
+    agent/
+    workflow/
+    tool/
+    memory/
+    model/
+    runtime/
+  adapters/
+    model/
+    memory/
+    tool/
+    runtime/
+applications/
+interfaces/
+tests/
+  contract/
+  integration/
+    real_model_fixture/
+  architecture/
 ```
 
-后续是否拆分更多文件，必须以职责边界为依据，不以“看起来完整”为依据。
+目录职责：
 
-### 5.3 模块设计方式
+| 目录 | 责任 | 当前阶段 |
+|---|---|---|
+| `src/agent_kernel/` | 六个 Core 的公开协议和实现 | 第一阶段建立 |
+| `src/adapters/` | 真实 Model、Memory、Tool、Runtime 的具体接入 | 第一阶段建立最小实现 |
+| `applications/` | 具体业务组合 | Kernel 验收前保持为空 |
+| `interfaces/` | CLI、SDK、HTTP 等外部入口 | Application 稳定后接入 |
+| `tests/contract/` | 协议和依赖方向测试 | 与 Core 同步建立 |
+| `tests/integration/real_model_fixture/` | 真实模型闭环测试 | 第一条纵向切片 |
+| `tests/architecture/` | 防止 Core 依赖外层 | K-01 建立 |
 
-六个 Core 原语按以下字段确认：
+`Context`、`Hooks`、`Guardrails`、`Retry`、`Cancellation` 和 `Streaming` 是 Runtime 的执行支撑，不各自建立新的 Core 目录。
 
-1. 模块目标。
-2. 核心职责。
-3. 非职责。
-4. 最小公开契约。
-5. 依赖关系和生命周期。
-6. 可替换点和错误边界。
-7. 测试和验收标准。
-8. 用户确认记录。
+### 5.3 Core 模块设计
 
-Execution、支撑协议、Applications 和 Interfaces 使用层级说明，不强行套用 Core 原语模板。
+每个 Core 模块按“目标、输入、输出、执行步骤、边界、错误和验收”描述，避免只写抽象名词。
 
-只有完成确认并关联验收 ID 的内容，才允许进入实现计划。
+#### 5.3.1 Agent
 
-### 5.4 模块确认顺序
+目标：使用 Instructions、Model、Tool 和 Memory 完成一个明确的智能任务。
+
+输入：
 
 ```text
-Execution
-  -> 已确认运行层边界
-Agent
-  -> 已确认智能执行单元边界
-Tool
-  -> 已确认结构化外部动作边界
-Workflow
-  -> 已确认流程组合边界
-Memory
-  -> 已确认跨运行上下文边界
-Model
-  -> 已确认 Provider 无关模型调用边界
-Runtime
-  -> 已确认运行生命周期边界
-支撑协议
-  -> 已确认 Context / Events / Errors / Core Result 边界
-Applications
-  -> 已确认业务组合边界
-Interfaces
-  -> 已确认接口边界
+AgentInput
+  -> task_input
+  -> instructions_version
+  -> Model
+  -> allowed Tools
+  -> Memory scope
+  -> Execution Context
 ```
 
-支撑协议只能服务六个原语，不能再次形成新的核心层。
+执行步骤：
 
-### 5.5 运行链路说明方式
+1. 读取当前运行需要的 Memory。
+2. 组装最终 Model Request。
+3. 调用真实 Model Adapter。
+4. 如果返回 Tool Call，经过 Execution 校验后执行 Tool。
+5. 将 Tool Result 回传 Model，直到得到最终结果或达到运行上限。
+6. 返回结构化 Agent Result。
 
-后续每个模块都必须同时说明两条链路：
-
-#### 配置链路
+输出：
 
 ```text
-Application
-  -> 组装 Agent / Workflow / Tool / Memory / Model
-  -> 交给 Runtime
+AgentResult
+  -> output
+  -> tool_calls
+  -> usage
+  -> stop_reason
+  -> error
 ```
 
-#### 执行链路
+边界：
+
+- Agent 不负责 Workflow 顺序、Runtime 生命周期、Provider SDK、Tool 后端或 Memory 存储。
+- Agent 不直接拼接业务流程，只使用 Application 提供的 Instructions 和输入。
+- Agent 必须保持单次运行无共享可变状态。
+
+验收：K-001、K-002、K-007。
+
+#### 5.3.2 Workflow
+
+目标：以确定性步骤组合 Agent、Tool 和函数步骤。
+
+输入：
 
 ```text
-Interface
-  -> Runtime
-  -> Workflow 或 Agent
-  -> Model / Tool / Memory
-  -> 结构化结果
+WorkflowInput
+  -> workflow_id
+  -> steps
+  -> initial_input
+  -> workflow_state
 ```
 
-这样文档既能说明“系统由什么组成”，也能说明“请求实际如何运行”。
+步骤类型：
 
-### 5.6 当前禁止提前创建的概念
+| 步骤 | 作用 |
+|---|---|
+| Agent Step | 调用一个 Agent 完成智能任务 |
+| Tool Step | 执行一个明确的结构化动作 |
+| Function Step | 执行确定性的数据转换或条件判断 |
+| Branch | 根据上一步结果选择下一步 |
 
-除六个 Core 原语外，不创建或冻结以下平行核心名词：
+状态至少包含当前步骤、已完成步骤结果、下一步条件、暂停位置和结束原因。已完成的副作用步骤必须具备幂等保护。
+
+边界：
+
+- Workflow 不实现 Model、Tool 或 Memory。
+- Workflow 不保存长期记忆、Trace 或业务数据库。
+- Workflow 可以表达流程规则，但不把业务领域概念写进 Core。
+
+验收：K-004、K-005。
+
+#### 5.3.3 Tool
+
+目标：提供一个明确、结构化、可治理的外部动作。
+
+执行流程：
 
 ```text
-Orchestrator
-Capability
-Stage
-Domain Core
-Agent Context
+结构化输入
+  -> Schema 校验
+  -> Guardrails / Permission 检查
+  -> 幂等键检查
+  -> 外部动作
+  -> 结构化输出或明确错误
 ```
 
-如果未来确实需要这些名称，必须先说明它们为什么不能由现有六个原语表达，并记录确认结果。
+Tool 必须定义输入 Schema、输出 Schema、权限要求、超时、取消行为、幂等语义和错误类别。Tool 不决定是否重试，不负责自然语言推理和 Workflow 路由。
 
-### 5.7 Execution 运行规则
+验收：K-002、K-003、K-005。
 
-一次 Agent 运行统一遵循：
+#### 5.3.4 Memory
+
+目标：跨运行保存和读取 Agent 所需上下文。
+
+操作：
 
 ```text
-Runtime 创建运行
+read(scope, query)
+write(scope, items)
+search(scope, query, limit)
+```
+
+每条记忆必须带有作用域、内容、来源和写入时间。不同作用域必须隔离。Memory 不保存 Workflow 当前步骤、完整 Trace、UI 历史或业务数据库事实。
+
+第一条切片使用 In-memory Adapter，但必须通过 Memory Protocol，后续可替换文件、数据库或语义检索存储。
+
+验收：K-006、K-010。
+
+#### 5.3.5 Model
+
+目标：提供与 Provider 无关的模型请求和响应协议。
+
+请求至少包含 Instructions、输入、上下文、Tool Schema、输出格式要求和运行元信息；响应至少包含文本或结构化输出、Tool Call 意图、usage、finish reason 和错误。
+
+真实模型要求：
+
+- 第一条纵向切片使用 `ANANHU_REAL_MODEL` 配置的真实模型。
+- Provider 凭证、网络或模型错误必须原样映射为 Kernel 错误，不允许改用替代输出。
+- Provider SDK 类型只能存在于 Model Adapter。
+
+验收：K-001、K-007、K-010。
+
+#### 5.3.6 Runtime
+
+目标：负责 Agent 或 Workflow 的完整运行生命周期。
+
+生命周期：
+
+```text
+start
+  -> execute
+  -> pause / resume
+  -> cancel
+  -> complete / fail
+```
+
+Runtime 负责 Run ID、Context、事件顺序、取消传播、暂停恢复和最终 Runtime Result。Runtime 不负责业务流程、Agent 推理、Tool 实现、Memory 存储或 Model Provider 调用。
+
+验收：K-005、K-008、K-010。
+
+### 5.4 执行流程
+
+#### 5.4.1 Agent 单次运行
+
+```text
+Runtime.start
   -> Context 初始化
   -> Agent 读取 Memory
   -> Model 生成
-  -> Tool 执行（可选）
-  -> Model 继续生成
-  -> Streaming 输出过程
-  -> 返回结构化结果
+  -> Tool Call（可选）
+  -> Tool Result 回传 Model
+  -> 结构化 Agent Result
+  -> Runtime Result
 ```
 
-运行失败时由 Execution 层统一判断是否 Retry；用户或系统要求停止时进入 Cancellation；二者不能混用。
+#### 5.4.2 Workflow 运行
 
-### 5.8 Core Contract Matrix
+```text
+Runtime.start
+  -> Workflow 读取 workflow_state
+  -> 执行当前 Step
+  -> 保存 Step Result
+  -> Branch 决定下一 Step
+  -> 完成、暂停或失败
+```
+
+#### 5.4.3 真实模型 Smoke
+
+Smoke 测试至少执行：
+
+1. 读取 `ANANHU_REAL_MODEL`。
+2. 校验 Provider 配置和凭证。
+3. 发送固定低成本请求。
+4. 验证结构化响应、usage 和错误映射。
+5. 保存模型标识、延迟、事件和结果摘要。
+
+`ANANHU_REAL_MODEL_SMOKE` 未开启时，测试必须明确报告未执行；凭证或网络不可用时必须失败或阻塞，不能静默跳过。
+
+#### 5.4.4 Retry、Cancellation 和 Streaming
+
+| 能力 | 触发 | 结果 |
+|---|---|---|
+| Retry | 可安全重试的临时错误 | 在上限内重新执行，不重复不可幂等副作用 |
+| Cancellation | 用户或系统主动停止 | 向 Model、Tool、Memory 和 Workflow 传播，最终只结束一次 |
+| Streaming | 运行过程中产生增量事件 | 按顺序输出，不改变 Workflow 状态和 Memory 事实 |
+| Pause / Resume | Workflow 到达等待点 | 保存恢复所需状态，从明确步骤继续 |
+
+### 5.5 配置驱动设计
+
+Provider 和运行参数在外层配置，Core 只接收已经校验的协议对象：
+
+```text
+ANANHU_REAL_MODEL=doubao-seed-2-0-mini-260428
+ANANHU_REAL_MODEL_SMOKE=0|1
+
+Model Adapter
+  -> provider configuration
+  -> credential reference
+  -> model identifier
+  -> timeout / retry policy
+
+Runtime
+  -> receives validated configuration
+  -> does not read provider SDK configuration directly
+```
+
+配置规则：
+
+- 环境变量和密钥只由 Adapter / Interface 读取，不能进入 Core。
+- 模型标识、Provider、超时、重试上限和输出格式必须可记录。
+- 配置错误在运行开始前失败，不等到 Model 调用中才发现。
+- 生产级多 Provider 路由暂不冻结，第一条切片只固定一个真实模型。
+
+### 5.6 扩展性设计要点
+
+新增能力必须遵循“实现既有协议、增加测试、更新规格”的顺序：
+
+1. 新增 Model Provider：实现 Model Adapter，不修改 Agent 和 Model Protocol。
+2. 新增 Memory 存储：实现 Memory Adapter，不修改 Agent 的记忆使用方式。
+3. 新增 Tool：定义结构化 Schema、权限、幂等和错误，挂入 Application 或测试 Fixture。
+4. 新增 Workflow：组合已有 Agent、Tool 和函数步骤，不新增 Orchestrator。
+5. 新增业务：只在 `applications/<业务>/` 组合 Kernel，不把业务词汇写回 Core。
+6. 新增 Interface：只做输入转换、调用、事件转发、结果序列化和错误映射。
+7. 新增 Observability：通过 Events / Hooks 扩展，不修改 Core 结果语义。
+
+### 5.7 Core Contract Matrix
 
 | 原语 | 最小输入 | 最小输出 | 主要错误 | 生命周期 | 替换点 |
 |---|---|---|---|---|---|
@@ -842,79 +1428,144 @@ Runtime 创建运行
 | Model | Model Request | response、tool_call、usage | provider、timeout、format | request -> response / error | Model Adapter |
 | Runtime | Run Request、Agent 或 Workflow | events、Runtime Result | runtime、cancel、timeout、internal | start -> execute -> pause / resume -> finish | Runtime Adapter |
 
-这张表是实现前的最小契约，具体字段 schema、序列化格式和错误码在实现计划中冻结；实现不得绕过表中的替换点直接依赖具体基础设施。
+### 5.8 第一条真实模型纵向切片
 
-### 5.9 第一条纵向切片
-
-第一条可运行路径固定为：
+第一条切片是 Kernel 验证 Fixture，不是业务功能：
 
 ```text
-Programmatic Interface
-  -> Application Fixture
-      -> Runtime
-          -> Execution
-              -> Agent
-                  -> Real Model Provider Adapter
-                  -> In-memory Memory
-                  -> No-side-effect Tool
-              -> Events
-          -> Agent Result
+tests/integration/real_model_fixture
+  -> Runtime
+      -> Execution
+          -> Agent
+              -> Real Model Provider Adapter
+              -> In-memory Memory
+              -> No-side-effect Tool
+          -> Events
+      -> Runtime Result
 ```
 
-纵向切片必须完成一次 Model 生成、一次可选 Tool Call、一次 Memory 写入和一次结构化结果返回，并覆盖成功、Tool 输入错误、取消和流式事件四类结果。
+交付标准：
+
+- 真实完成一次 Model 生成。
+- 真实完成一次可选 Tool Call。
+- 完成一次 Memory 写入和再次读取。
+- 返回结构化 Agent Result 和 Runtime Result。
+- 覆盖成功、Tool 输入错误、取消和流式事件。
+- 保存足以复核的模型标识、usage、事件序列、延迟和错误证据。
 
 ---
 
 ## 6. 项目排期
 
-### 6.1 阶段总览
+### 6.1 排期原则
 
-| 阶段 | 目标 | 产出 | 状态 |
+排期严格对齐第 5 章的目录和运行链路：
+
+- 只按本规格落地，每个任务必须在文件系统或测试证据中产生可见变化。
+- 每个任务必须同时写出目标、输出、验收标准和验证方法。
+- 先打通真实模型主闭环，再补齐 Workflow、合同测试和外围能力。
+- 真实模型不在单元测试中伪造；需要真实效果的场景必须开启真实 Smoke / Integration。
+- 每个任务只解决一个边界问题，避免把 Core、Application 和 Interface 一次性混合实现。
+- Kernel 验收通过前不创建业务 Application，架构版本发布前不扩展外部 Interface。
+
+### 6.2 阶段总览（大阶段 -> 目的）
+
+| 阶段 | 名称 | 目的 | 状态 |
 |---|---|---|---|
-| 0 | 清理旧项目并建立新分支 | 新 Kernel 文档基线 | 已完成 |
-| 1 | 确认 Core、Execution、支撑协议和外围边界 | `DEV_SPEC v0.15`、契约矩阵、验收矩阵 | 已完成 |
-| 2 | 实现第一条真实模型 Kernel 纵向切片 | Real Model Adapter、In-memory Memory、Tool、Agent、Runtime、Events | 待开始 |
-| 3 | 补齐 Kernel Contract Tests | 六原语和 Adapter 合同测试 | 待开始 |
-| 4 | 建立第一个架构版本 | 完整架构正文、迁移/兼容说明、版本索引 | 待开始 |
-| 5 | 组合业务 Application | `applications/<业务>/` | 待开始 |
-| 6 | 接入 Interfaces、Observability 和 Evals | CLI / API / Trace / Eval | 待开始 |
+| A | 规格和测试基座 | 冻结 Core 契约、目录和架构依赖规则 | 已完成，待审查 |
+| B | Core 协议骨架 | 建立六个 Core 的最小公开协议 | 待开始 |
+| C | 真实 Model 和最小 Adapter | 接入真实模型、Memory 和 Tool | 待开始 |
+| D | Agent 主闭环 | 真实完成 Model、Tool Call、Memory 和结构化输出 | 待开始 |
+| E | Runtime 和 Workflow | 补齐生命周期、Streaming、Cancellation、暂停恢复和幂等 | 待开始 |
+| F | 合同与集成验收 | 完成 Contract、Integration 和 Architecture Tests | 待开始 |
+| G | 第一个架构版本 | 固化完整架构快照、迁移和限制 | 待开始 |
+| H | Application 和 Interface | 在 Kernel 之上组合业务并提供外部入口 | 待开始 |
 
-### 6.2 阶段门禁
+### 6.3 进度跟踪表
 
-每个阶段必须满足前一阶段的验收条件：
+状态说明：`[ ]` 未开始，`[~]` 进行中，`[x]` 已完成，`[!]` 阻塞。
+
+#### 阶段 A：规格和测试基座
+
+| 任务编号 | 任务名称 | 状态 | 交付物 | 验证方法 |
+|---|---|---|---|---|
+| A1 | Core、Execution、外围边界确认 | [x] | 六原语和三层结构 | 设计记录 |
+| A2 | 对抗性规格审查修订 | [x] | `DEV_SPEC v0.15` | 文档一致性检查 |
+| A3 | 第 1-10 章按参考结构重写 | [x] | `DEV_SPEC v0.16` | 文档结构和链接检查 |
+
+#### 阶段 B：Core 协议骨架
+
+| 任务编号 | 任务名称 | 状态 | 交付物 | 验证方法 |
+|---|---|---|---|---|
+| B1 | 建立六个 Core 的最小协议 | [ ] | `src/agent_kernel/` 骨架 | Architecture Test |
+| B2 | 建立 Core 依赖方向检查 | [ ] | 禁止反向依赖规则 | Architecture Test |
+| B3 | 建立错误、事件和结果最小 Schema | [ ] | 公共协议 Schema | Contract Test |
+
+#### 阶段 C：真实 Model 和最小 Adapter
+
+| 任务编号 | 任务名称 | 状态 | 交付物 | 验证方法 |
+|---|---|---|---|---|
+| C1 | 接入真实 Model Provider Adapter | [ ] | `ANANHU_REAL_MODEL` 配置校验 | Real Model Smoke |
+| C2 | 建立 In-memory Memory Adapter | [ ] | 作用域隔离读写 | Memory Contract Test |
+| C3 | 建立无副作用 Tool Adapter | [ ] | 输入、输出、错误和幂等 Schema | Tool Contract Test |
+
+#### 阶段 D：Agent 主闭环
+
+| 任务编号 | 任务名称 | 状态 | 交付物 | 验证方法 |
+|---|---|---|---|---|
+| D1 | Agent 组装真实 Model Request | [ ] | Instructions、Context、Memory 组装 | Real Model Integration |
+| D2 | Agent 处理真实 Tool Call | [ ] | Model -> Tool -> Model 循环 | Tool Call Integration |
+| D3 | Agent 返回结构化结果和 usage | [ ] | Agent Result | K-001、K-002、K-007 |
+
+#### 阶段 E：Runtime 和 Workflow
+
+| 任务编号 | 任务名称 | 状态 | 交付物 | 验证方法 |
+|---|---|---|---|---|
+| E1 | Runtime 生命周期和 Events | [ ] | start / execute / finish | Runtime Test |
+| E2 | Cancellation、Streaming 和 Retry | [ ] | 传播和只结束一次保证 | Execution Test |
+| E3 | Workflow 顺序、分支和暂停恢复 | [ ] | Workflow State | K-004、K-005 |
+
+#### 阶段 F：合同与集成验收
+
+| 任务编号 | 任务名称 | 状态 | 交付物 | 验证方法 |
+|---|---|---|---|---|
+| F1 | 六个 Core Contract Tests | [ ] | 协议行为证据 | Contract Test |
+| F2 | 真实模型纵向切片 | [ ] | Model、Agent、Tool、Memory、Runtime 闭环 | K-010 |
+| F3 | Architecture Tests 和依赖扫描 | [ ] | Core 边界证据 | K-009 |
+
+#### 阶段 G：架构版本
+
+| 任务编号 | 任务名称 | 状态 | 交付物 | 验证方法 |
+|---|---|---|---|---|
+| G1 | 创建第一个完整架构版本 | [ ] | `docs/architecture/versions/` 快照 | 架构版本检查 |
+| G2 | 更新架构入口和 changelog | [ ] | 版本索引和变更记录 | 文档链接检查 |
+
+#### 阶段 H：Application 和 Interface
+
+| 任务编号 | 任务名称 | 状态 | 交付物 | 验证方法 |
+|---|---|---|---|---|
+| H1 | 创建第一个业务 Application | [ ] | `applications/<业务>/` | Application Integration |
+| H2 | 接入第一个 Interface | [ ] | CLI 或其他入口 | Interface E2E |
+| H3 | 建立业务 Evals 和运行观测 | [ ] | Trace、Eval、Badcase 记录 | Evals / Observability |
+
+### 6.4 阶段门禁
 
 ```text
-文档结构确认
-  -> 契约和验收确认
-  -> 第一条纵向切片计划
-  -> Kernel 纵向切片
-  -> Contract Tests
-  -> 第一个架构版本
-  -> Application
-  -> Interfaces / Observability / Evals
+阶段 A 审查通过
+  -> 阶段 B Core 协议可测试
+  -> 阶段 C 真实 Model Smoke 通过
+  -> 阶段 D Agent 主闭环通过
+  -> 阶段 E Runtime / Workflow 控制通过
+  -> 阶段 F Contract / Integration / Architecture Tests 通过
+  -> 阶段 G 第一个架构版本发布
+  -> 阶段 H Application / Interface
 ```
 
-在用户确认完整设计前，不进入代码实现。
-
-### 6.3 任务记录
-
-| 任务 ID | 任务 | 依赖 | 输出 | 验收 |
-|---|---|---|---|---|
-| K-01 | 建立 `src/agent_kernel/` 最小协议目录 | 规格审查通过 | 六原语最小协议 | K-009 |
-| K-02 | 接入真实 Model Adapter，配置 In-memory Memory 和无副作用 Tool | K-01 | 真实模型 Adapter、Memory Adapter、Tool Adapter | K-001、K-003、K-006、K-007 |
-| K-03 | 实现 Agent 单次执行闭环 | K-02 | Agent + Tool Call 循环 | K-001、K-002 |
-| K-04 | 实现最小 Runtime 和 Events | K-03 | start / execute / cancel / finish | K-008 |
-| K-05 | 实现最小 Workflow 顺序、分支、暂停恢复 | K-04 | Workflow 运行协议 | K-004、K-005 |
-| K-06 | 建立 Kernel Contract Tests 和真实模型纵向切片 | K-01-K-05 | 自动化验收证据、真实调用记录 | K-010 |
-| K-07 | 创建第一个完整架构版本 | K-06 | `docs/architecture/versions/` 版本正文 | 架构版本验收 |
-
-每个任务必须记录基线规格、修改边界、关联验收 ID、验证命令和结果；没有这些信息不得标记完成。
-
----
+任何阶段未通过，不得跳到下一个阶段。每次完成任务后必须同步更新本表、验收证据和对应版本文档。
 
 ## 7. 可扩展性与未来展望
 
-### 7.1 新增业务
+### 7.1 新增业务 Application
 
 新增业务只新增 Application：
 
@@ -925,40 +1576,151 @@ applications/
   legal_consultation/
 ```
 
-不同业务不复制 Kernel，也不把业务模型写回 Kernel。
+Application 必须包含：
+
+| 内容 | 责任 |
+|---|---|
+| Agents | 面向业务目标配置 Agent |
+| Workflows | 组合业务流程 |
+| Tools | 定义业务动作和权限 |
+| Prompts | 管理业务 Instructions 和版本 |
+| Policies | 保存业务规则，不进入 Core |
+| Evals | 维护业务 Golden Inputs 和质量指标 |
+
+新增业务流程：
+
+1. 先确认 Kernel 公开协议是否足够。
+2. 在 `applications/<业务>/` 组合 Agent、Workflow、Tool、Memory 和 Model。
+3. 添加业务 Evals 和 Trace 字段。
+4. 不修改 Core，不复制一套 Agent Framework。
 
 ### 7.2 新增 Agent
 
-只有当任务具备独立目标、Instructions、Tool 集合、Memory 策略、输出边界和测试边界时，才新增 Agent。
+只有当任务具备以下独立边界时，才新增 Agent：
 
-“多 Agent”不是架构目标，清晰的职责边界才是。
+- 独立目标。
+- 独立 Instructions 和版本。
+- 独立 Tool 集合。
+- 独立 Memory 读取范围。
+- 独立输出 Schema。
+- 独立测试和评估边界。
 
-### 7.3 新增 Tool
+“多 Agent”不是架构目标；如果一个 Agent 可以完成目标，不拆分为多个 Agent。
 
-每个 Tool 应当只有一个明确动作，并具备：
+### 7.3 新增 Workflow
+
+Workflow 扩展只允许增加步骤组合，不允许创建新的总控抽象：
+
+```text
+已有 Agent / Tool / Function Step
+  -> 顺序
+  -> 条件分支
+  -> 暂停恢复
+  -> 并行（无共享副作用时）
+```
+
+新增 Workflow 必须明确：
+
+| 字段 | 要求 |
+|---|---|
+| 输入 | 结构化 Workflow Input |
+| 状态 | 当前步骤和恢复数据 |
+| 副作用 | 幂等键、重试和取消行为 |
+| 结束 | 成功、失败、暂停、取消 |
+| 验收 | 顺序、分支、恢复和重复执行测试 |
+
+### 7.4 新增 Tool
+
+每个 Tool 只有一个明确动作，并具备：
 
 ```text
 结构化输入
 结构化输出
 明确错误
 明确权限
+超时和取消
+幂等语义
 可测试行为
 ```
 
-### 7.4 新增 Runtime 或 Provider
+Tool 扩展流程：
 
-新增 Runtime 或 Provider 只能实现既有 Kernel 协议，不得复制一套业务流程或平行状态模型。
+1. 定义输入和输出 Schema。
+2. 定义权限和敏感数据边界。
+3. 定义是否幂等以及重试策略。
+4. 实现 Tool Adapter。
+5. 添加 Contract、Integration 和 Application 测试。
 
-### 7.5 暂不规划的平台化能力
+### 7.5 新增 Model、Memory 或 Runtime
 
-以下能力等 Kernel 稳定后再评估：
+新增 Provider 或后端只能实现既有协议：
+
+| 扩展对象 | 必须实现 | 不能改变 |
+|---|---|---|
+| Model Provider | Model Request / Response、usage、错误和流式映射 | Agent 和 Application 协议 |
+| Memory Store | read / write / search、scope 隔离 | Memory 使用方式 |
+| Runtime Engine | 生命周期、事件、取消、暂停恢复 | Workflow 和 Agent 职责 |
+
+替换后必须重新运行对应 Adapter Contract Tests 和真实纵向切片。
+
+### 7.6 新增 Interface、Observability 和 Evals
+
+#### Interface
+
+Interface 只负责：
+
+```text
+外部输入
+  -> Application 请求
+  -> Runtime / Application 调用
+  -> Events 转发
+  -> Result 序列化
+  -> Error 映射
+```
+
+同一业务增加 CLI、HTTP 或 SDK 时，不复制业务 Workflow。
+
+#### Observability
+
+观测能力通过 Events、Hooks 和 Adapter 接入：
+
+- 不修改 Core Result 语义。
+- 不把 Trace 当作 Memory 或 Workflow State。
+- 至少记录 run_id、component、event、duration、usage 和 error。
+
+#### Evals
+
+Evals 分两层：
+
+1. Kernel Evals：验证协议、运行链路、错误和真实模型行为。
+2. Application Evals：验证业务答案、证据、规则和用户目标。
+
+### 7.7 生产化演进路径
+
+Kernel 稳定后的演进顺序：
+
+```text
+单进程 Runtime
+  -> 持久化 Workflow State
+  -> 可替换 Memory Store
+  -> 远程 Runtime Adapter
+  -> 多租户和权限隔离
+  -> 分布式调度
+```
+
+每一步都必须先升级架构版本，不直接在旧版本文档上覆盖。
+
+### 7.8 暂不规划的平台化能力
+
+以下能力等 Kernel、真实模型闭环和第一个业务 Application 稳定后再评估：
 
 - Agent Registry。
 - Workflow Registry。
 - Tool Catalog。
-- 远程运行服务。
 - 可视化管理平台。
+- 远程运行服务。
 - 多租户和分布式调度。
+- 自动化 Agent 发现和动态编排。
 
 ---
 
@@ -1120,6 +1882,34 @@ Interface 不能绕过 Application 直接拼装 Kernel。
 
 CLI、TUI、HTTP 等入口最后迁移，不反向决定 Kernel 的设计。
 
+### 8.12 模块确认记录模板
+
+后续新增或修改模块必须按以下结构记录：
+
+| 字段 | 必须回答的问题 |
+|---|---|
+| 目标 | 这个模块为用户或系统提供什么能力？ |
+| 输入 | 接收哪些结构化数据和运行上下文？ |
+| 输出 | 返回什么结果、事件和 usage？ |
+| 核心职责 | 模块自己做什么？ |
+| 非职责 | 明确不做什么，防止边界漂移 |
+| 依赖 | 依赖哪些 Core Protocol 或 Adapter？ |
+| 生命周期 | 如何开始、暂停、恢复、取消和结束？ |
+| 错误 | 错误类别、是否可重试、是否终止 |
+| 可替换点 | 替换实现时公共协议是否保持不变？ |
+| 测试 | 对应哪些 Unit、Contract、Integration 或 E2E？ |
+| 证据 | 用什么文件、事件、日志或测试结果证明完成？ |
+
+### 8.13 实现准入门禁
+
+模块只有同时满足以下条件，才允许创建代码目录：
+
+1. 模块边界已确认。
+2. 最小输入、输出和错误已写入规格。
+3. 至少关联一个验收 ID。
+4. 已明确是否需要真实 Model Integration。
+5. 已说明对其他文档和版本的影响。
+
 ---
 
 ## 9. 开发规格维护与版本化
@@ -1221,7 +2011,8 @@ docs/
 
 | 日期 | 开发规格版本 | 架构基线 | 变更摘要 | 状态 |
 |---|---|---|---|---|
-| 2026-07-12 | v0.15 | DEV_SPEC v0.4 | 完成对抗性审查修订：补齐外围能力归属、Prompt 所有权、契约矩阵、真实模型纵向切片、验收矩阵和任务拆解，并合并模块版本碎片；明确不使用模拟模型 | 待用户审查 |
+| 2026-07-12 | v0.15 | DEV_SPEC v0.4 | 完成对抗性审查修订：补齐外围能力归属、Prompt 所有权、契约矩阵、真实模型纵向切片、验收矩阵和任务拆解，并合并模块版本碎片；明确不使用模拟模型 | 已建立基线 |
+| 2026-07-12 | v0.16 | DEV_SPEC v0.15 | 按参考规格的详细小节结构重写第 1-7 章，补充第 8-10 章的确认模板、准入门禁和阅读顺序；前置真实模型 Smoke，细化模块契约、测试分层、扩展路径和阶段进度 | 待用户审查 |
 
 ---
 
@@ -1246,3 +2037,16 @@ docs/
 5. 第一个 Kernel 版本确认后，创建新的 `docs/architecture/versions/` 完整架构正文。
 6. 后续任何改变系统边界的设计，在进入实现前必须创建新的架构版本文档。
 7. 本文件只记录已确认的边界；未确认内容必须明确标记为“待确认”。
+
+## 阅读顺序
+
+第一次进入项目时按以下顺序阅读：
+
+1. 第 1 章：理解项目目标、边界和非目标。
+2. 第 2 章：理解六个 Core、Execution 和外围能力。
+3. 第 3 章：理解协议、Adapter、真实模型和配置。
+4. 第 4 章：理解测试层级和真实模型验收。
+5. 第 5 章：理解架构图、模块输入输出和运行链路。
+6. 第 6 章：理解当前阶段、任务和门禁。
+7. 第 8 章：查看已经确认的模块记录。
+8. 第 9 章：修改规格或新增版本前先阅读维护规则。

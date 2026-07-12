@@ -10,10 +10,10 @@
 - 核心原语：`Agent`、`Workflow`、`Tool`、`Memory`、`Model`、`Runtime`。
 - 已确认 Execution 执行层：`Context`、`Hooks`、`Guardrails`、`Retry`、`Cancellation`、`Streaming`。
 - Core、Execution、支撑协议、Applications 和 Interfaces 已完成设计确认。
-- 当前完整开发规格：`DEV_SPEC v0.15`，已完成对抗性规格审查修订，待用户审查。
+- 当前完整开发规格：`DEV_SPEC v0.16`，已按参考规格完成全章详细结构升级，待用户审查。
 - 第一条纵向切片将直接接入真实 Model Provider，不使用模拟模型。
 - 尚未创建 Kernel 实现代码。
-- 尚未发布架构版本；架构版本将在第一条 Kernel 纵向切片和 Contract Tests 通过后建立。
+- 尚未发布架构版本；架构版本将在真实 Agent 闭环和 Contract / Integration / Architecture Tests 通过后建立。
 
 ## 阅读顺序
 

@@ -19,6 +19,7 @@ docs/dev-spec/versions/
 docs/dev-spec/versions/
   v0.4-clean-kernel-baseline.md
   v0.15-kernel-design-baseline.md
+  v0.16-full-spec-structure-baseline.md
 ```
 
 ## 什么时候新增版本文档
@@ -74,11 +75,12 @@ docs/superpowers/plans/
 
 ## 当前版本
 
-当前开发规格版本为 `v0.15`，六个 Core 原语、Execution、支撑协议、Applications 和 Interfaces 边界均已确认，已完成一次对抗性完整规格审查修订，待用户审查。当前尚未建立新的架构版本；架构版本应在第一条 Kernel 纵向切片和 Contract Tests 通过后创建。
+当前开发规格版本为 `v0.16`，六个 Core 原语、Execution、支撑协议、Applications 和 Interfaces 边界均已确认，已按参考规格完成全章详细结构升级，待用户审查。当前尚未建立新的架构版本；架构版本应在真实 Agent 闭环和 Contract / Integration / Architecture Tests 通过后创建。
 
 ## 版本索引
 
 | 版本 | 主题 | 状态 |
 |---|---|---|
 | `v0.4` | 全新 Kernel 清理与重构基线 | 已归档基线 |
-| `v0.15` | Core、Execution、支撑协议、Application 和 Interface 的完整设计基线 | 待用户审查 |
+| `v0.15` | Core、Execution、支撑协议、Application 和 Interface 的完整设计基线 | 已建立基线 |
+| `v0.16` | 全章详细规格结构、真实模型前置验证和实现排期基线 | 待用户审查 |
