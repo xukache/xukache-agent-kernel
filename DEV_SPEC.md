@@ -1782,7 +1782,7 @@ RuntimeResult != AgentResult != WorkflowResult != ToolResult
 |---|---|---|---|
 | A1 | 完成开发规格逐章确认 | [x] | 第 1-7 章一致 |
 | A2 | 确认公共类型表达策略 | [x] | Python 类型与序列化规则 |
-| A3 | 确认物理目录与公开导入路径 | [ ] | 可实施目录设计 |
+| A3 | 确认物理目录与公开导入路径 | [~] | 可实施目录设计 |
 | A4 | 建立 uv、pytest 与 Architecture Test 基座 | [ ] | 可运行工程 |
 | A5 | 建立真实对话证据基座 | [ ] | RD 执行和证据入口 |
 
@@ -1867,7 +1867,7 @@ RuntimeResult != AgentResult != WorkflowResult != ToolResult
 
 | 阶段 | 总任务 | 已完成 | 进行中 | 进度 |
 |---|---:|---:|---:|---:|
-| A | 5 | 2 | 0 | 40% |
+| A | 5 | 2 | 1 | 40% |
 | B | 6 | 0 | 0 | 0% |
 | C | 5 | 0 | 0 | 0% |
 | D | 6 | 0 | 0 | 0% |
