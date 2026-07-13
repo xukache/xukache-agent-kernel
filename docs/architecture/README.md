@@ -2,6 +2,19 @@
 
 当前分支是全新 Agent Kernel 重构起点，尚未发布第一个架构版本。
 
+技术架构总入口是 [`docs/architecture.md`](../architecture.md)。本文件只负责架构版本的创建、命名和只读规则，不能替代当前完整规格或架构分册。
+
+## 当前架构分册
+
+| 文档 | 作用 |
+|---|---|
+| [`00-overview.md`](00-overview.md) | 逻辑分层和六个核心原语 |
+| [`01-module-boundaries.md`](01-module-boundaries.md) | 模块职责、所有权和单向依赖 |
+| [`02-runtime-data-flow.md`](02-runtime-data-flow.md) | Agent、Tool、Memory 和 Workflow 数据流 |
+| [`03-public-contracts.md`](03-public-contracts.md) | 公共类型和序列化边界 |
+| [`10-evolution-rules.md`](10-evolution-rules.md) | 架构变更监控和文档同步 |
+| [`99-changelog.md`](99-changelog.md) | 架构文档维护记录 |
+
 ## 版本规则
 
 当确认的设计改变以下内容时，创建新的完整架构版本：
@@ -37,6 +50,7 @@ docs/architecture/versions/
 - `docs/dev-spec/versions/` 记录每个开发规格版本的新增和变化。
 - `docs/architecture/versions/` 记录改变系统边界后的完整架构快照。
 - 三类文档必须互相链接，不能用计划文档代替架构事实。
+- 只改变文档组织而不改变系统边界时，更新 `99-changelog.md`，不创建架构版本正文。
 
 ## 当前事实源
 
