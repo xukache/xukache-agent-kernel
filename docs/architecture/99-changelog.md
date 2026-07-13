@@ -10,6 +10,7 @@
 | 2026-07-13 | 新增 | 建立后端开发规范，集中记录 Python、依赖方向、类型、异步、错误、状态和测试规则 | `docs/backend-conventions.md` | 否 |
 | 2026-07-13 | 更新 | 补充 Coding Agent 修改前阅读路径、文档事实源和纯文档治理分支规则 | `AGENTS.md` | 否 |
 | 2026-07-13 | 更新 | 补充项目文档索引、架构分册索引和文档使用规则 | `README.md`、`docs/architecture/README.md` | 否 |
+| 2026-07-13 | 确认 | 确认 `src/agent_kernel` Kernel 包、Adapter / Application / Interface 顶层命名空间、公开导入边界和测试分层 | `docs/superpowers/specs/2026-07-13-agent-kernel-physical-layout-import-paths-a3.md` | 否 |
 
 ## 本次变更结论
 
@@ -18,6 +19,6 @@
 | 六个核心原语、模块边界、依赖方向和公共契约 | 未改变 |
 | 架构版本正文 | 不创建 |
 | 开发规格版本 | 不新增 |
-| A3 实施状态 | 保持未开始 |
+| A3 实施状态 | 已完成 |
 | Kernel 代码目录 | 不创建 |
-| 物理目录和公开导入路径 | 不提前确认 |
+| 物理目录和公开导入路径 | 已由 A3 确认 |

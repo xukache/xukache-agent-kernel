@@ -51,7 +51,7 @@ Runtime / Core
 ## 当前阶段边界
 
 - 已冻结逻辑架构和语义级公共契约。
-- 尚未冻结 Python 物理目录、文件名和公开导入路径。
+- A3 已冻结 `src/agent_kernel` 物理目录基线和公开导入路径规则，具体模块字段与实现文件仍由 A4、B-G 任务建立。
 - 尚未创建 Kernel 实现代码。
 - 第一阶段只建立单进程、单真实 Model Provider、In-memory Memory 和无副作用 Tool 的纵向切片。
 - CLI、HTTP、MCP、业务 Application 和 Multi-Agent 属于后续确认范围。

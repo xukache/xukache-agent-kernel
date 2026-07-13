@@ -15,7 +15,7 @@
   -> 返回 Events 和结构化 Result
 ```
 
-这里的 Kernel Protocol 是 Python 行为契约，不是网络 API。具体类名、模块路径和公开导入路径仍由 A3 及后续 B-G 任务确认。
+这里的 Kernel Protocol 是 Python 行为契约，不是网络 API。A3 已确认 `agent_kernel` 及其稳定子包为公开导入路径基线；具体模块字段和方法签名由后续 B-G 任务确认。
 
 ## 当前契约事实源
 
