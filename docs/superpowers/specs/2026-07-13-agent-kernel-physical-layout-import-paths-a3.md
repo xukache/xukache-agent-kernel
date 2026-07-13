@@ -6,7 +6,7 @@
 |---|---|
 | 任务 | A3：确认物理目录与公开导入路径 |
 | 日期 | 2026-07-13 |
-| 状态 | 进行中 |
+| 状态 | 已完成 |
 | 任务分支 | `task/a3-physical-layout-import-paths` |
 | 基线分支 | `architecture` |
 | 当前规格 | `DEV_SPEC v0.25` |
@@ -205,11 +205,11 @@ agent_kernel -X-> adapters / applications / interfaces
 | Unit、Contract、Integration、Architecture、RD 测试分层 | 已形成方案 |
 | 旧项目入口、旧协议和旧目录未迁移 | 已满足 |
 | 尚未创建 Kernel 代码目录 | 已满足 |
-| A3 用户任务结果确认 | 待确认 |
+| A3 用户任务结果确认 | 已确认 |
 
 ## 7. 后续影响
 
-A3 方案确认后，才能进入 A4：
+A3 方案确认后，进入 A4：
 
 1. 创建 `pyproject.toml` 和 `uv.lock`。
 2. 创建 `src/agent_kernel`、Adapter 命名空间和测试基座。

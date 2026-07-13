@@ -953,7 +953,7 @@ uv run pytest -q
 ANANHU_REAL_MODEL_SMOKE=1 uv run pytest -q
 ```
 
-具体测试路径和 pytest markers 在物理目录与测试组织确认后补充，本章不提前冻结。
+测试分层和基础目录由 A3 确认；具体 pytest markers、测试文件和节点由 A4 及对应 B-G 任务补充。
 
 CI 分层：
 
@@ -1019,7 +1019,7 @@ CI 没有真实 Provider 凭证时：
 - Adapter 在哪里隔离第三方实现。
 - Events、Results 和 Errors 从哪里产生并如何被观察。
 
-本章冻结逻辑架构和语义级公共契约，不提前冻结 Python 类型工具、文件名或物理目录。
+本章冻结逻辑架构和语义级公共契约；A3 已确认 Python 包、物理目录和测试分层，具体文件、字段和方法仍由 A4 及 B-G 任务补充。
 
 ### 5.1 整体架构图
 
@@ -1693,7 +1693,7 @@ RuntimeResult != AgentResult != WorkflowResult != ToolResult
 
 ### 5.8 物理目录决策状态
 
-物理目录结构当前为“待确认”，不是实现事实。此前文档中的扁平 Core 布局和 `core` 嵌套布局均已取消。
+物理目录结构已由 A3 确认，采用 `src/agent_kernel` 作为唯一 Kernel 包；此前文档中的扁平 Core 布局和 `core` 嵌套布局均已取消。
 
 正式目录必须在首个模块实现前，根据以下事实单独设计和确认：
 
@@ -1703,7 +1703,7 @@ RuntimeResult != AgentResult != WorkflowResult != ToolResult
 - Contract、Integration、Architecture 和 RD 测试组织。
 - 对外公开导入路径。
 
-目录确认前不得创建 Kernel 代码目录，也不得从旧项目恢复工程结构。
+目录确认后可由 A4 建立工程基座，但不得从旧项目恢复工程结构，也不得创建平行 `core/` 或 `kernel/` 包。
 
 ---
 
@@ -1721,7 +1721,7 @@ RuntimeResult != AgentResult != WorkflowResult != ToolResult
 - 模型相关完成证据必须来自真实 Provider 和固定 RD 场景。
 - 每个阶段出口都必须运行当前 RD 和此前全部 RD。
 - 任务完成必须产生可检查的协议、实现、测试或证据，不能只创建空目录。
-- 未确认物理目录和 Python 类型前，排期不反向冻结文件路径、类名或库。
+- 已确认物理目录后，排期仍不得反向冻结 B-G 尚未确认的字段、类名或 Provider 库。
 - Application、Interface 和业务 Evals 属于 Kernel 完成后的扩展路线，不进入本章第一阶段排期。
 
 任务状态：
@@ -1782,7 +1782,7 @@ RuntimeResult != AgentResult != WorkflowResult != ToolResult
 |---|---|---|---|
 | A1 | 完成开发规格逐章确认 | [x] | 第 1-7 章一致 |
 | A2 | 确认公共类型表达策略 | [x] | Python 类型与序列化规则 |
-| A3 | 确认物理目录与公开导入路径 | [~] | 可实施目录设计 |
+| A3 | 确认物理目录与公开导入路径 | [x] | 可实施目录设计 |
 | A4 | 建立 uv、pytest 与 Architecture Test 基座 | [ ] | 可运行工程 |
 | A5 | 建立真实对话证据基座 | [ ] | RD 执行和证据入口 |
 
@@ -1867,7 +1867,7 @@ RuntimeResult != AgentResult != WorkflowResult != ToolResult
 
 | 阶段 | 总任务 | 已完成 | 进行中 | 进度 |
 |---|---:|---:|---:|---:|
-| A | 5 | 2 | 1 | 40% |
+| A | 5 | 3 | 0 | 60% |
 | B | 6 | 0 | 0 | 0% |
 | C | 5 | 0 | 0 | 0% |
 | D | 6 | 0 | 0 | 0% |

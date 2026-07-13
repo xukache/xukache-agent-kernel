@@ -1,12 +1,12 @@
 # 技术架构
 
-本文档是 Agent Kernel 技术架构的导航入口。它不替代 `DEV_SPEC.md`，也不提前冻结尚未由 A3 确认的 Python 包、文件名和公开导入路径。
+本文档是 Agent Kernel 技术架构的导航入口。它不替代 `DEV_SPEC.md`，也不提前冻结尚未由后续 B-G 任务确认的具体字段和实现细节。
 
 ## 当前状态
 
-- 六个核心原语、Execution 支撑能力、逻辑分层和公共类型策略已经确认。
+- 六个核心原语、Execution 支撑能力、逻辑分层、公共类型策略和 A3 物理目录已经确认。
 - 当前尚未创建 Kernel 实现代码。
-- A3“物理目录与公开导入路径”仍未确认。
+- A3 已确认 `src/agent_kernel` 为 Kernel 包和公开导入路径基线。
 - 当前没有对外 HTTP、REST、WebSocket 或 MCP 接口。
 - 第一阶段通过 Python Programmatic Interface 和测试组合根调用 Kernel。
 
@@ -45,4 +45,4 @@
 2. 已确认设计的摘要才可以进入架构分册。
 3. 只改变文档组织、不改变系统边界时，更新 `99-changelog.md`，不创建架构版本正文。
 4. 改变原语、模块边界、依赖、数据所有权、外部接口、部署或验收口径时，按 [`docs/architecture/README.md`](architecture/README.md) 创建完整架构版本。
-5. A3 确认前，架构文档只描述逻辑职责，不声明物理代码目录。
+5. A3 已确认物理目录基线；A4 负责建立工程，后续模块任务不得绕过已确认的公开入口。

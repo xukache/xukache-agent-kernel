@@ -80,4 +80,4 @@ Provider / Backend Exception
 - `definition_ref.revision` 与 `state_schema_version` 分别管理定义和状态结构版本。
 - `checkpoint_id` 可以进入 State；一次性 `resume_token` 不能进入 State。
 
-完整规则和示例以 A2 确认记录为准；具体字段、枚举和错误捕获层级由 B-G 对应任务确认。
+完整规则和示例以 A2 确认记录为准；A3 已确认 `agent_kernel` 及其稳定子包为公开导入边界；具体字段、枚举和错误捕获层级由 B-G 对应任务确认。

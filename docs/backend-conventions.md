@@ -1,13 +1,13 @@
 # 后端开发规范
 
-本文档约束未来 Agent Kernel 的 Python 实现。当前物理目录和公开导入路径尚未由 A3 确认，因此这里只规定逻辑边界和工程原则。
+本文档约束未来 Agent Kernel 的 Python 实现。A3 已确认 `src/agent_kernel` 物理目录和公开导入路径；A4 负责建立 Python 工程和测试基座。
 
 ## 工程基线
 
 - Python 固定为 3.11，以 `.python-version` 为准。
 - 建立 Python 工程后统一使用 `uv` 管理环境、依赖、测试和运行。
 - 不从 `mvp`、`main` 或旧项目恢复 `pyproject.toml`、`uv.lock`、代码和测试。
-- A3 确认前不得创建 Kernel 代码目录或提前声明包路径。
+- A4 建立工程前不得创建 Kernel 实现目录或自行扩展公开包路径。
 - 依赖版本和命令在 A4 建立工程基座时确认，本文档不虚构未落地命令。
 
 ## 依赖方向
