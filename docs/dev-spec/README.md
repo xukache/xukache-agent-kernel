@@ -124,7 +124,7 @@ docs/superpowers/plans/
 
 当前开发规格版本为 `v0.25`。第一至七章已确认：前六章定义学习定位、核心特点、技术决策、双轨测试验收、系统架构，以及从实现准入到 Kernel 发布的 8 个阶段、47 个任务；第七章定义 Kernel 完成后向 Agent Harness、垂直业务 Application 和有证据支撑的 Multi-Agent 演进的路线。
 
-六个 Core 的语义级公共契约和第一阶段范围保持不变。具体 Provider SDK、Schema 库、Python 类型表达和物理目录仍待实现准入阶段确认，当前不得创建代码目录。
+六个 Core 的语义级公共契约和第一阶段范围保持不变。A2 已完成 Protocol、Definition、Schema Model、Error、State 和 JSON 边界确认；具体 Provider SDK、Pydantic 精确依赖版本、物理目录和公开导入路径仍待后续任务确认，当前不得创建代码目录。
 
 ## 版本索引
 

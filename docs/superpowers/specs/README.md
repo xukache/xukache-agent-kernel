@@ -16,7 +16,7 @@
 | 学习实施路线与第六章 | 已确认 | [`2026-07-12-agent-kernel-learning-roadmap-design.md`](2026-07-12-agent-kernel-learning-roadmap-design.md) |
 | 完整 Agent 系统演进路线与第七章 | 已确认 | [`2026-07-13-agent-system-evolution-roadmap-design.md`](2026-07-13-agent-system-evolution-roadmap-design.md) |
 | A1 开发规格确认与实现准入 | 已完成 | [`2026-07-13-agent-kernel-implementation-admission-a1.md`](2026-07-13-agent-kernel-implementation-admission-a1.md) |
-| A2 公共类型表达策略 | 进行中 | 待逐项确认 |
+| A2 公共类型表达策略 | 已完成 | [`2026-07-13-agent-kernel-public-type-strategy-design.md`](2026-07-13-agent-kernel-public-type-strategy-design.md) |
 
 ## 模块确认记录模板
 
@@ -47,4 +47,4 @@
 5. 已说明对其他文档和版本的影响。
 6. 已定义一个真实对话输入、该模块必须承担的职能、预期输出或事件，以及累计回归范围。
 
-具体 Python 类型表达、物理目录和公开导入路径仍需在阶段 A 逐项展示并获得用户确认。
+Python 类型表达已在 A2 完成确认；物理目录和公开导入路径仍需在 A3 逐项展示并获得用户确认。

@@ -465,7 +465,9 @@ Schema 校验与序列化工具当前状态为：
 
 ```text
 能力要求：已确认
-具体库：待模块级契约确认
+Schema Model：Pydantic v2 风格 BaseModel
+公共配置：frozen=True、extra="forbid"、strict=True
+具体依赖版本：阶段 A4 建立 uv 工程时确认
 ```
 
 ### 3.5 第一阶段 Adapter 选择
@@ -602,7 +604,7 @@ retry_count
 
 | 技术选项 | 延后原因 | 重新评估时点 |
 |---|---|---|
-| 具体 Schema 库 | 需要先确认公共字段和序列化要求 | 第一个模块契约确认时 |
+| Pydantic 精确依赖版本 | 公共类型策略已确认，具体版本需结合 uv 工程依赖统一锁定 | A4 建立工程基座时 |
 | 多 Provider 路由 | 一个真实 Provider 足以验证 Model Protocol | Model Adapter 稳定后 |
 | 持久化 Memory | In-memory 足以验证第一阶段语义 | Memory Contract 通过后 |
 | 远程或分布式 Runtime | 会引入调度、网络和状态一致性问题 | 单进程 Runtime 验收后 |
@@ -1232,21 +1234,48 @@ Agent 负责组装 ModelRequest。Provider SDK 类型只能存在于 Adapter 内
 目标：把模型或 Workflow 的结构化意图转换为可治理外部动作。
 
 ```text
-Tool Call
+AgentDefinition 持有可执行 Tool
+  -> Agent 提取 ToolDefinition / Tool Schema
+  -> ModelRequest 只携带 Tool Schema
+  -> ModelResponse 返回 ToolCall
+  -> Agent 检查 allowed Tools 并按名称解析 Tool
   -> Input Schema Validation
-  -> Guardrail / Permission
-  -> Idempotency Check
-  -> Backend Execution
+  -> Runtime / Execution 执行 Guardrail、Permission、Cancellation 和 Idempotency 治理
+  -> Tool 调用 Backend
   -> ToolResult
+  -> Agent 将 ToolResult 加入下一次 ModelRequest
+  -> Model 继续生成最终回答或新的 ToolCall
 ```
 
 | 项目 | 语义 |
 |---|---|
-| 定义 | 名称、说明、输入输出 Schema、权限、超时、取消和幂等语义 |
+| 可执行 Tool | Kernel 内存中的可调用对象，包含公开 Definition，并实现统一执行契约 |
+| Tool Definition / Schema | 名称、说明、输入输出 Schema、权限、超时、取消和幂等声明；这是 Model 能看到的部分 |
+| Tool Call | Model 返回的结构化调用意图，至少包含 call_id、工具名称和参数 |
 | 输入 | `ToolInput`：已经结构化但仍需校验的调用参数 |
 | 输出 | `ToolResult`：结构化 output、执行元数据和错误 |
 | 主要错误 | validation、permission、timeout、execution、cancelled |
 | 非职责 | 自然语言推理、Prompt、Workflow 路由、重试策略、共享状态 |
+
+Function Calling 的边界固定为：
+
+```text
+Tool              != ToolDefinition
+ToolDefinition    != ToolCall
+ToolCall          != ToolResult
+Model 看见 Schema != Model 获得 Python callable
+```
+
+统一规则：
+
+- `AgentDefinition` 保存允许使用的可执行 Tool 对象，形成当前 Agent 的 Tool 白名单。
+- Model Adapter 只能把 Tool 的名称、说明和参数 Schema 转换到 Provider 请求，不能把 Python 对象、函数或 Backend 暴露给 Provider。
+- Model 只负责选择工具并生成结构化参数，不直接执行工具。
+- Agent 负责 Tool Call 循环、允许工具检查、按名称解析 Tool，以及把 ToolResult 加入下一次 ModelRequest。
+- Tool 负责输入输出契约和一次 Backend 调用，不自行决定是否再次调用 Model。
+- Runtime / Execution 负责运行上下文、Guardrail、Permission、Cancellation、Retry 和幂等治理；Retry 仍受 Tool 幂等声明约束。
+- Provider 返回的 Tool Call 必须先转换为 Kernel 的统一 `ToolCall`，Provider SDK 类型不能进入 Agent 或 Tool。
+- Tool 执行结果必须转换为统一 `ToolResult`，再由 Agent 回传给 Model。
 
 是否重试由 Runtime / Execution 根据错误和幂等声明决定。
 
@@ -1308,16 +1337,20 @@ Agent 的推理循环只属于当前 Run，不使用跨 Run 的共享可变状�
 #### 5.4.2 Tool Call 循环
 
 ```text
-ModelResponse.tool_calls
+Application 创建包含可执行 Tools 的 AgentDefinition
+  -> Agent 从 Tools 提取 Provider Neutral Tool Schemas
+  -> Model Adapter 转换 Tool Schemas 并调用 Provider
+  -> Provider Tool Call 转换为 Kernel ToolCall
   -> Agent 检查 Tool 是否在 allowed Tools
+  -> Agent 按 ToolCall.name 解析可执行 Tool
   -> ToolInput Schema Validation
-  -> Guardrail / Permission / Idempotency
+  -> Guardrail / Permission / Cancellation / Idempotency
   -> Tool Adapter
   -> External Backend
-  -> ToolResult
+  -> Kernel ToolResult
   -> Agent 把 ToolResult 加入下一次 ModelRequest
   -> Model 继续生成
-  -> 最终回答或达到执行上限
+  -> 最终回答、新的 ToolCall 或达到执行上限
 ```
 
 每次 Tool Call 必须产生名称、参数摘要、开始、结果或错误事件。Tool 不自行决定是否再次调用 Model。
@@ -1444,6 +1477,210 @@ Programmatic Test Entry
 | Provider 请求响应转换 | `Model Adapter` | 转换为统一 Model 协议 |
 | 业务 Prompt、规则和业务状态 | `Application` | 不进入 Kernel 通用状态 |
 
+#### 5.7.1 Definition 类型规则
+
+`AgentDefinition`、`WorkflowDefinition` 和 `ToolDefinition` 使用只读 dataclass 表达：
+
+```python
+@dataclass(
+    frozen=True,
+    slots=True,
+    kw_only=True,
+    eq=False,
+)
+class ComponentDefinition:
+    ...
+```
+
+统一规则：
+
+- Definition 是只读装配对象，不是 Input、State、Context 或 Result。
+- Definition 必须提供稳定的 `definition_id` 和 `revision`。
+- Definition 可以引用 Model、Tool 等 Protocol 实例，因此不承诺整体 JSON 序列化。
+- `eq=False` 避免对 Model、Tool、函数包装器等运行对象进行结构相等比较；身份一致性由 `definition_id + revision` 显式判断。
+- Definition 内部集合使用 `tuple`、`frozenset` 或等价不可变值对象，不保存可原地修改的 `list`、`set` 或 `dict`。
+- 修改 Definition 必须创建新对象并更新 revision，不能在运行中原地修改。
+- `__post_init__` 只校验 definition_id、revision、执行上限等本地装配不变量，不执行 Provider 网络或凭证检查。
+- Provider 凭证、SDK 配置、run_id、Tool Call 历史和 WorkflowState 不得进入 Definition。
+- 暂停恢复数据只保存可序列化的 `DefinitionRef(definition_id, revision)`，由 Application / Composition Root 重新提供对应 Definition。
+- 恢复时 DefinitionRef 与实际 Definition 不一致，必须返回明确恢复错误，不能自动使用新版本继续旧状态。
+
+Definition 的具体业务字段仍由对应 B-G 任务确认，本节只冻结公共 Python 类型和生命周期规则。
+
+#### 5.7.2 Input 类型规则
+
+`AgentInput`、`WorkflowInput`、`ToolInput`、`ModelRequest` 和 `RunRequest` 使用严格、不可变的 Schema Model 表达。
+
+公共 Schema 基类只统一 Pydantic 配置，不定义万能公共字段：
+
+```python
+class KernelSchema(BaseModel):
+    model_config = ConfigDict(
+        frozen=True,
+        extra="forbid",
+        strict=True,
+    )
+```
+
+统一规则：
+
+- 每个 Input 只保存对应模块本次调用需要的数据，不能重复携带 Definition 中已有的 Model、Tools、Instructions 或 Workflow 拓扑。
+- Input 创建后不可修改；新的调用数据必须创建新的 Input 和新的 Run。
+- `frozen=True` 只提供浅层冻结；嵌套 Schema 也必须冻结，集合优先使用 tuple，开放 JSON 必须防御性复制或规范化，不能保留调用方可变引用。
+- `extra="forbid"` 拒绝拼错字段、未声明参数和外围私有字段静默进入 Kernel。
+- `strict=True` 禁止把错误类型自动转换为目标类型；Model 生成的非法 Tool 参数必须形成明确 validation 错误。
+- Input 必须能够稳定序列化为 JSON，不包含 Protocol、callable、可执行 Tool、Provider SDK 类型或凭证。
+- 公共字段必须使用明确类型，不使用 `Any` 绕过契约。
+- KernelSchema 不提供 run_id、scope、metadata、provider 等万能字段；共享字段只在确有相同语义的具体 Input 中显式声明。
+- run_id、deadline 和 cancellation 属于 RunContext；运行中产生的数据属于 State、Event 或 Result，不能回填 Input。
+- 不创建 UniversalInput，也不通过继承让无关模块获得彼此字段。
+
+Input 的具体字段和嵌套 Schema 由对应 B-G 任务确认，本节只冻结严格校验、不可变和模块隔离规则。
+
+#### 5.7.3 Result 类型规则
+
+`ModelResponse`、`AgentResult`、`ToolResult`、`WorkflowResult` 和 `RuntimeResult` 使用模块独立的严格 Schema Model 表达，不创建万能 `KernelResult`。
+
+统一规则：
+
+- Result 表达一次模块调用的最终结构化结果，不承担 Input、State、Event 或完整 Trace 的职责。
+- Result 继承 KernelSchema，保持 `frozen=True`、`extra="forbid"` 和 `strict=True`。
+- 能够以成功、失败、取消或暂停结束的 Result 必须使用模块专属 `str Enum` 表达明确状态，不使用 `success: bool` 压缩不同终态。
+- 各模块只声明自己真实支持的状态；例如 `paused` 只属于支持暂停语义的 Workflow / Runtime 结果。
+- Result 必须使用 Pydantic model validator 校验 status、output、error 和 state 的合法组合。
+- 成功结果不能同时携带 ErrorInfo；失败结果必须携带 ErrorInfo；暂停结果必须携带可恢复 State 或其稳定引用。
+- Result 输出使用明确的 Provider Neutral 类型，不使用 `Any`，不保存 Provider SDK 响应对象或凭证。
+- Result 可以保存归一化 usage、stop_reason、必要调用摘要和事件引用，但不复制全部 Events、日志、完整 Prompt 或其他模块内部状态。
+- 内部 Exception 在明确模块边界转换为可序列化 ErrorInfo；具体捕获层级和映射由 Error 类型规则及 B-G 任务确认。
+- Streaming 增量和 Events 先独立产生，流结束后只创建一次最终 Result；最终内容必须与已消费增量一致。
+- `RuntimeResult != AgentResult != WorkflowResult != ToolResult`，上层结果只能引用或组合下层公开结果，不能继承为同一万能对象。
+
+具体状态枚举、必填输出和 ErrorInfo 组合规则仍由对应 B-G 任务确认，本节只冻结结构化终态和不变量策略。
+
+#### 5.7.4 Event 类型规则
+
+Event 使用“公共信封 + 具体事件 Schema + 判别联合”表达。
+
+公共信封至少提供：
+
+```text
+event_id
+run_id
+sequence
+occurred_at
+source
+```
+
+具体事件使用稳定 `type` 字段和明确负载字段，并通过 Pydantic discriminated union 组合：
+
+```python
+KernelEvent = Annotated[
+    RunStartedEvent
+    | ToolCallStartedEvent
+    | ToolCallCompletedEvent
+    | RunCompletedEvent
+    | RunFailedEvent,
+    Field(discriminator="type"),
+]
+```
+
+统一规则：
+
+- Event 表达已经发生的结构化事实，不是 Command、State、Result 或普通日志。
+- Event 继承 KernelSchema，创建后不可修改，只能追加。
+- 只共享一层 EventEnvelope，不建立多层事件继承体系。
+- 每一种事件使用独立 Schema 和稳定的 Literal type，不使用 `payload: dict[str, Any]` 万能负载。
+- Runtime 保证同一 run_id 内 sequence 单调递增；事件顺序以 sequence 为准，不依赖时间戳排序。
+- occurred_at 统一使用 UTC，只用于观察、耗时和证据记录。
+- 并行事件通过 sequence 以及 step_id、call_id 等关联字段表达观察顺序。
+- 每个 Run 只能产生一个 Terminal Event；cancelled 或 failed 后不得再产生 completed。
+- WorkflowState 是暂停恢复的事实源，Events 不作为第一阶段的状态回放存储。
+- Result 可以保存事件引用或摘要，但不能复制完整 Events。
+- Event 不保存 Provider 密钥、完整敏感 Prompt、Backend 凭证、Provider 原始响应或不必要的用户隐私。
+- Tool 参数和输出默认进入脱敏的 arguments_summary / output_summary；完整测试证据由受控工件单独保存。
+- Streaming 增量是否作为具体事件类型由 F3 确认；若进入 Event，仍必须遵守同一信封、顺序和唯一终态规则。
+
+具体事件清单和字段由对应 D-G 任务确认，本节只冻结事件类型表达、顺序和边界。
+
+#### 5.7.5 Error 类型规则
+
+错误采用 `KernelError + ErrorInfo` 双层模型：
+
+```text
+KernelError -> Python 运行时中断和向上层传播
+ErrorInfo   -> Result、Event 和测试证据中的可序列化错误
+```
+
+统一规则：
+
+- KernelError 只建立少量需要不同捕获边界的领域异常，例如 ModelInvocationError、ToolExecutionError、MemoryOperationError、WorkflowExecutionError、RuntimeExecutionError 和 KernelCancellationError。
+- 具体错误差异优先使用稳定的分域 ErrorCode 表达，不为每个错误码创建异常子类。
+- ErrorCode 使用 `model.timeout`、`tool.validation`、`workflow.revision_mismatch` 等 Provider Neutral 字符串，不直接暴露 Provider 原始错误码。
+- Provider SDK Exception 必须在对应 Adapter 边界映射为 KernelError，并使用异常链保留内部 cause。
+- ErrorInfo 继承 KernelSchema，至少表达 code、message、source、retryable 和脱敏 details。
+- Exception、traceback、Provider SDK 对象、凭证、完整请求响应和未脱敏用户数据不得进入 ErrorInfo。
+- 合法运行开始前的无效 Definition 或 Input 构造直接抛出 ValueError / Pydantic ValidationError，不伪装成一次正常 failed Result。
+- 合法运行中的 Model、Tool、Memory、Workflow 或 Runtime 操作失败通过 KernelError 传播，并在明确模块边界转换为 failed Result 和 failure Event 中的 ErrorInfo。
+- `retryable=True` 只表示错误类型允许重试；真正重试还必须满足幂等或幂等键、Retry Policy、次数、deadline 和未取消条件。
+- Permission、Schema、Cancellation 和非幂等副作用失败不得因为 retryable 字段被自动重试。
+- ErrorInfo 的 message 和 details 必须适合公开证据；完整内部诊断只进入受控日志或异常链。
+
+具体 ErrorCode 清单、异常捕获层级和 Result 映射由对应 B-G 任务确认，本节只冻结双层错误表达和安全边界。
+
+#### 5.7.6 State 类型规则
+
+State 使用模块独立、严格、不可变且可完整 JSON 往返的 Schema Model 表达。第一阶段最主要的公开 State 是 WorkflowState，不创建万能 `KernelState`。
+
+统一规则：
+
+- State 表达可继续执行组件的当前可恢复快照，不承担 Definition、Input、Memory、RunContext、Event 或 Result 的职责。
+- 每次状态转换创建新的 State 实例，禁止原地修改 completed_steps、position、branch values 等字段。
+- 状态转换必须重新执行 Schema 和业务不变量校验，不能依赖可能绕过完整校验的复制更新。
+- State 只包含标量、str Enum、UTC datetime、冻结嵌套 Schema、稳定集合、受约束 JsonValue、DefinitionRef 和结构化步骤结果或引用。
+- State 不包含 Model、Tool、Protocol、callable、asyncio Task / Lock / Event、Cancellation Token、数据库连接、Provider SDK 对象、Exception 或 Runtime 内存引用。
+- 每种 State 必须通过 `model_dump_json -> model_validate_json` 往返测试，并保持语义等价。
+- DefinitionRef.revision 表达 Definition 拓扑版本；state_schema_version 表达序列化结构版本，两者必须独立校验。
+- 第一阶段不自动迁移未知 Definition revision 或 State schema version，必须返回明确的 revision mismatch 或 unsupported schema 错误。
+- checkpoint_id 可以进入 State，用于标识保存快照；resume_token 属于 Runtime 的一次性恢复授权，禁止进入 State。
+- Workflow 创建、解释和推进 WorkflowState；Runtime 只负责保存、取回、token 校验和恢复驱动，不修改 Workflow 语义字段。
+- State Store Adapter 只执行持久化语义，不解释步骤位置或分支。
+- Events 是审计证据，不是第一阶段恢复事实源；第一阶段不实现 Event Sourcing。
+- resume_token 必须绑定 run_id、checkpoint_id 和 DefinitionRef，成功消费后立即失效，重复恢复不得再次执行已完成副作用。
+
+WorkflowState 的具体字段和恢复协议由 G1、G4 确认，本节只冻结 State 的类型、序列化和所有权规则。
+
+#### 5.7.7 JSON 与 metadata 公共边界
+
+公共协议禁止使用 `Any`、`object` 和无类型 `dict` 绕过结构化契约。
+
+开放 JSON 数据只允许以下递归类型：
+
+```python
+JsonScalar = str | int | float | bool | None
+JsonValue = JsonScalar | list["JsonValue"] | dict[str, "JsonValue"]
+JsonObject = dict[str, JsonValue]
+```
+
+统一规则：
+
+- 上述别名描述 JSON wire shape，不表示 Kernel 可以长期保留外部传入的可变 list / dict 引用。
+- Schema 构造边界必须对开放 JSON 做防御性复制和规范化；State、Event 等不可变对象不能向调用方暴露可原地修改其内部语义的引用。
+- 内存中的深度不可变表示和 JSON wire shape 必须可以稳定互转；具体 Frozen JSON 容器实现由 A4 确认。
+- 已知结构必须定义明确 Schema；JsonValue 只用于真正开放的 Model 输出、Tool 通用包装、受控 metadata 和脱敏 Provider 扩展信息。
+- datetime、Enum、UUID、Decimal 和 bytes 不能作为任意 Python 对象进入 JsonValue，必须按字段契约显式转换。
+- float 必须是有限值，禁止 NaN、Infinity 和 -Infinity 进入公共 JSON。
+- metadata 只能在确有扩展需求的具体 Schema 中显式声明，不能进入 KernelSchema 基类。
+- 每个 metadata 字段必须明确写入者、读取者、是否参与核心逻辑、是否持久化、敏感数据规则和大小限制。
+- application metadata、runtime_metadata 和 provider_metadata 必须分域，不能互相覆盖正式字段。
+- Kernel 核心逻辑不能依赖 provider_metadata 做分支、状态推进或重试决定。
+- Provider Adapter 只能按白名单提取 request_id、model_version 等必要字段，禁止复制原始响应、请求头、凭证或 SDK 对象。
+- 需要哈希、幂等键、Checkpoint 完整性或证据比较时，必须使用统一 Canonical JSON，不使用 Python repr 或无规范序列化。
+- Canonical JSON 至少固定 UTF-8、key 排序、稳定分隔符、有限浮点、Enum value 和 UTC ISO 8601 datetime。
+- 开放 JSON 必须设置最大嵌套深度、key 数、字符串长度和序列化字节数；具体阈值由使用该字段的 B-G 任务确认。
+- 超出 JSON 边界必须产生稳定的 schema.json_too_deep、schema.json_too_large 或等价 ErrorCode。
+
+JsonValue 的具体 Python 实现、Canonical JSON 函数和限制值由 A4 及首个使用任务确认，本节只冻结公共数据边界。
+
 必须保持：
 
 ```text
@@ -1544,7 +1781,7 @@ RuntimeResult != AgentResult != WorkflowResult != ToolResult
 | ID | 任务 | 状态 | 主要出口 |
 |---|---|---|---|
 | A1 | 完成开发规格逐章确认 | [x] | 第 1-7 章一致 |
-| A2 | 确认公共类型表达策略 | [~] | Python 类型与序列化规则 |
+| A2 | 确认公共类型表达策略 | [x] | Python 类型与序列化规则 |
 | A3 | 确认物理目录与公开导入路径 | [ ] | 可实施目录设计 |
 | A4 | 建立 uv、pytest 与 Architecture Test 基座 | [ ] | 可运行工程 |
 | A5 | 建立真实对话证据基座 | [ ] | RD 执行和证据入口 |
@@ -1630,7 +1867,7 @@ RuntimeResult != AgentResult != WorkflowResult != ToolResult
 
 | 阶段 | 总任务 | 已完成 | 进行中 | 进度 |
 |---|---:|---:|---:|---:|
-| A | 5 | 1 | 1 | 20% |
+| A | 5 | 2 | 0 | 40% |
 | B | 6 | 0 | 0 | 0% |
 | C | 5 | 0 | 0 | 0% |
 | D | 6 | 0 | 0 | 0% |
@@ -1638,7 +1875,7 @@ RuntimeResult != AgentResult != WorkflowResult != ToolResult
 | F | 8 | 0 | 0 | 0% |
 | G | 6 | 0 | 0 | 0% |
 | H | 5 | 0 | 0 | 0% |
-| **总计** | **47** | **1** | **1** | **2%** |
+| **总计** | **47** | **2** | **0** | **4%** |
 
 只有 `[x]` 计入完成进度；`[~]`、`[!]` 和测试状态 `BLOCKED`、`NOT RUN` 均不计入。
 
@@ -1663,6 +1900,7 @@ RuntimeResult != AgentResult != WorkflowResult != ToolResult
 - 前置依赖：A1、第五章语义级公共契约。
 - 交付：Definition、Input、Result、Event、Error 和 State 的类型策略。
 - 验收：Provider 类型不泄漏，跨 Adapter 和暂停恢复数据可序列化。
+- 证据：[`A2 公共类型表达策略确认记录`](docs/superpowers/specs/2026-07-13-agent-kernel-public-type-strategy-design.md)。
 - 关联：K-009、全部 Contract Tests。
 
 ##### A3：确认物理目录与公开导入路径
@@ -2099,6 +2337,24 @@ RuntimeResult != AgentResult != WorkflowResult != ToolResult
 5. 影响系统边界时的架构版本或 changelog。
 
 任务详细实施文件、类、方法和测试节点由确认后的实施计划维护。实施计划必须引用本章任务 ID，不能新增本章未确认的架构决定。
+
+任务分支遵循以下门禁：
+
+```text
+最新 architecture
+  -> 创建仅承载一个任务的独立分支
+  -> 在任务分支逐项确认设计
+  -> 在任务分支实现并验证
+  -> 用户确认任务结果
+  -> 勾选任务并创建原子提交
+  -> 合并回 architecture
+```
+
+- 每个任务都必须从最新 `architecture` 创建新分支。
+- 一个任务分支不能混入其他 `DEV_SPEC.md` 任务。
+- 用户确认前，任务保持 `[~]` 或原状态，不得标记 `[x]`。
+- 用户确认前，不得提交任务结果或合并回 `architecture`。
+- 合并完成后，下一任务必须重新从最新 `architecture` 创建分支。
 
 ## 7. 从 Agent Kernel 到完整 Agent 系统
 
