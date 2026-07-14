@@ -13,13 +13,17 @@ dependencies = [
 [package.dev-dependencies]
 dev = [
     { name = "pytest" },
+    { name = "typing-extensions" },
 ]
 
 [package.metadata]
 requires-dist = [{ name = "pydantic", specifier = ">=2.10,<3" }]
 
 [package.metadata.requires-dev]
-dev = [{ name = "pytest", specifier = ">=8.3,<9" }]
+dev = [
+    { name = "pytest", specifier = ">=8.3,<9" },
+    { name = "typing-extensions", specifier = ">=4.12,<5" },
+]
 
 [[package]]
 name = "annotated-types"

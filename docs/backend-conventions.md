@@ -99,3 +99,11 @@ Kernel    -X-> Interface / Application / Provider SDK / 具体存储
 4. 未运行的验证明确标记，不能声称通过。
 
 Architecture Test 基座使用 AST 检查 Kernel 源码导入边界，并由 pytest 统一执行。
+
+真实对话测试使用 `tests/real_dialogue` 场景注册表和 `tests/support` 证据
+支持层。证据默认写入 `artifacts/real-dialogue/`，也可以通过
+`ANANHU_REAL_DIALOGUE_EVIDENCE_DIR` 指定目录；该目录不进入 Git。
+
+真实对话证据必须使用独立的 `run_id` 和 `scope`，并通过结构化字段保存
+状态、事件、usage、latency 和失败信息。没有真实 Provider、凭证或必要能力
+时只能记录 `BLOCKED` 或 `NOT RUN`，不能写入模拟的 `PASS` 证据。

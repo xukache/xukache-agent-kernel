@@ -11,7 +11,7 @@
 - 已确认 Execution 执行层：`Context`、`Hooks`、`Guardrails`、`Retry`、`Cancellation`、`Streaming`。
 - Core、Execution、支撑协议、Applications 和 Interfaces 已完成设计确认。
 - 当前完整开发规格：`DEV_SPEC v0.25`。第一至七章已确认学习目标、核心特点、技术决策、双轨验收、整体架构、8 个阶段 47 个任务的学习实施路线，以及从 Kernel 到完整 Agent 系统的演进路线。
-- 阶段 A 的 A1、A2、A3、A4 已完成；下一任务是 A5 真实对话证据基座。
+- 阶段 A 的 A1、A2、A3、A4、A5 已完成；下一阶段进入 B：Model MVP。
 - 六个 Core 的语义级公共契约、Python 类型表达策略、`src/agent_kernel` 物理目录和公开导入路径已经确认。
 - 第一条纵向切片将直接接入真实 Model Provider，不使用模拟模型。
 - 每个模块实现任务都必须新增真实用户对话输入输出场景，并累计回归此前全部真实对话场景。
