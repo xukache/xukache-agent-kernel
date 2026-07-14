@@ -28,6 +28,7 @@ from agent_kernel.model import (
     ModelResponse,
     ModelStreamChunk,
     ToolCall,
+    ToolCallDelta,
     Usage,
 )
 from agent_kernel.model.schemas import JsonObject, JsonValue
@@ -135,8 +136,8 @@ class VolcengineArkModel:
 
     @property
     def capabilities(self) -> frozenset[str]:
-        """当前 B3 只承诺完整生成；Streaming 由 B5 接入。"""
-        return frozenset({"generate"})
+        """当前 Adapter 支持完整生成和 SSE Streaming。"""
+        return frozenset({"generate", "stream"})
 
     async def generate(self, request: ModelRequest) -> ModelResponse:
         payload = self._build_payload(request)
@@ -144,12 +145,61 @@ class VolcengineArkModel:
         return self._parse_response(response, request.output_schema)
 
     def stream(self, request: ModelRequest) -> AsyncIterator[ModelStreamChunk]:
-        """在 B5 完成真实增量转换前显式报告能力未启用。"""
-        raise ModelError(
-            ModelErrorCode.PROVIDER,
-            "Volcengine streaming adapter is not enabled until B5",
-            details={"capability": "stream"},
-        )
+        """返回一次性消费的 Provider Neutral SSE 增量流。"""
+        return self._stream(request)
+
+    async def _stream(self, request: ModelRequest) -> AsyncIterator[ModelStreamChunk]:
+        payload = self._build_payload(request)
+        payload["stream"] = True
+        url = f"{self._config.base_url.rstrip('/')}/chat/completions"
+        headers = {
+            "Authorization": f"Bearer {self._config.api_key}",
+            "Content-Type": "application/json",
+        }
+        try:
+            if self._client is not None:
+                async with self._client.stream(
+                    "POST",
+                    url,
+                    headers=headers,
+                    json=payload,
+                ) as response:
+                    self._raise_for_status(response)
+                    async for chunk in self._parse_stream(
+                        response,
+                        request.output_schema,
+                    ):
+                        yield chunk
+            else:
+                async with httpx.AsyncClient(
+                    timeout=self._config.timeout_seconds
+                ) as client:
+                    async with client.stream(
+                        "POST",
+                        url,
+                        headers=headers,
+                        json=payload,
+                    ) as response:
+                        self._raise_for_status(response)
+                        async for chunk in self._parse_stream(
+                            response,
+                            request.output_schema,
+                        ):
+                            yield chunk
+        except ModelError:
+            raise
+        except httpx.TimeoutException as exc:
+            raise ModelError(
+                ModelErrorCode.TIMEOUT,
+                "Volcengine streaming request timed out",
+                retryable=True,
+            ) from exc
+        except httpx.RequestError as exc:
+            raise ModelError(
+                ModelErrorCode.PROVIDER,
+                "Volcengine streaming request failed",
+                retryable=True,
+            ) from exc
 
     def _build_payload(self, request: ModelRequest) -> JsonObject:
         payload: JsonObject = {
@@ -233,6 +283,11 @@ class VolcengineArkModel:
                 retryable=True,
             ) from exc
 
+        self._raise_for_status(response)
+        return response
+
+    @staticmethod
+    def _raise_for_status(response: httpx.Response) -> None:
         if response.status_code == 429:
             raise ModelError(
                 ModelErrorCode.RATE_LIMIT,
@@ -252,7 +307,156 @@ class VolcengineArkModel:
                 "Volcengine returned an error",
                 details={"status_code": response.status_code},
             )
-        return response
+
+    async def _parse_stream(
+        self,
+        response: httpx.Response,
+        output_schema: JsonObject | None,
+    ) -> AsyncIterator[ModelStreamChunk]:
+        structured_fragments: list[str] = []
+        finish_reason: FinishReason | None = None
+        model_id = self._config.model
+        saw_done = False
+
+        async for line in response.aiter_lines():
+            line = line.strip()
+            if not line or not line.startswith("data:"):
+                continue
+            data = line[5:].strip()
+            if data == "[DONE]":
+                saw_done = True
+                break
+
+            try:
+                body = json.loads(data)
+                if not isinstance(body, dict):
+                    raise TypeError("stream event must be an object")
+                raw_model_id = body.get("model")
+                if isinstance(raw_model_id, str):
+                    model_id = raw_model_id
+                choices = body["choices"]
+                if not isinstance(choices, list) or not choices:
+                    raise TypeError("stream choices must be a non-empty list")
+                choice = choices[0]
+                if not isinstance(choice, dict):
+                    raise TypeError("stream choice must be an object")
+                delta = choice.get("delta", {})
+                if not isinstance(delta, dict):
+                    raise TypeError("stream delta must be an object")
+            except (KeyError, TypeError, ValueError, json.JSONDecodeError) as exc:
+                raise ModelError(
+                    ModelErrorCode.FORMAT,
+                    "Volcengine stream event does not match the expected format",
+                ) from exc
+
+            raw_finish_reason = choice.get("finish_reason")
+            event_finish_reason = (
+                self._parse_finish_reason(raw_finish_reason)
+                if raw_finish_reason is not None
+                else None
+            )
+            if event_finish_reason is not None:
+                finish_reason = event_finish_reason
+
+            usage = (
+                self._parse_usage(body["usage"])
+                if isinstance(body.get("usage"), dict)
+                else None
+            )
+            content = delta.get("content")
+            if content is not None and not isinstance(content, str):
+                raise ModelError(
+                    ModelErrorCode.FORMAT,
+                    "Volcengine stream content is not text",
+                )
+
+            if output_schema is not None and content:
+                structured_fragments.append(content)
+
+            tool_deltas = self._parse_tool_call_deltas(delta.get("tool_calls"))
+            if output_schema is None and content:
+                yield ModelStreamChunk(
+                    text_delta=content,
+                    usage=usage,
+                    finish_reason=event_finish_reason,
+                    model_id=model_id,
+                )
+                usage = None
+                event_finish_reason = None
+
+            for tool_delta in tool_deltas:
+                yield ModelStreamChunk(
+                    tool_call_delta=tool_delta,
+                    model_id=model_id,
+                )
+
+            if event_finish_reason is not None:
+                if output_schema is not None:
+                    structured_output = self._parse_structured_output(
+                        "".join(structured_fragments),
+                        output_schema,
+                    )
+                    yield ModelStreamChunk(
+                        structured_delta=structured_output,
+                        model_id=model_id,
+                    )
+                yield ModelStreamChunk(
+                    usage=usage,
+                    finish_reason=event_finish_reason,
+                    model_id=model_id,
+                )
+            elif usage is not None and not content and not tool_deltas:
+                yield ModelStreamChunk(usage=usage, model_id=model_id)
+
+        if not saw_done or finish_reason is None:
+            raise ModelError(
+                ModelErrorCode.FORMAT,
+                "Volcengine stream ended without a finish reason",
+            )
+
+    @staticmethod
+    def _parse_tool_call_deltas(value: JsonValue) -> tuple[ToolCallDelta, ...]:
+        if value is None:
+            return ()
+        if not isinstance(value, list):
+            raise ModelError(
+                ModelErrorCode.FORMAT,
+                "Volcengine stream tool_calls is not a list",
+            )
+
+        deltas: list[ToolCallDelta] = []
+        try:
+            for item in value:
+                if not isinstance(item, dict):
+                    raise TypeError("tool call delta is not an object")
+                function = item.get("function", {})
+                if not isinstance(function, dict):
+                    raise TypeError("tool call delta function is not an object")
+                call_id = item.get("id")
+                name = function.get("name")
+                arguments_delta = function.get("arguments")
+                if call_id is not None and not isinstance(call_id, str):
+                    raise TypeError("tool call delta id is not text")
+                if name is not None and not isinstance(name, str):
+                    raise TypeError("tool call delta name is not text")
+                if arguments_delta is not None and not isinstance(
+                    arguments_delta,
+                    str,
+                ):
+                    raise TypeError("tool call delta arguments are not text")
+                deltas.append(
+                    ToolCallDelta(
+                        call_id=call_id,
+                        name=name,
+                        arguments_delta=arguments_delta,
+                    )
+                )
+        except (TypeError, ValueError) as exc:
+            raise ModelError(
+                ModelErrorCode.FORMAT,
+                "Volcengine stream tool call does not match the expected format",
+            ) from exc
+        return tuple(deltas)
 
     def _parse_response(
         self,

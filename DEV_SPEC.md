@@ -1798,7 +1798,7 @@ RuntimeResult != AgentResult != WorkflowResult != ToolResult
 | B2 | 定义 Model Contract 与错误语义 | [x] | generate / stream 契约 |
 | B3 | 实现首个真实 Model Provider Adapter | [x] | 真实 Provider 可调用 |
 | B4 | 实现结构化输出转换 | [x] | 统一结构化结果 |
-| B5 | 实现 Provider Streaming 转换 | [ ] | 有序真实增量 |
+| B5 | 实现 Provider Streaming 转换 | [x] | 有序真实增量 |
 | B6 | 完成 RD-001 真实模型验收 | [ ] | Model MVP 完成证据 |
 
 #### 6.4.3 阶段 C：Agent MVP
@@ -1872,7 +1872,7 @@ RuntimeResult != AgentResult != WorkflowResult != ToolResult
 | 阶段 | 总任务 | 已完成 | 进行中 | 进度 |
 |---|---:|---:|---:|---:|
 | A | 5 | 5 | 0 | 100% |
-| B | 6 | 4 | 0 | 67% |
+| B | 6 | 5 | 0 | 83% |
 | C | 5 | 0 | 0 | 0% |
 | D | 6 | 0 | 0 | 0% |
 | E | 6 | 0 | 0 | 0% |
@@ -2003,6 +2003,14 @@ RuntimeResult != AgentResult != WorkflowResult != ToolResult
 - 前置依赖：B3。
 - 交付：有序增量、结束原因和合并规则。
 - 验收：完整消费后合并结果与最终 ModelResponse 一致。
+- 当前实现：建立 Volcengine Ark SSE Streaming 转换，支持文本增量、Tool Call
+  增量、usage、finish_reason 和结构化输出收尾；能力声明为
+  `{"generate", "stream"}`。
+- 当前验证：MockTransport 集成测试覆盖 SSE 顺序、请求 `stream` 标记、Tool Call
+  增量、结构化 JSON 缓存校验和无结束原因错误。
+- 当前限制：尚未执行真实网络 Smoke；不负责 Runtime 重试、取消治理或最终
+  `ModelResponse` 聚合对象，真实 RD-008 仍需后续 Runtime / Agent 层完成。
+- 证据：[`B5 Provider Streaming 转换记录`](docs/superpowers/specs/2026-07-14-agent-kernel-provider-streaming-b5.md)。
 - 关联：K-007；RD-008 的前置能力。
 
 ##### B6：完成 RD-001 真实模型验收
