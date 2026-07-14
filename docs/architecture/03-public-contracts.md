@@ -77,6 +77,32 @@ JSON 序列化。`ModelResponse` 约束 `tool_call` 结束原因必须有 Tool C
 `stop` 结束原因不得包含 Tool Call。B1 只定义数据，不定义 Model Protocol、
 Provider 错误或 `generate / stream` 行为。
 
+## Model 行为契约与错误
+
+B2 已确认 `Model` Protocol：
+
+```python
+async def generate(request: ModelRequest) -> ModelResponse
+def stream(request: ModelRequest) -> AsyncIterator[ModelStreamChunk]
+```
+
+`generate` 返回一次完整响应；`stream` 返回按产生顺序消费的一次性异步
+增量流。`ModelStreamChunk` 可以携带文本增量、结构化增量、Tool Call 增量、
+usage 或 finish_reason，但不携带 Provider SDK 类型。
+
+Model 运行时错误统一使用 `ModelErrorCode`：
+
+| 错误码 | 语义 |
+|---|---|
+| `model.provider` | Provider 调用或响应不可用 |
+| `model.timeout` | 超过调用时限 |
+| `model.rate_limit` | Provider 限流 |
+| `model.format` | 请求或响应格式不满足契约 |
+| `model.cancelled` | Model 调用被取消 |
+
+`ModelError` 继承公共 `KernelError`，其 `retryable` 只描述错误属性，不自动触发重试；重试策略由后续
+Runtime / Execution 任务治理。B2 不实现 Provider 转换、RunContext 或取消令牌。
+
 ## Error
 
 ```text
@@ -97,4 +123,4 @@ Provider / Backend Exception
 - `definition_ref.revision` 与 `state_schema_version` 分别管理定义和状态结构版本。
 - `checkpoint_id` 可以进入 State；一次性 `resume_token` 不能进入 State。
 
-完整规则和示例以 A2 确认记录为准；A3 已确认 `agent_kernel` 及其稳定子包为公开导入边界；B1 已确认 Model 数据协议；其他字段、枚举和错误捕获层级由 B-G 对应任务确认。
+完整规则和示例以 A2 确认记录为准；A3 已确认 `agent_kernel` 及其稳定子包为公开导入边界；B1 已确认 Model 数据协议，B2 已确认 Model 行为和错误语义；其他字段、枚举和错误捕获层级由 B-G 对应任务确认。
