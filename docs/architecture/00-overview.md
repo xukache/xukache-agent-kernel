@@ -51,8 +51,10 @@ Runtime / Core
 ## 当前阶段边界
 
 - 已冻结逻辑架构和语义级公共契约。
-- A3 已冻结 `src/agent_kernel` 物理目录基线和公开导入路径规则，具体模块字段与实现文件仍由 A4、B-G 任务建立。
-- 尚未创建 Kernel 实现代码。
+- A3 已冻结 `src/agent_kernel` 物理目录基线和公开导入路径规则；当前已由 B1-B6
+  建立 Model 公共协议、Volcengine Adapter、结构化输出、Streaming 和 RD-001
+  真实验收。
+- Agent、Tool、Memory、Runtime 和 Workflow 尚未创建实现目录。
 - 第一阶段只建立单进程、单真实 Model Provider、In-memory Memory 和无副作用 Tool 的纵向切片。
 - CLI、HTTP、MCP、业务 Application 和 Multi-Agent 属于后续确认范围。
 
