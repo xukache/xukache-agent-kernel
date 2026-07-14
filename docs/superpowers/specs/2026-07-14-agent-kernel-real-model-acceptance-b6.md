@@ -83,9 +83,9 @@ artifacts/real-dialogue/RD-001/<run_id>.json
 | Smoke 关闭门禁 | 通过，记录 `NOT RUN` |
 | 真实 Provider RD-001 | 通过，记录 `PASS` |
 | Evidence 支持层回归 | 通过 |
-| `uv run pytest -q` | 待最终验证 |
-| `uv lock --check` | 待最终验证 |
-| `git diff --check` | 待最终验证 |
+| `uv run pytest -q` | 通过，34 passed |
+| `uv lock --check` | 通过 |
+| `git diff --check` | 通过 |
 
 真实运行时本机默认 SOCKS 代理缺少 `socksio`，首次尝试在 HTTP 客户端创建阶段
 被阻塞；第二次运行清除代理环境变量后成功访问真实 Provider。该运行环境处理

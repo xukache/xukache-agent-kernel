@@ -6,7 +6,7 @@
 
 ## 当前状态
 
-- 处于实现准入阶段。
+- 已完成 Model MVP，当前进入 Agent MVP 实现阶段。
 - 核心原语：`Agent`、`Workflow`、`Tool`、`Memory`、`Model`、`Runtime`。
 - 已确认 Execution 执行层：`Context`、`Hooks`、`Guardrails`、`Retry`、`Cancellation`、`Streaming`。
 - Core、Execution、支撑协议、Applications 和 Interfaces 已完成设计确认。
@@ -17,8 +17,10 @@
 - Provider、模型、Endpoint、超时和能力配置位于 [`config/models.yaml`](config/models.yaml)；
   `ANANHU_MODEL_CATALOG` 可切换 Model Catalog，API Key 仍通过环境变量注入。
 - 每个模块实现任务都必须新增真实用户对话输入输出场景，并累计回归此前全部真实对话场景。
-- 尚未创建 Kernel Core 实现代码；当前只有可安装、可导入的空包入口。
-- 尚未发布架构版本；首个架构版本的准确创建时点仍在实现准入阶段逐项确认。
+- 已完成 Model Core 的协议、错误语义、Volcengine Adapter、结构化输出、
+  Streaming 和 RD-001 真实 Provider 验收；Agent、Tool、Memory、Runtime、
+  Workflow 尚未开始实现。
+- 尚未发布架构版本；首个完整架构版本将在 Kernel 累计验收通过后创建。
 
 ## 文档索引
 
