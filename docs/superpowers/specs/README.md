@@ -19,6 +19,7 @@
 | A2 公共类型表达策略 | 已完成 | [`2026-07-13-agent-kernel-public-type-strategy-design.md`](2026-07-13-agent-kernel-public-type-strategy-design.md) |
 | A3 物理目录与公开导入路径 | 已完成 | [`2026-07-13-agent-kernel-physical-layout-import-paths-a3.md`](2026-07-13-agent-kernel-physical-layout-import-paths-a3.md) |
 | A4 uv、pytest 与 Architecture Test 基座 | 已完成 | [`2026-07-14-agent-kernel-engineering-test-foundation-a4.md`](2026-07-14-agent-kernel-engineering-test-foundation-a4.md) |
+| A5 真实对话证据基座 | 已完成 | [`2026-07-14-agent-kernel-real-dialogue-evidence-foundation-a5.md`](2026-07-14-agent-kernel-real-dialogue-evidence-foundation-a5.md) |
 
 ## 模块确认记录模板
 
@@ -50,4 +51,5 @@
 6. 已定义一个真实对话输入、该模块必须承担的职能、预期输出或事件，以及累计回归范围。
 
 Python 类型表达已在 A2 完成确认；物理目录和公开导入路径已在 A3 完成确认；
-A4 已建立并确认工程和测试基座，下一任务进入 A5。
+A4 已建立并确认工程和测试基座；A5 已建立真实对话场景注册和证据写入基座，
+尚未运行真实 Provider。

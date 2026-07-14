@@ -1784,7 +1784,7 @@ RuntimeResult != AgentResult != WorkflowResult != ToolResult
 | A2 | 确认公共类型表达策略 | [x] | Python 类型与序列化规则 |
 | A3 | 确认物理目录与公开导入路径 | [x] | 可实施目录设计 |
 | A4 | 建立 uv、pytest 与 Architecture Test 基座 | [x] | 可运行工程 |
-| A5 | 建立真实对话证据基座 | [ ] | RD 执行和证据入口 |
+| A5 | 建立真实对话证据基座 | [x] | RD 执行和证据入口 |
 
 #### 6.4.2 阶段 B：Model MVP
 
@@ -1867,7 +1867,7 @@ RuntimeResult != AgentResult != WorkflowResult != ToolResult
 
 | 阶段 | 总任务 | 已完成 | 进行中 | 进度 |
 |---|---:|---:|---:|---:|
-| A | 5 | 4 | 0 | 80% |
+| A | 5 | 5 | 0 | 100% |
 | B | 6 | 0 | 0 | 0% |
 | C | 5 | 0 | 0 | 0% |
 | D | 6 | 0 | 0 | 0% |
@@ -1929,6 +1929,10 @@ RuntimeResult != AgentResult != WorkflowResult != ToolResult
 - 前置依赖：A4、第四章证据规则。
 - 交付：RD 场景入口、隔离 run_id/scope、状态和证据格式。
 - 验收：可以记录 `PASS`、`FAIL`、`BLOCKED`、`NOT RUN`，且不泄漏凭证。
+- 当前实现：建立 `tests/real_dialogue` 场景注册表和 `tests/support` 证据模型、脱敏写入器、工件目录配置。
+- 当前验证：12 个 RD 场景元数据完整，证据状态、失败详情、唯一 `run_id/scope` 和递归凭证脱敏均有确定性测试。
+- 当前限制：尚未执行真实 Provider；当前没有任何 `RD-*` 被标记为 `PASS`。
+- 证据：[`A5 真实对话证据基座记录`](docs/superpowers/specs/2026-07-14-agent-kernel-real-dialogue-evidence-foundation-a5.md)。
 - 关联：RD-001 至 RD-012 的公共基座。
 
 #### 6.6.2 阶段 B：Model MVP

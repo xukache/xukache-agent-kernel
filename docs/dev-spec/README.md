@@ -127,7 +127,9 @@ docs/superpowers/plans/
 六个 Core 的语义级公共契约和第一阶段范围保持不变。A2 已完成 Protocol、Definition、
 Schema Model、Error、State 和 JSON 边界确认；A3 已确认物理目录和公开导入路径；
 A4 已锁定 Pydantic 2.13.4、pytest 8.4.2，并建立 uv 与 Architecture Test 基座。
-具体 Provider SDK 仍待后续模块任务确认，当前不得创建未经确认的 Core 实现目录。
+A5 已建立 RD-001 至 RD-012 的场景注册、结构化证据和脱敏写入基座，但尚未执行
+真实 Provider。具体 Provider SDK 仍待后续模块任务确认，当前不得创建未经确认的
+Core 实现目录。
 
 ## 版本索引
 

@@ -15,6 +15,7 @@ dependencies = [
 [dependency-groups]
 dev = [
     "pytest>=8.3,<9",
+    "typing-extensions>=4.12,<5",
 ]
 
 [tool.hatch.build.targets.wheel]
@@ -23,6 +24,9 @@ packages = ["src/agent_kernel"]
 [tool.pytest.ini_options]
 testpaths = ["tests"]
 addopts = ["-ra", "--strict-config", "--strict-markers"]
+markers = [
+    "real_dialogue: tests that require a real Provider and produce evidence artifacts",
+]
 
 [tool.uv]
 default-groups = ["dev"]
