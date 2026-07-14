@@ -520,11 +520,15 @@ Kernel 不依赖具体 Adapter。替换 Adapter 时，必须重新运行对应 C
 当前配置入口保留：
 
 ```text
-ANANHU_REAL_MODEL
+ANANHU_MODEL_CATALOG
 ANANHU_REAL_MODEL_SMOKE
+VOLCENGINE_API_KEY
 ```
 
-具体 Provider 客户端、端点、凭证变量和 Tool Choice、Structured Output、Streaming 能力映射，必须在 Model Adapter 确认时冻结。
+`ANANHU_MODEL_CATALOG` 用于定位 YAML Model Catalog。Provider、模型、Endpoint、
+超时和能力声明由 YAML 管理；YAML 中的 `api_key_env` 再指向环境变量读取密钥。
+Provider Endpoint 可以通过替换或覆盖 YAML 配置调整，不能写死为不可调整的架构常量。
+具体 Provider 客户端、凭证变量和 Tool Choice、Structured Output、Streaming 能力映射，必须在 Model Adapter 确认时冻结。
 
 ### 3.7 可观测性与测试工具策略
 
@@ -1792,7 +1796,7 @@ RuntimeResult != AgentResult != WorkflowResult != ToolResult
 |---|---|---|---|
 | B1 | 定义 ModelRequest 与 ModelResponse | [x] | Provider Neutral 数据协议 |
 | B2 | 定义 Model Contract 与错误语义 | [x] | generate / stream 契约 |
-| B3 | 实现首个真实 Model Provider Adapter | [ ] | 真实 Provider 可调用 |
+| B3 | 实现首个真实 Model Provider Adapter | [~] | 真实 Provider 可调用 |
 | B4 | 实现结构化输出转换 | [ ] | 统一结构化结果 |
 | B5 | 实现 Provider Streaming 转换 | [ ] | 有序真实增量 |
 | B6 | 完成 RD-001 真实模型验收 | [ ] | Model MVP 完成证据 |
@@ -1868,7 +1872,7 @@ RuntimeResult != AgentResult != WorkflowResult != ToolResult
 | 阶段 | 总任务 | 已完成 | 进行中 | 进度 |
 |---|---:|---:|---:|---:|
 | A | 5 | 5 | 0 | 100% |
-| B | 6 | 2 | 0 | 33% |
+| B | 6 | 2 | 1 | 33% |
 | C | 5 | 0 | 0 | 0% |
 | D | 6 | 0 | 0 | 0% |
 | E | 6 | 0 | 0 | 0% |
@@ -1969,6 +1973,11 @@ RuntimeResult != AgentResult != WorkflowResult != ToolResult
 - 前置依赖：B2、Provider 配置确认。
 - 交付：一个真实 Provider Adapter 和能力预检。
 - 验收：凭证、模型和能力错误明确；不得 fallback 到模拟输出。
+- 当前实现：建立 `adapters.model.VolcengineArkModel`、YAML Model Catalog
+  配置读取、请求/响应转换、错误映射和能力声明。
+- 当前验证：MockTransport 集成测试覆盖配置校验、请求鉴权、响应归一化、限流、超时、Protocol 兼容和安装打包。
+- 当前限制：`ANANHU_REAL_MODEL_SMOKE=0`，尚未运行真实网络 Smoke；Streaming 能力明确留到 B5，不伪造支持；B3 仍待用户确认后标记为 `[x]`。
+- 证据：[`B3 Volcengine Ark Model Adapter 记录`](docs/superpowers/specs/2026-07-14-agent-kernel-volcengine-adapter-b3.md)。
 - 关联：K-001、K-007。
 
 ##### B4：实现结构化输出转换

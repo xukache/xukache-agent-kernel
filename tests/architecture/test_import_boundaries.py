@@ -12,6 +12,7 @@ from pathlib import Path
 
 PROJECT_ROOT = Path(__file__).resolve().parents[2]
 KERNEL_ROOT = PROJECT_ROOT / "src" / "agent_kernel"
+ADAPTER_ROOT = PROJECT_ROOT / "src" / "adapters"
 
 FORBIDDEN_TOP_LEVEL_MODULES = frozenset(
     {
@@ -63,3 +64,16 @@ def test_kernel_has_no_parallel_core_package() -> None:
     }
 
     assert parallel_packages == set()
+
+
+def test_adapters_do_not_import_application_or_interface_layers() -> None:
+    """Adapter 可以依赖外部 SDK，但不能反向依赖业务和外部入口。"""
+    violations: dict[str, set[str]] = {}
+    forbidden = {"applications", "interfaces"}
+
+    for path in ADAPTER_ROOT.rglob("*.py"):
+        imported = _imported_top_level_modules(path) & forbidden
+        if imported:
+            violations[str(path.relative_to(PROJECT_ROOT))] = imported
+
+    assert violations == {}

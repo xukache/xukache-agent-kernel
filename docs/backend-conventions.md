@@ -9,6 +9,7 @@
 - 不从 `mvp`、`main` 或旧项目恢复 `pyproject.toml`、`uv.lock`、代码和测试。
 - A4 只建立 `src/agent_kernel/__init__.py`、工程配置和测试基座，不代表任何 Core 已实现。
 - 依赖版本由 `uv.lock` 锁定；当前主依赖为 Pydantic 2.13.4，开发测试依赖为 pytest 8.4.2。
+- HTTP Adapter 使用 `httpx`；Provider SDK 和凭证只存在于 `adapters/`，不进入 `agent_kernel`。
 - 安装、测试和运行统一使用以下命令：
 
 ```bash
@@ -107,3 +108,7 @@ Architecture Test 基座使用 AST 检查 Kernel 源码导入边界，并由 pyt
 真实对话证据必须使用独立的 `run_id` 和 `scope`，并通过结构化字段保存
 状态、事件、usage、latency 和失败信息。没有真实 Provider、凭证或必要能力
 时只能记录 `BLOCKED` 或 `NOT RUN`，不能写入模拟的 `PASS` 证据。
+
+Provider Endpoint 属于 Adapter 运行配置。由 YAML Model Catalog 管理，并允许
+通过 `ANANHU_MODEL_CATALOG` 切换配置文件；不能把官方 Endpoint 固化为无法调整
+的 Kernel 常量。
