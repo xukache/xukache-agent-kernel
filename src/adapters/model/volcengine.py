@@ -15,6 +15,9 @@ from typing import cast
 
 import httpx
 import yaml
+from jsonschema import ValidationError as JsonSchemaValidationError
+from jsonschema import SchemaError as JsonSchemaError
+from jsonschema import validate as validate_json_schema
 
 from agent_kernel.model import (
     FinishReason,
@@ -138,7 +141,7 @@ class VolcengineArkModel:
     async def generate(self, request: ModelRequest) -> ModelResponse:
         payload = self._build_payload(request)
         response = await self._post(payload)
-        return self._parse_response(response)
+        return self._parse_response(response, request.output_schema)
 
     def stream(self, request: ModelRequest) -> AsyncIterator[ModelStreamChunk]:
         """在 B5 完成真实增量转换前显式报告能力未启用。"""
@@ -251,7 +254,11 @@ class VolcengineArkModel:
             )
         return response
 
-    def _parse_response(self, response: httpx.Response) -> ModelResponse:
+    def _parse_response(
+        self,
+        response: httpx.Response,
+        output_schema: JsonObject | None,
+    ) -> ModelResponse:
         try:
             body = cast(JsonObject, response.json())
             choices = body["choices"]
@@ -280,6 +287,9 @@ class VolcengineArkModel:
         content = message.get("content")
         text = content if isinstance(content, str) else None
         structured_output = content if isinstance(content, dict) else None
+        if output_schema is not None:
+            structured_output = self._parse_structured_output(content, output_schema)
+            text = None
         model_id = body.get("model") or self._config.model
         provider_metadata = (
             {"request_id": body["id"]} if isinstance(body.get("id"), str) else {}
@@ -294,6 +304,30 @@ class VolcengineArkModel:
             model_id=model_id,
             provider_metadata=provider_metadata,
         )
+
+    @staticmethod
+    def _parse_structured_output(
+        content: JsonValue,
+        output_schema: JsonObject,
+    ) -> JsonObject:
+        """把 Provider 内容转换为对象并在 Adapter 边界完成 Schema 校验。"""
+        try:
+            if isinstance(content, str):
+                content = json.loads(content)
+            if not isinstance(content, dict):
+                raise TypeError("structured output must be a JSON object")
+            validate_json_schema(instance=content, schema=output_schema)
+        except (
+            JsonSchemaError,
+            JsonSchemaValidationError,
+            TypeError,
+            ValueError,
+        ) as exc:
+            raise ModelError(
+                ModelErrorCode.FORMAT,
+                "Volcengine structured output does not match the requested schema",
+            ) from exc
+        return content
 
     @staticmethod
     def _parse_tool_call(item: JsonValue) -> ToolCall:

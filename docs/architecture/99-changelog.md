@@ -18,6 +18,8 @@
 | 2026-07-14 | 新增 | 建立 Volcengine Ark HTTP Model Adapter、配置校验、响应归一化和错误映射；真实 Smoke 尚未运行，Streaming 留给 B5 | `src/adapters/model/volcengine.py`、`tests/integration/model/`、`docs/superpowers/specs/2026-07-14-agent-kernel-volcengine-adapter-b3.md` | 否 |
 | 2026-07-14 | 更新 | 将 Provider、模型、Endpoint、超时和能力配置统一收敛到 YAML Model Catalog；环境变量仅定位 Catalog 和注入密钥 | `config/models.yaml`、`src/adapters/model/volcengine.py`、`README.md`、`DEV_SPEC.md` | 否 |
 | 2026-07-14 | 确认 | 用户确认 B3 Volcengine Ark Model Adapter 完成；真实 Provider Smoke 仍保持 `NOT RUN`，不等同于 RD-001 通过 | `DEV_SPEC.md`、`docs/superpowers/specs/2026-07-14-agent-kernel-volcengine-adapter-b3.md` | 否 |
+| 2026-07-14 | 新增 | 开始 B4 结构化输出转换：显式 Schema 请求的 JSON 解析、本地 Schema 校验和格式错误映射；普通文本、Tool Call 与 Streaming 边界保持不变 | `src/adapters/model/volcengine.py`、`tests/integration/model/test_volcengine_adapter.py`、`docs/superpowers/specs/2026-07-14-agent-kernel-structured-output-b4.md` | 否 |
+| 2026-07-14 | 确认 | 用户确认 B4 结构化输出转换完成；真实网络 Smoke 和 RD-001 仍由后续 B6 验收 | `DEV_SPEC.md`、`docs/superpowers/specs/2026-07-14-agent-kernel-structured-output-b4.md` | 否 |
 
 ## 本次变更结论
 
@@ -34,3 +36,4 @@
 | B1 ModelRequest / ModelResponse | 已完成 |
 | B2 Model Contract 与错误语义 | 已完成 |
 | B3 Volcengine Ark Model Adapter | 已完成 |
+| B4 结构化输出转换 | 已完成 |

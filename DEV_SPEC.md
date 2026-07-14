@@ -1797,7 +1797,7 @@ RuntimeResult != AgentResult != WorkflowResult != ToolResult
 | B1 | 定义 ModelRequest 与 ModelResponse | [x] | Provider Neutral 数据协议 |
 | B2 | 定义 Model Contract 与错误语义 | [x] | generate / stream 契约 |
 | B3 | 实现首个真实 Model Provider Adapter | [x] | 真实 Provider 可调用 |
-| B4 | 实现结构化输出转换 | [ ] | 统一结构化结果 |
+| B4 | 实现结构化输出转换 | [x] | 统一结构化结果 |
 | B5 | 实现 Provider Streaming 转换 | [ ] | 有序真实增量 |
 | B6 | 完成 RD-001 真实模型验收 | [ ] | Model MVP 完成证据 |
 
@@ -1872,7 +1872,7 @@ RuntimeResult != AgentResult != WorkflowResult != ToolResult
 | 阶段 | 总任务 | 已完成 | 进行中 | 进度 |
 |---|---:|---:|---:|---:|
 | A | 5 | 5 | 0 | 100% |
-| B | 6 | 3 | 0 | 50% |
+| B | 6 | 4 | 0 | 67% |
 | C | 5 | 0 | 0 | 0% |
 | D | 6 | 0 | 0 | 0% |
 | E | 6 | 0 | 0 | 0% |
@@ -1986,6 +1986,15 @@ RuntimeResult != AgentResult != WorkflowResult != ToolResult
 - 前置依赖：B3。
 - 交付：结构化输出请求、解析和格式错误映射。
 - 验收：固定 Schema 请求得到可精确断言的结构化结果。
+- 当前实现：当 `ModelRequest.output_schema` 存在时，发送 Provider
+  `response_format`，解析 JSON 字符串或对象，并使用 JSON Schema 在 Adapter
+  边界进行本地校验；非法 JSON、非对象结果和 Schema 不匹配统一映射为
+  `model.format`。
+- 当前验证：集成测试覆盖结构化请求转换、JSON 字符串解析、非法 JSON 和 Schema
+  不匹配；普通文本路径保持兼容。
+- 当前限制：尚未执行真实网络 Smoke；B4 不实现 Streaming，真实 RD-001 由 B6
+  执行。
+- 证据：[`B4 结构化输出转换记录`](docs/superpowers/specs/2026-07-14-agent-kernel-structured-output-b4.md)。
 - 关联：RD-001。
 
 ##### B5：实现 Provider Streaming 转换
