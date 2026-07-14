@@ -25,6 +25,7 @@
 | Agent、Tool、Memory、Workflow 数据流 | `DEV_SPEC.md` 第 5.4 节 |
 | Protocol、Definition、Schema、Error、State 规则 | `DEV_SPEC.md` 第 5.7 节和 A2 确认记录 |
 | ModelRequest、ModelResponse 及其嵌套 Schema | B1 确认记录和 `agent_kernel.model` |
+| Model Protocol、stream 增量和 Model 错误 | B2 确认记录和 `agent_kernel.model` |
 | 其他模块字段、状态枚举和错误捕获层级 | 后续 B-G 对应任务，当前不得自行补全 |
 
 摘要见 [`docs/architecture/03-public-contracts.md`](architecture/03-public-contracts.md)。
@@ -36,6 +37,8 @@
 - Input、Result、Event、State 和跨 Adapter 数据必须使用严格 Schema，并能按所属边界稳定序列化。
 - Provider SDK、Backend 对象、凭证、callable 和内部 Exception 不得进入公共 Schema。
 - `ModelRequest` 只携带 Tool Schema，不携带可执行 Tool；`ModelResponse` 的 Tool Call 只表达结构化意图。
+- `Model.generate` 是异步完整响应调用；`Model.stream` 是异步增量迭代调用。
+- Provider 错误必须映射为 `ModelErrorCode`，不能把 SDK Exception 暴露给 Kernel。
 - `KernelError` 负责 Python 运行时传播，`ErrorInfo` 负责公开、脱敏、可序列化的失败证据。
 
 ## 新增外部接口的门禁

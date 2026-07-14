@@ -1791,7 +1791,7 @@ RuntimeResult != AgentResult != WorkflowResult != ToolResult
 | ID | 任务 | 状态 | 主要出口 |
 |---|---|---|---|
 | B1 | 定义 ModelRequest 与 ModelResponse | [x] | Provider Neutral 数据协议 |
-| B2 | 定义 Model Contract 与错误语义 | [ ] | generate / stream 契约 |
+| B2 | 定义 Model Contract 与错误语义 | [x] | generate / stream 契约 |
 | B3 | 实现首个真实 Model Provider Adapter | [ ] | 真实 Provider 可调用 |
 | B4 | 实现结构化输出转换 | [ ] | 统一结构化结果 |
 | B5 | 实现 Provider Streaming 转换 | [ ] | 有序真实增量 |
@@ -1868,7 +1868,7 @@ RuntimeResult != AgentResult != WorkflowResult != ToolResult
 | 阶段 | 总任务 | 已完成 | 进行中 | 进度 |
 |---|---:|---:|---:|---:|
 | A | 5 | 5 | 0 | 100% |
-| B | 6 | 1 | 0 | 17% |
+| B | 6 | 2 | 0 | 33% |
 | C | 5 | 0 | 0 | 0% |
 | D | 6 | 0 | 0 | 0% |
 | E | 6 | 0 | 0 | 0% |
@@ -1957,6 +1957,10 @@ RuntimeResult != AgentResult != WorkflowResult != ToolResult
 - 前置依赖：B1。
 - 交付：generate、stream 能力和 provider、timeout、rate_limit、format、cancelled 错误。
 - 验收：共享 Contract Test 能约束成功和失败路径。
+- 当前实现：建立 `Model` Protocol、`ModelStreamChunk`、`ToolCallDelta`、`ModelErrorCode` 和 `ModelError`。
+- 当前验证：共享 Model Contract Test 已覆盖完整生成、异步增量、结束标记、Provider Neutral 错误、可重试属性和取消错误。
+- 当前限制：尚未接入真实 Provider、RunContext 或取消令牌。
+- 证据：[`B2 Model Contract 与错误语义记录`](docs/superpowers/specs/2026-07-14-agent-kernel-model-contract-errors-b2.md)。
 - 关联：K-001、K-007、K-010。
 
 ##### B3：实现首个真实 Model Provider Adapter

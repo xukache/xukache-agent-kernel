@@ -87,6 +87,43 @@ class ToolCall(ModelSchema):
     arguments: JsonObject
 
 
+class ToolCallDelta(ModelSchema):
+    """Streaming 中的部分 Tool Call，不要求每个 chunk 都完整。"""
+
+    call_id: str | None = None
+    name: str | None = None
+    arguments_delta: str | None = None
+
+    @model_validator(mode="after")
+    def validate_delta(self) -> ToolCallDelta:
+        if self.call_id is None and self.name is None and self.arguments_delta is None:
+            raise ValueError("ToolCallDelta requires at least one delta field")
+        return self
+
+
+class ModelStreamChunk(ModelSchema):
+    """Model stream 的一个有序增量或终止标记。"""
+
+    text_delta: str | None = None
+    structured_delta: JsonObject | None = None
+    tool_call_delta: ToolCallDelta | None = None
+    usage: Usage | None = None
+    finish_reason: FinishReason | None = None
+    model_id: str | None = None
+
+    @model_validator(mode="after")
+    def validate_chunk(self) -> ModelStreamChunk:
+        if (
+            self.text_delta is None
+            and self.structured_delta is None
+            and self.tool_call_delta is None
+            and self.usage is None
+            and self.finish_reason is None
+        ):
+            raise ValueError("ModelStreamChunk requires a delta or terminal field")
+        return self
+
+
 class ModelRequest(ModelSchema):
     """Agent 交给 Model Adapter 的一次 Provider Neutral 请求。"""
 
