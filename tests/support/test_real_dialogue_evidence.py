@@ -59,6 +59,7 @@ def test_recorder_writes_minimum_evidence_and_redacts_secrets(
     assert document["run_id"] == context.run_id
     assert document["scope"] == context.scope
     assert document["events"][0]["api_key"] == "[REDACTED]"
+    assert document["usage"] == {"input_tokens": 10, "output_tokens": 4}
 
 
 def test_failure_evidence_requires_failure_details(tmp_path: Path) -> None:

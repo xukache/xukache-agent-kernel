@@ -22,6 +22,8 @@
 | 2026-07-14 | 确认 | 用户确认 B4 结构化输出转换完成；真实网络 Smoke 和 RD-001 仍由后续 B6 验收 | `DEV_SPEC.md`、`docs/superpowers/specs/2026-07-14-agent-kernel-structured-output-b4.md` | 否 |
 | 2026-07-14 | 新增 | 开始 B5 Provider Streaming 转换：接入 SSE 文本、Tool Call、结构化输出收尾、usage 和结束原因归一化 | `src/adapters/model/volcengine.py`、`tests/integration/model/test_volcengine_adapter.py`、`docs/superpowers/specs/2026-07-14-agent-kernel-provider-streaming-b5.md` | 否 |
 | 2026-07-14 | 确认 | 用户确认 B5 Provider Streaming 转换完成；真实 Provider Smoke、Runtime 治理和 RD-001 仍由后续任务验收 | `DEV_SPEC.md`、`docs/superpowers/specs/2026-07-14-agent-kernel-provider-streaming-b5.md` | 否 |
+| 2026-07-14 | 新增 | 开始 B6 RD-001 真实模型验收；新增真实 Provider 门禁测试、结构化结果证据和 usage 脱敏修复 | `tests/real_dialogue/test_rd001_model.py`、`tests/support/real_dialogue_evidence.py`、`docs/superpowers/specs/2026-07-14-agent-kernel-real-model-acceptance-b6.md` | 否 |
+| 2026-07-14 | 确认 | 用户确认 B6 完成；RD-001 已通过真实 Volcengine Provider，阶段 B Model MVP 完成 | `DEV_SPEC.md`、`docs/superpowers/specs/2026-07-14-agent-kernel-real-model-acceptance-b6.md` | 否 |
 
 ## 本次变更结论
 
@@ -40,3 +42,4 @@
 | B3 Volcengine Ark Model Adapter | 已完成 |
 | B4 结构化输出转换 | 已完成 |
 | B5 Provider Streaming 转换 | 已完成 |
+| B6 RD-001 真实模型验收 | 已完成 |

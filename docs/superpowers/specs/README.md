@@ -25,6 +25,7 @@
 | B3 Volcengine Ark Model Adapter | 已完成 | [`2026-07-14-agent-kernel-volcengine-adapter-b3.md`](2026-07-14-agent-kernel-volcengine-adapter-b3.md) |
 | B4 结构化输出转换 | 已完成 | [`2026-07-14-agent-kernel-structured-output-b4.md`](2026-07-14-agent-kernel-structured-output-b4.md) |
 | B5 Provider Streaming 转换 | 已完成 | [`2026-07-14-agent-kernel-provider-streaming-b5.md`](2026-07-14-agent-kernel-provider-streaming-b5.md) |
+| B6 RD-001 真实模型验收 | 已完成 | [`2026-07-14-agent-kernel-real-model-acceptance-b6.md`](2026-07-14-agent-kernel-real-model-acceptance-b6.md) |
 
 ## 模块确认记录模板
 

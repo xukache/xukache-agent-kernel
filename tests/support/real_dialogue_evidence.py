@@ -27,7 +27,8 @@ JsonObject = TypeAliasType("JsonObject", dict[str, JsonValue])
 
 _TEST_ID_PATTERN = re.compile(r"^RD-\d{3}$")
 _SECRET_KEY_PATTERN = re.compile(
-    r"(?i)(api[_ -]?key|authorization|password|secret|token)"
+    r"(?i)^(api[_ -]?key|authorization|password|secret|token|"
+    r"access[_ -]?token|refresh[_ -]?token)$"
 )
 _SECRET_ASSIGNMENT_PATTERN = re.compile(
     r"(?i)\b(api[_ -]?key|authorization|password|secret|token)\b"
