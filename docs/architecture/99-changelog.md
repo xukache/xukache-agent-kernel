@@ -24,6 +24,7 @@
 | 2026-07-14 | 确认 | 用户确认 B5 Provider Streaming 转换完成；真实 Provider Smoke、Runtime 治理和 RD-001 仍由后续任务验收 | `DEV_SPEC.md`、`docs/superpowers/specs/2026-07-14-agent-kernel-provider-streaming-b5.md` | 否 |
 | 2026-07-14 | 新增 | 开始 B6 RD-001 真实模型验收；新增真实 Provider 门禁测试、结构化结果证据和 usage 脱敏修复 | `tests/real_dialogue/test_rd001_model.py`、`tests/support/real_dialogue_evidence.py`、`docs/superpowers/specs/2026-07-14-agent-kernel-real-model-acceptance-b6.md` | 否 |
 | 2026-07-14 | 确认 | 用户确认 B6 完成；RD-001 已通过真实 Volcengine Provider，阶段 B Model MVP 完成 | `DEV_SPEC.md`、`docs/superpowers/specs/2026-07-14-agent-kernel-real-model-acceptance-b6.md` | 否 |
+| 2026-07-14 | 更新 | 同步 B6 后活动架构、开发规格和项目入口文档；修正 Model MVP、真实 RD-001、实现边界及已删除 `mvp` 分支描述 | `README.md`、`DEV_SPEC.md`、`docs/architecture.md`、`docs/architecture/00-overview.md`、`docs/dev-spec/README.md` | 否 |
 
 ## 本次变更结论
 

@@ -6,7 +6,7 @@
 
 - Python 固定为 3.11，以 `.python-version` 为准。
 - 建立 Python 工程后统一使用 `uv` 管理环境、依赖、测试和运行。
-- 不从 `mvp`、`main` 或旧项目恢复 `pyproject.toml`、`uv.lock`、代码和测试。
+- 不从 `main` 或旧项目恢复 `pyproject.toml`、`uv.lock`、代码和测试。
 - A4 只建立 `src/agent_kernel/__init__.py`、工程配置和测试基座，不代表任何 Core 已实现。
 - 依赖版本由 `uv.lock` 锁定；当前主依赖为 Pydantic 2.13.4，开发测试依赖为 pytest 8.4.2。
 - HTTP Adapter 使用 `httpx`；Provider SDK 和凭证只存在于 `adapters/`，不进入 `agent_kernel`。

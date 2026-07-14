@@ -5,7 +5,9 @@
 ## 当前状态
 
 - 六个核心原语、Execution 支撑能力、逻辑分层、公共类型策略和 A3 物理目录已经确认。
-- 当前尚未创建 Kernel 实现代码。
+- 当前已落地 Model Core 公共协议、Volcengine Model Adapter、结构化输出、
+  Streaming 和 RD-001 真实验收；Agent、Tool、Memory、Runtime 和 Workflow
+  实现尚未开始。
 - A3 已确认 `src/agent_kernel` 为 Kernel 包和公开导入路径基线。
 - 当前没有对外 HTTP、REST、WebSocket 或 MCP 接口。
 - 第一阶段通过 Python Programmatic Interface 和测试组合根调用 Kernel。
