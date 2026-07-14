@@ -7,8 +7,16 @@
 - Python 固定为 3.11，以 `.python-version` 为准。
 - 建立 Python 工程后统一使用 `uv` 管理环境、依赖、测试和运行。
 - 不从 `mvp`、`main` 或旧项目恢复 `pyproject.toml`、`uv.lock`、代码和测试。
-- A4 建立工程前不得创建 Kernel 实现目录或自行扩展公开包路径。
-- 依赖版本和命令在 A4 建立工程基座时确认，本文档不虚构未落地命令。
+- A4 只建立 `src/agent_kernel/__init__.py`、工程配置和测试基座，不代表任何 Core 已实现。
+- 依赖版本由 `uv.lock` 锁定；当前主依赖为 Pydantic 2.13.4，开发测试依赖为 pytest 8.4.2。
+- 安装、测试和运行统一使用以下命令：
+
+```bash
+uv sync
+uv run pytest -q
+uv run pytest -q tests/architecture
+uv run python -c "import agent_kernel"
+```
 
 ## 依赖方向
 
@@ -90,4 +98,4 @@ Kernel    -X-> Interface / Application / Provider SDK / 具体存储
 3. 检查文档、任务状态和测试证据一致。
 4. 未运行的验证明确标记，不能声称通过。
 
-具体工具命令由 A4 确认后补充。
+Architecture Test 基座使用 AST 检查 Kernel 源码导入边界，并由 pytest 统一执行。

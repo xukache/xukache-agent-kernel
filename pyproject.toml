@@ -1,0 +1,28 @@
+[build-system]
+requires = ["hatchling>=1.27"]
+build-backend = "hatchling.build"
+
+[project]
+name = "ananhu-agent-kernel"
+version = "0.1.0.dev0"
+description = "A learning-oriented Agent Kernel built from first principles."
+readme = "README.md"
+requires-python = ">=3.11,<3.12"
+dependencies = [
+    "pydantic>=2.10,<3",
+]
+
+[dependency-groups]
+dev = [
+    "pytest>=8.3,<9",
+]
+
+[tool.hatch.build.targets.wheel]
+packages = ["src/agent_kernel"]
+
+[tool.pytest.ini_options]
+testpaths = ["tests"]
+addopts = ["-ra", "--strict-config", "--strict-markers"]
+
+[tool.uv]
+default-groups = ["dev"]
