@@ -1,3 +1,0 @@
-{"id":"rag_recognition_001","query":"上下班途中交通事故 非本人主要责任 工伤认定","jurisdiction":{"province":"四川省"},"expected_document_ids":["policy_001"],"top_k":3}
-{"id":"rag_labor_001","query":"劳动能力鉴定需要准备哪些材料 诊断证明 病历","jurisdiction":{"province":"四川省"},"expected_document_ids":["policy_002"],"top_k":3}
-{"id":"rag_payment_001","query":"四川十级工伤 一次性伤残补助金 月工资","jurisdiction":{"province":"四川省"},"expected_document_ids":["policy_003"],"top_k":3}

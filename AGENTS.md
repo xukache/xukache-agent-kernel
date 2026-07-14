@@ -1,93 +1,67 @@
 # 项目规范
 
-> 单一事实来源：
-> - 技术架构版本入口：`TECH_ARCHITECTURE_MVP.md`
-> - 当前完整版本：由版本入口指向 `docs/architecture/versions/` 中的只读正文
-> - 技术架构入口：`docs/architecture.md`
-> - API 契约入口：`docs/api-contracts.md`
-> - 后端开发规范：`docs/backend-conventions.md`
-> - 架构演进规则：`docs/architecture/10-evolution-rules.md`
->
-> 本文件只保留顶层索引、阅读顺序和强制约束。详细设计只在对应事实源维护。
+## 项目定位
 
-## 项目形态
+- 当前分支是全新 Agent Kernel 重构项目。
+- `mvp` 和 `main` 保留旧项目；当前分支不读取、不兼容、不迁移旧项目。
+- 当前属于“已有设计、尚无 Kernel 实现代码”的 Python 后端/库项目。
+- 当前唯一完整开发规格：`DEV_SPEC.md`。
+- 当前技术架构入口：`docs/architecture.md`。
+- 当前公共接口契约入口：`docs/api-contracts.md`。
+- 当前后端工程规范：`docs/backend-conventions.md`。
+- 当前模块确认记录：`docs/superpowers/specs/`。
+- 当前开发规格版本记录：`docs/dev-spec/versions/`。
+- 当前架构版本规则：`docs/architecture/README.md`。
 
-- 类型：工伤咨询领域的后端 Agent Harness，当前以 CLI 作为开发和验收入口。
-- 当前阶段：MVP 离线闭环、最小串行 LangGraph Runtime 和双运行时差分验收已实现，下一步接入真实 ModelGateway。
-- 技术路线：不使用 Dify；LangGraph 是默认可配置工作流运行时，Native Runtime 保留用于回归，领域和应用核心不得依赖 LangGraph 类型。
-- 环境管理：统一使用 `uv` 管理 Python、虚拟环境、依赖和命令运行。
-- Python 版本：固定使用 Python 3.11，版本文件为 `.python-version`。
-- 对外接口：当前没有 HTTP API、WebSocket 或前端；这只是当前交付边界，不是 Agent 内核的永久限制。
-- 业务定位：面向工伤认定、劳动能力鉴定、待遇辅助测算和政策咨询。
+## 修改前阅读顺序
 
-## 修改前必读
+1. 阅读 `DEV_SPEC.md` 中与任务相关的章节和任务状态。
+2. 阅读 `docs/architecture.md`，确认事实源优先级和对应架构分册。
+3. 涉及公共类型、调用边界或外部接口时，阅读 `docs/api-contracts.md`。
+4. 涉及 Python 工程、依赖、异步、错误或测试时，阅读 `docs/backend-conventions.md`。
+5. 涉及系统边界或长期演进时，阅读 `docs/architecture/10-evolution-rules.md` 和 `docs/architecture/README.md`。
 
-| 改动类型 | 必读文档 |
-|---|---|
-| 架构、模块边界、运行时、数据模型 | `docs/architecture.md` 和对应架构分册 |
-| 工作流、Agent、状态、恢复、异步边界 | `docs/architecture/02-agent-runtime.md` |
-| Prompt、上下文、记忆和裁剪 | `docs/architecture/03-prompt-context.md` |
-| Tool、模型、RAG、测算能力 | `docs/architecture/04-tools-models.md` |
-| Trace、usage、badcase、eval | `docs/architecture/05-data-observability.md` |
-| 后端代码、CLI、测试、配置 | `docs/backend-conventions.md` |
-| HTTP / WebSocket / 外部接入 | `docs/api-contracts.md` |
+## 核心边界
+
+核心只保留：
+
+```text
+Agent
+Workflow
+Tool
+Memory
+Model
+Runtime
+```
+
+业务应用以后放在 `applications/`，不能反向进入 Kernel。第三方模型、存储、运行时和接口只能通过适配器接入。
 
 ## 强制约束
 
-1. Agent 数量由独立目标、上下文、权限和评测边界决定，不以展示“多 Agent”为目的。当前四个 Agent 是 MVP 实现现状，不是永久架构边界。
-2. 接入后，LangGraph 只负责节点调度、条件路由、中断恢复和必要的有限并行；业务状态、状态合并规则、错误语义和运行证据由项目协议定义。
-3. `StateGraph`、`Command`、LangGraph message、channel 和 checkpoint 类型不得进入 domain、application、Agent、Tool、Prompt、Eval 公共协议。
-4. Agent 保持无状态，只读取项目定义的输入并返回结构化结果，不直接修改共享状态。
-5. Agent 不直接调用底层能力，必须经过统一能力执行网关；当前实现为框架中立的 `CapabilityGateway`，由 `DefaultCapabilityGateway` 直接执行显式注册能力。
-6. Agent 不直接拼接完整 prompt，必须经过 `PromptManager` 和 `ContextManager`。
-7. Prompt 必须版本化、可评测、可回滚；上下文裁剪不得丢失当前请求、已确认关键事实和直接支撑结论的证据。
-8. 工具、Prompt、上下文、模型调用、状态转换、校验和安全守卫必须写入项目自己的 trace。LangGraph/LangSmith 观测不能替代业务 trace。
-9. checkpoint、task state、session/case memory 和 trace 必须职责分离，不得互相冒充事实来源或恢复数据。
-10. 当前不实现 HTTP API、WebSocket 和前端；新增外部接口前必须先更新 `docs/api-contracts.md`。
-11. 架构变更必须同步更新 `docs/architecture/99-changelog.md`。
-12. Python 环境、依赖安装、测试和 CLI 运行必须通过 `uv`；不要新增 `pip install` 或 `python -m pytest` 作为主路径命令。
-13. 关键代码模块必须写中文注释，说明职责、协议边界、关键流程和非显而易见的业务规则。
-14. 已发布的架构版本文档不得原地覆盖。后续架构升级、模块边界调整或新增功能，必须基于当前版本复制并生成一份新的版本文档，保留旧版本用于审计和版本对比。
+1. 每个模块必须逐项展示并获得用户确认后才能实现。
+2. 未确认设计不得创建对应代码目录。
+3. 不兼容旧项目，不保留旧模块别名、旧数据协议或旧入口。
+4. 新增功能先更新完整 `DEV_SPEC.md`。
+5. 每个版本的新增和变更追加到 `docs/dev-spec/versions/`。
+6. 改变系统边界时，必须创建新的 `docs/architecture/versions/` 完整正文。
+7. 计划文档只描述已确认设计的实现任务，不能反向决定架构。
+8. 关键代码和协议必须有中文注释，说明职责和边界。
+9. 提交前运行与变更匹配的验证；未验证不得声称完成。
+10. 新增文档必须链接到现有事实源，不得复制并形成第二份完整规格。
 
-## 开发分支流程
+## 分支规则
 
-- 当前版本分支作为集成分支，例如 MVP 阶段使用 `mvp`。
-- 每个任务开发前必须从当前版本分支创建任务分支。
-- 分支命名格式：`<版本号>-<feature>-<任务>`，统一使用小写英文、数字和短横线。
-- 示例：`mvp-workflow-state-task-25`。
-- 任务完成后先汇报改动范围、验证结果和待合并分支，等待用户确认。
-- 用户确认后才允许提交 commit，并合并回当前版本分支。
-- 合并后确认版本分支包含任务提交；发生冲突必须停止并让用户确认处理方式。
-- 未经用户确认，不得合并到 `mvp`、`main`、`master` 或其他版本分支。
+- 当前架构主分支：`architecture`。
+- 每个任务必须从最新 `architecture` 创建独立任务分支。
+- 一个任务分支只承载一个 `DEV_SPEC.md` 任务，不混入其他任务。
+- 不对应 `DEV_SPEC.md` 实施编号的纯文档治理任务也必须使用独立任务分支，但不得修改实施任务状态。
+- 任务设计、实现和验证都在对应任务分支完成。
+- 用户确认任务结果后，才允许勾选任务、提交并合并回 `architecture`。
+- 未经用户确认，不得提前勾选、提交或合并任务分支。
+- 未经用户明确确认，不合并或推送到 `mvp`、`main` 或其他分支。
 
-## 文档同步纪律
+## 环境规则
 
-- 修改工作流、Agent 清单、状态协议、reducer 或 checkpoint 时，同步更新 `02-agent-runtime.md`。
-- 修改 Prompt、上下文或记忆时，同步更新 `03-prompt-context.md`，并说明 eval 影响。
-- 修改 Tool、模型、RAG 或测算能力时，同步更新 `04-tools-models.md`，并检查幂等和 trace 字段。
-- 修改 trace、usage、badcase 或 eval 时，同步更新 `05-data-observability.md`。
-- 新增 FastAPI、WebSocket 或其他外部接口时，先更新 `docs/api-contracts.md`，再创建领域契约分册。
-- 新增前端后再创建 `docs/frontend-conventions.md`，不要提前创建空文档。
-
-## 架构文档版本化流程
-
-- `TECH_ARCHITECTURE_MVP.md` 是技术架构版本入口，维护当前版本指向、版本索引和对应计划，不再直接承载完整架构正文。
-- `docs/architecture.md` 是当前主题化架构入口，维护当前版本号、分册阅读顺序和事实源优先级，不承载完整历史正文。
-- 每次架构版本升级或新增影响系统边界的功能前，先读取当前版本文档，以它为基线生成新版本，不允许直接覆盖旧版本文件。
-- 版本文档统一放在 `docs/architecture/versions/`，命名格式为 `v<版本号>-<主题>.md`，例如 `v0.3-langgraph-runtime.md`、`v0.4-production-rag.md`。
-- 新版本文档必须包含：版本信息、基线版本、变更原因、完整架构、相对上一版本的差异、兼容性与迁移策略、任务计划入口、验收标准和已知限制。
-- 新增功能如果改变工作流、状态协议、Agent/Capability 边界、数据模型、外部接口、部署方式、安全规则或观测评测口径，必须升级架构版本；仅修正错别字、失效链接或不改变语义的表达可以直接修订当前入口文档。
-- 生成新版本后，同一变更必须更新 `TECH_ARCHITECTURE_MVP.md` 的当前版本指向和版本索引、`docs/architecture.md` 的当前版本信息，并在 `docs/architecture/99-changelog.md` 记录版本、日期、变更摘要和迁移影响。
-- 对应开发任务计划也必须新建版本化文件，不覆盖上一版本计划；计划中要明确基于哪个架构版本以及依赖的上一任务状态。
-- 旧版本只能增加“已废弃 / 已归档 / 被哪个版本替代”的元信息，不得修改其原始架构正文。
-- Agent 开始架构或大功能任务前，必须先确认当前架构版本、目标版本和新文档路径；未完成版本化文档时不得直接进入实现。
-
-## 本地命令
-
-```bash
-uv python pin 3.11
-uv sync --extra dev
-uv run pytest -v
-uv run ananhu-agent ask "四川十级工伤，月工资6000，大概能赔多少钱？"
-uv run ananhu-agent eval data/eval/eval_cases.jsonl
-```
+- Python 固定 3.11，使用 `.python-version`。
+- 新项目建立 Python 工程后，统一使用 `uv` 管理环境、依赖、测试和运行。
+- 不从旧项目的 `pyproject.toml`、`uv.lock`、代码或测试恢复实现。

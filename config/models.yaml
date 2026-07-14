@@ -1,0 +1,16 @@
+version: 1
+
+default:
+  provider: volcengine
+  model: doubao-seed-2-0-mini-260428
+
+providers:
+  volcengine:
+    adapter: volcengine_ark
+    api_key_env: VOLCENGINE_API_KEY
+    base_url: https://ark.cn-beijing.volces.com/api/v3
+    timeout_seconds: 30
+    models:
+      doubao-seed-2-0-mini-260428:
+        capabilities:
+          - generate

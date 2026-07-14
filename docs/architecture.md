@@ -1,62 +1,50 @@
-# 技术架构总纲
+# 技术架构
 
-本文是安安虎工伤智能助手 Agent Harness 的架构事实源入口。
+本文档是 Agent Kernel 技术架构的导航入口。它不替代 `DEV_SPEC.md`，也不提前冻结尚未由后续 B-G 任务确认的具体字段和实现细节。
 
-## 文档状态
+## 当前状态
 
-- 当前阶段：双运行时、Provider/Profile 模型目录、Textual Chat TUI 和直接 KnowledgeCapability 已稳定，正在准备真实咨询 Smoke Eval。
-- 当前架构版本：v0.9，完整快照见 `architecture/versions/v0.9-direct-knowledge-capability.md`。
-- 当前运行时：默认 `LangGraphWorkflowRuntime`，通过 `WorkflowRuntime` 端口调用；可显式选择 `NativeWorkflowRuntime`。
-- 演进方向：先完成可观测的 Textual Chat TUI，再扩展真实知识能力。
-- 核心原则：领域、应用、Agent、Capability、Trace 和 Eval 协议不依赖 LangGraph。
-- 外部接口：当前只有 CLI；没有 HTTP API、WebSocket 或前端。
-- 架构版本入口：`TECH_ARCHITECTURE_MVP.md`。
+- 六个核心原语、Execution 支撑能力、逻辑分层、公共类型策略和 A3 物理目录已经确认。
+- 当前已落地 Model Core 公共协议、Volcengine Model Adapter、结构化输出、
+  Streaming 和 RD-001 真实验收；Agent、Tool、Memory、Runtime 和 Workflow
+  实现尚未开始。
+- A3 已确认 `src/agent_kernel` 为 Kernel 包和公开导入路径基线。
+- 当前没有对外 HTTP、REST、WebSocket 或 MCP 接口。
+- 第一阶段通过 Python Programmatic Interface 和测试组合根调用 Kernel。
 
 ## 事实源优先级
 
-1. 对应 `docs/architecture/` 分册中的当前规则。
-2. `docs/architecture/99-changelog.md` 中较新的架构决策。
-3. `TECH_ARCHITECTURE_MVP.md` 指向的当前只读版本正文。
-4. 实施计划只作为执行历史，不覆盖当前架构事实。
+发生描述差异时，按以下顺序判断：
+
+1. [`DEV_SPEC.md`](../DEV_SPEC.md)：当前完整开发规格和实施进度。
+2. [`docs/superpowers/specs/`](superpowers/specs/)：已确认模块和任务的设计证据。
+3. 本目录下的架构分册：对已确认逻辑结构的导航和摘要。
+4. 后续实现代码与测试：已经落地行为的证据，但不能绕过规格变更流程自行改变架构。
+
+架构分册不得引入 `DEV_SPEC.md` 未确认的新原语、依赖方向或公共协议。
 
 ## 阅读顺序
 
-| 顺序 | 文档 | 关注内容 |
-|---|---|---|
-| 1 | `00-overview.md` | 项目定位、分层、范围和非目标 |
-| 2 | `01-business-flow.md` | 稳定业务阶段和数据流 |
-| 3 | `02-agent-runtime.md` | 状态、运行时端口、LangGraph 边界和恢复 |
-| 4 | `03-prompt-context.md` | Prompt、上下文、案件事实和记忆 |
-| 5 | `04-tools-models.md` | 能力执行、模型、知识检索和幂等 |
-| 6 | `05-data-observability.md` | Trace、Usage、Badcase 和 Eval |
-| 7 | `10-evolution-rules.md` | 架构演进与同步规则 |
-| 8 | `99-changelog.md` | 架构变更记录 |
+| 文档 | 解决的问题 |
+|---|---|
+| [`00-overview.md`](architecture/00-overview.md) | 系统由哪些逻辑层和核心原语组成 |
+| [`01-module-boundaries.md`](architecture/01-module-boundaries.md) | 每个模块负责什么、依赖可以朝哪里 |
+| [`02-runtime-data-flow.md`](architecture/02-runtime-data-flow.md) | Agent、Tool、Memory、Workflow 如何运行 |
+| [`03-public-contracts.md`](architecture/03-public-contracts.md) | 行为、装配、数据、错误和状态用什么类型表达 |
+| [`10-evolution-rules.md`](architecture/10-evolution-rules.md) | 变更时如何同步规格、文档、测试和版本 |
+| [`99-changelog.md`](architecture/99-changelog.md) | 架构文档入口的变更记录 |
 
-完整历史版本统一保存在 `docs/architecture/versions/`，当前主题分册与当前版本正文必须保持一致。
+## 相关入口
 
-## 核心原则
-
-1. LangGraph 是调度运行时，不是业务架构。
-2. 工作流按稳定业务阶段建模，不按 Agent 名称机械建图。
-3. 项目协议定义业务状态、状态增量、reducer、停止原因、错误码和运行证据。
-4. Agent 无状态，不直接修改共享状态、调用底层能力或拼接完整 Prompt。
-5. 当前四 Agent 是实现现状，不是永久架构约束。
-6. checkpoint、审计快照、session/case memory 和 trace 职责分离。
-7. Native 与 LangGraph Runtime 必须通过同一套 contract tests 和 eval 数据。
-8. 所有框架、模型、检索库和存储实现都通过端口隔离。
-
-## 当前不适用项
-
-- 当前不启用 HTTP / WebSocket 领域契约分册。
-- 当前不建设前端规范。
-- 当前不启用复杂并行 Agent 仲裁、通用工作流平台和多路流式协议。
-- 当前不宣称 fake model、fixture RAG 或未启用 checkpoint 的能力已经生产可用。
-
-这些是阶段边界，不是 Agent 内核的永久限制。
+- [`docs/api-contracts.md`](api-contracts.md)：当前程序化公共契约和未来接口建档规则。
+- [`docs/backend-conventions.md`](backend-conventions.md)：Python 后端实现约定。
+- [`docs/architecture/README.md`](architecture/README.md)：架构版本发布和只读规则。
+- [`docs/dev-spec/README.md`](dev-spec/README.md)：开发规格版本维护规则。
 
 ## 维护规则
 
-- 模块边界、状态协议、运行时所有权、事件、权限或评测变化时，同步更新对应分册。
-- 架构级变化必须记录在 `99-changelog.md`。
-- API 状态变化先更新 `docs/api-contracts.md`。
-- 不在 README、AGENTS 和实施计划中重复维护详细架构；只写摘要并链接事实源。
+1. 功能或契约变更先更新 `DEV_SPEC.md`。
+2. 已确认设计的摘要才可以进入架构分册。
+3. 只改变文档组织、不改变系统边界时，更新 `99-changelog.md`，不创建架构版本正文。
+4. 改变原语、模块边界、依赖、数据所有权、外部接口、部署或验收口径时，按 [`docs/architecture/README.md`](architecture/README.md) 创建完整架构版本。
+5. A3 已确认物理目录基线；A4 负责建立工程，后续模块任务不得绕过已确认的公开入口。

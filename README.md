@@ -1,131 +1,94 @@
-# 安安虎工伤智能助手 Agent Harness
+# Agent Kernel
 
-安安虎工伤智能助手是面向工伤认定、劳动能力鉴定、待遇辅助测算和政策咨询的 Python 后端 Agent Harness。项目当前以 CLI 作为开发和验收入口，默认运行时为 `LangGraphWorkflowRuntime`，通过框架中立 `WorkflowRuntime` 端口调用。
+这是一个从空白起点重建的通用 Agent Kernel 项目。
 
-当前代码已经具备离线可回归闭环：CLI、MVP Agent、Prompt/上下文管理、CapabilityGateway、ModelGateway、fixture 政策检索、确定性待遇测算、JSONL trace、badcase、eval，以及 Native/LangGraph 双运行时差分验收。LangGraph 只作为可替换运行时，不拥有业务状态、能力治理、Prompt、trace 或 eval 协议。
+当前分支不兼容、不迁移旧项目。旧项目历史代码保留在 `main`，不作为本项目的代码、协议、测试或文档来源。
 
 ## 当前状态
 
-- Python 版本：3.11。
-- 环境和命令管理：`uv`。
-- Python 发行包名：`ananhu-agent`。
-- CLI 命令：`ananhu-agent`。
-- 当前外部入口：CLI；没有 HTTP API、WebSocket 或前端。
-- 模型默认使用 Fake，可显式切换通用 OpenAI-compatible provider；政策检索仍使用 fixture。这些能力不代表真实咨询链路的生产验收。
+- 已完成 Model MVP，当前进入 Agent MVP 实现阶段。
+- 核心原语：`Agent`、`Workflow`、`Tool`、`Memory`、`Model`、`Runtime`。
+- 已确认 Execution 执行层：`Context`、`Hooks`、`Guardrails`、`Retry`、`Cancellation`、`Streaming`。
+- Core、Execution、支撑协议、Applications 和 Interfaces 已完成设计确认。
+- 当前完整开发规格：`DEV_SPEC v0.25`。第一至七章已确认学习目标、核心特点、技术决策、双轨验收、整体架构、8 个阶段 47 个任务的学习实施路线，以及从 Kernel 到完整 Agent 系统的演进路线。
+- 阶段 A 的 A1、A2、A3、A4、A5 已完成；阶段 B 的 B1 至 B6 已完成，RD-001 已通过真实 Provider 验收。
+- 六个 Core 的语义级公共契约、Python 类型表达策略、`src/agent_kernel` 物理目录和公开导入路径已经确认。
+- 第一条纵向切片将直接接入真实 Model Provider，不使用模拟模型。
+- Provider、模型、Endpoint、超时和能力配置位于 [`config/models.yaml`](config/models.yaml)；
+  `ANANHU_MODEL_CATALOG` 可切换 Model Catalog，API Key 仍通过环境变量注入。
+- 每个模块实现任务都必须新增真实用户对话输入输出场景，并累计回归此前全部真实对话场景。
+- 已完成 Model Core 的协议、错误语义、Volcengine Adapter、结构化输出、
+  Streaming 和 RD-001 真实 Provider 验收；Agent、Tool、Memory、Runtime、
+  Workflow 尚未开始实现。
+- 尚未发布架构版本；首个完整架构版本将在 Kernel 累计验收通过后创建。
 
-## 快速开始
+## 文档索引
 
-```bash
-uv python pin 3.11
-uv sync --extra dev
-uv run ananhu-agent version
-uv run ananhu-agent ask "四川十级工伤，月工资6000，大概能赔多少钱？"
-uv run ananhu-agent eval data/eval/eval_cases.jsonl
-uv run ananhu-agent eval data/eval/eval_cases.jsonl --runtime both
-ANANHU_REAL_MODEL_SMOKE=1 uv run ananhu-agent eval data/eval/real_smoke_cases.jsonl --runtime both
-uv run pytest -v
-```
+| 文档 | 作用 | 是否可覆盖 |
+|---|---|---|
+| [`DEV_SPEC.md`](DEV_SPEC.md) | 当前完整开发规格 | 可以持续更新 |
+| [`docs/architecture.md`](docs/architecture.md) | 技术架构导航、事实源和分册入口 | 可以持续更新 |
+| [`docs/api-contracts.md`](docs/api-contracts.md) | 当前程序化公共契约和未来外部接口建档规则 | 可以持续更新 |
+| [`docs/backend-conventions.md`](docs/backend-conventions.md) | Python 后端实现、边界和验证规范 | 可以持续更新 |
+| [`docs/dev-spec/README.md`](docs/dev-spec/README.md) | 开发规格版本目录、维护规则和历史索引 | 可以持续更新 |
+| [`docs/dev-spec/versions/`](docs/dev-spec/versions/) | 各版本新增和变更记录 | 已发布文档只读 |
+| [`docs/architecture/README.md`](docs/architecture/README.md) | 架构版本规则入口 | 可以持续更新 |
+| [`docs/architecture/00-overview.md`](docs/architecture/00-overview.md) | 六个核心原语和逻辑分层摘要 | 可以持续更新 |
+| [`docs/architecture/01-module-boundaries.md`](docs/architecture/01-module-boundaries.md) | 模块职责、所有权和依赖方向 | 可以持续更新 |
+| [`docs/architecture/02-runtime-data-flow.md`](docs/architecture/02-runtime-data-flow.md) | Agent、Tool、Memory 和 Workflow 数据流 | 可以持续更新 |
+| [`docs/architecture/03-public-contracts.md`](docs/architecture/03-public-contracts.md) | 公共类型、错误和状态策略摘要 | 可以持续更新 |
+| [`docs/architecture/10-evolution-rules.md`](docs/architecture/10-evolution-rules.md) | 架构演进和 Agent 修改检查清单 | 可以持续更新 |
+| [`docs/architecture/99-changelog.md`](docs/architecture/99-changelog.md) | 架构文档维护记录 | 可以持续更新 |
+| [`docs/architecture/versions/`](docs/architecture/versions/) | 架构版本完整正文 | 已发布正文只读 |
+| [`docs/superpowers/specs/`](docs/superpowers/specs/) | 模块、章节和阶段设计确认记录 | 当前设计阶段持续追加 |
+| `docs/superpowers/plans/` | 已确认设计的后续实施计划；目录尚未创建 | 实现阶段按需创建 |
 
-## 常用命令
+## 文档使用规则
 
-```bash
-# 单轮咨询
-uv run ananhu-agent ask "四川十级工伤，月工资6000，大概能赔多少钱？"
+1. `DEV_SPEC.md` 是当前完整开发规格的唯一主线入口。
+2. `docs/architecture.md` 负责导航已确认架构，不复制完整规格。
+3. `docs/api-contracts.md` 和 `docs/backend-conventions.md` 分别维护调用边界与工程约定。
+4. 版本新增和变更记录放在 `docs/dev-spec/versions/`。
+5. 模块、章节和阶段确认记录放在 `docs/superpowers/specs/`。
+6. 改变系统边界时，进入实现前必须创建新的架构版本正文。
+7. 实施计划只能拆解已经确认的设计，不能反向决定架构。
+8. 未确认内容必须明确标记为“待确认”，不得创建对应代码目录。
 
-# 交互式会话
-uv run ananhu-agent chat
-
-# 运行评测
-uv run ananhu-agent eval data/eval/eval_cases.jsonl
-
-# 双运行时差分验收
-uv run ananhu-agent eval data/eval/eval_cases.jsonl --runtime both
-
-# 查看版本
-uv run ananhu-agent version
-```
-
-### Chat 交互
-
-- 输入 `/` 打开命令候选列表。
-- 上下键移动候选，`Tab` 补全到输入框，`Enter` 提交当前输入，`Esc` 收起候选。
-- `F1` 帮助、`F2` 上下文、`F3` trace、`F4` 反馈。
-- `Ctrl+N` 新会话、`Ctrl+L` 清屏、`Ctrl+R` 重试、`Ctrl+C` 取消或退出。
-- `/context` 显示当前 session 的当前事实和本次 chat 进程内已完成轮次摘要。
-- `/new` 会重置 session；重启 `chat` 也会创建新的 session。
-
-运行证据默认写入 `.ananhu-runtime/`，包括 trace、运行报告和 badcase 记录。双运行时差分额外写入 `runtime-differential.json`。
-
-## 真实模型配置
-
-默认配置不会读取 key 或访问网络。切换 OpenAI-compatible provider 时集中配置模型 profile，
-密钥不会进入 profile、trace 或评测产物：
-
-```bash
-export ANANHU_MODEL_API_KEY="..."
-export ANANHU_MODEL_BASE_URL="https://provider.example/v1"
-export ANANHU_MODELS='{"intent_fast":{"provider":"openai_compatible","model":"provider-model","temperature":0,"timeout_seconds":30}}'
-
-uv run ananhu-agent ask "工伤认定需要哪些条件？"
-```
-
-真实连接 smoke 默认跳过，需显式启用并单独指定模型：
-
-```bash
-ANANHU_REAL_MODEL_SMOKE=1 \
-ANANHU_REAL_MODEL="provider-model" \
-uv run pytest tests/test_model_gateway_contract.py -v
-```
-
-任务 34 的真实咨询 Smoke 场景和验收记录见
-`data/eval/real_smoke_cases.jsonl` 与 `docs/evaluation/2026-07-12-real-smoke.md`。
-
-## 项目结构
+## 任务分支流程
 
 ```text
-ananhu_agent/
-  agents/          # 当前 MVP Agent 实现
-  capabilities/    # CapabilityRequest / CapabilityResult / CapabilityGateway
-  cli/             # Typer CLI 入口
-  context/         # 上下文构建和槽位规则
-  evaluation/      # eval runner 和指标
-  models/          # 模型 profile 与 gateway 路由
-  ports/           # ModelGateway 等框架中立端口
-  infrastructure/  # OpenAI-compatible、Fake 等基础设施适配器
-  orchestrator/    # 聚合、规则、安全校验和 badcase 规则
-  prompts/         # 版本化 Prompt
-  runtime.py       # 默认 Runtime 组合根
-  runtimes/native/ # 显式回归 Native Runtime
-  runtimes/langgraph/ # 当前默认 LangGraph Runtime
-  storage/         # JSONL 存储和运行证据
-  tools/           # 保留的领域 handler；能力治理统一位于 capabilities/
-  workflow/        # RunRequest、WorkflowState、StatePatch、Reducer、WorkflowResult
-data/
-  eval/            # 离线评测用例
-docs/
-  architecture.md  # 架构事实源入口
-tests/
+最新 architecture
+  -> 创建单任务分支
+  -> 逐项确认设计
+  -> 完成实现与验证
+  -> 用户确认任务结果
+  -> 勾选 DEV_SPEC 任务
+  -> 原子提交
+  -> 合并回 architecture
 ```
 
-## 文档入口
+未经用户确认，不得在任务分支上提前勾选任务、提交任务结果或合并回 `architecture`。
 
-| 文档 | 说明 |
-|---|---|
-| `AGENTS.md` | 开发约束、分支流程和文档同步纪律 |
-| `TECH_ARCHITECTURE_MVP.md` | 技术架构版本入口 |
-| `docs/architecture.md` | 当前架构事实源入口 |
-| `docs/backend-conventions.md` | 后端开发规范 |
-| `docs/api-contracts.md` | 当前外部 API 状态和启用条件 |
+## 阅读顺序
 
-详细架构以 `docs/architecture.md` 及其分册为准，README 只保留项目入口信息。
+第一次进入项目时：
 
-## 当前非目标
+1. 阅读 `DEV_SPEC.md` 第 1 章，理解项目目标、边界和非目标。
+2. 阅读第 2 章，理解 Kernel 的七项核心特点。
+3. 阅读第 3 章，理解自研与复用边界、技术基线和延后决策。
+4. 阅读第 4 章，理解确定性测试、真实对话和模块完成门禁。
+5. 阅读第 5 章，理解整体架构、六个核心模块和四条数据流。
+6. 阅读第 6 章，查看 8 个阶段、47 个任务、里程碑和当前进度。
+7. 阅读第 7 章，理解 Kernel 后续如何演进为完整 Agent 系统。
+8. 查看 [`docs/superpowers/specs/README.md`](docs/superpowers/specs/README.md)，确认模块和章节的设计状态。
+9. 阅读 [`docs/architecture.md`](docs/architecture.md)，按任务进入对应架构分册。
+10. 修改公共契约或 Python 工程时，分别阅读 [`docs/api-contracts.md`](docs/api-contracts.md) 和 [`docs/backend-conventions.md`](docs/backend-conventions.md)。
+11. 修改规格或新增版本前，阅读 [`docs/dev-spec/README.md`](docs/dev-spec/README.md)。
 
-- 不提供 HTTP API、WebSocket、SSE、前端或小程序入口。
-- 不把当前四个 Agent 固化为永久架构边界。
-- 不把 LangGraph 类型引入 domain、application、Agent、Capability、Prompt、Trace 或 Eval 公共协议。
-- 不把 fake model、fixture RAG 的通过率描述为真实业务效果。
+## Model Catalog
 
-## 免责声明
+默认配置文件为 `config/models.yaml`。运行时可通过
+`ANANHU_MODEL_CATALOG=/path/to/models.yaml` 指定其他配置文件；配置中的
+`api_key_env` 只引用环境变量名，不把密钥写入 YAML。
 
-本项目输出仅用于工伤政策咨询、材料准备和待遇辅助测算，不构成法律意见、行政决定或最终赔付承诺。实际认定、鉴定和待遇结果以当地主管部门、经办机构以及现行有效法律法规为准。
+每个模块逐项确认后，才会进入实现计划和代码阶段。

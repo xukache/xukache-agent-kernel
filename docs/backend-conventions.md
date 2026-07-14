@@ -1,130 +1,114 @@
 # 后端开发规范
 
-## 项目形态
+本文档约束未来 Agent Kernel 的 Python 实现。A3 已确认 `src/agent_kernel` 物理目录和公开导入路径；A4 负责建立 Python 工程和测试基座。
 
-本项目是 Python 3.11 后端 Agent Harness，当前以 CLI 为入口。LangGraph 是默认可替换运行时，Native Runtime 保留用于显式回归。
+## 工程基线
 
-## 环境管理
-
-- 统一使用 `uv` 管理 Python、虚拟环境、依赖和命令运行。
-- Python 固定为 3.11，使用 `.python-version`。
-- 不把 `pip install`、裸 `python` 或 `python -m pytest` 写成项目主路径命令。
-- 新增依赖前说明用途、隔离层、可替换性和最小 extra，避免为单个 provider 安装无关集成包。
-
-## 本地命令
-
-```bash
-uv python pin 3.11
-uv sync --extra dev
-uv run pytest -v
-uv run ananhu-agent version
-uv run ananhu-agent ask "四川十级工伤，月工资6000，大概能赔多少钱？"
-uv run ananhu-agent eval data/eval/eval_cases.jsonl
-uv run ananhu-agent eval data/eval/eval_cases.jsonl --runtime both
-```
-
-真实模型只通过显式环境配置启用：
+- Python 固定为 3.11，以 `.python-version` 为准。
+- 建立 Python 工程后统一使用 `uv` 管理环境、依赖、测试和运行。
+- 不从 `main` 或旧项目恢复 `pyproject.toml`、`uv.lock`、代码和测试。
+- A4 只建立 `src/agent_kernel/__init__.py`、工程配置和测试基座，不代表任何 Core 已实现。
+- 依赖版本由 `uv.lock` 锁定；当前主依赖为 Pydantic 2.13.4，开发测试依赖为 pytest 8.4.2。
+- HTTP Adapter 使用 `httpx`；Provider SDK 和凭证只存在于 `adapters/`，不进入 `agent_kernel`。
+- 安装、测试和运行统一使用以下命令：
 
 ```bash
-export ANANHU_MODEL_API_KEY="..."
-export ANANHU_MODEL_BASE_URL="https://provider.example/v1"
-export ANANHU_MODELS='{"intent_fast":{"provider":"openai_compatible","model":"provider-model","temperature":0,"timeout_seconds":30}}'
-uv run ananhu-agent ask "工伤认定需要哪些条件？"
-
-ANANHU_REAL_MODEL_SMOKE=1 ANANHU_REAL_MODEL="provider-model" \
-  uv run pytest tests/test_model_gateway_contract.py -v
+uv sync
+uv run pytest -q
+uv run pytest -q tests/architecture
+uv run python -c "import agent_kernel"
 ```
 
-API key 不得写入 `ANANHU_MODELS`、代码、trace 或测试 fixture。未设置
-`ANANHU_REAL_MODEL_SMOKE=1` 时真实 smoke 必须 skip。
-
-CLI 入口会读取项目当前工作目录的 UTF-8 `.env`，以便模型目录和其 `api_key_env` 引用在当前 Settings
-私有映射内解析；`RuntimeSettings` 不自动读取 dotenv，也不修改进程环境，保证核心 Runtime 的配置显式
-且可测试。已导出的 shell 环境变量优先，可用于部署时覆盖本地 `.env`。`.env` 不提交，API key 只以
-环境变量保存。
-
-## 目标模块边界
+## 依赖方向
 
 ```text
-ananhu_agent/
-  domain/               # 纯业务实体、值对象和规则
-  application/          # 用例、阶段服务、状态转换、响应组装
-  ports/                # Runtime、Model、Knowledge、Capability、Storage 端口
-  runtimes/
-    native/             # 显式回归 Native Runtime
-    langgraph/          # 当前默认的 LangGraph 专有图、node 和 mapper
-  infrastructure/       # 模型、检索、存储、观测适配
-  interfaces/           # CLI 和未来外部入口
+Interface -> Application / Composition Root -> Kernel Contracts
+Adapter   -> Kernel Contracts
+Kernel    -X-> Interface / Application / Provider SDK / 具体存储
 ```
 
-迁移采用小步增量完成。现有 `agents/`、`orchestrator/`、`tools/` 等目录只保留仍被 Runtime 使用的业务组件，不保留未使用的兼容入口。
+- `Agent`、`Workflow`、`Tool`、`Memory`、`Model`、`Runtime` 是唯一核心原语。
+- Execution 是支撑协议集合，不是第七个核心原语。
+- Application 负责组装 Definition、Adapter 和配置，不能反向进入 Kernel。
+- 第三方 SDK、数据库客户端和外部运行框架只能存在于 Adapter 或 Interface 边界。
+- Core 不导入具体 Adapter；Adapter 通过实现 Kernel Protocol 接入。
 
-## 依赖规则
+## 类型选择
 
-- `domain` 不依赖框架、SDK、CLI、数据库和网络。
-- `application` 只依赖 domain 和 ports。
-- runtime 与 infrastructure 实现 ports，不能反向成为业务层依赖。
-- LangGraph 类型只允许出现在 `runtimes/langgraph/` 和组合根。
-- 当前 CLI 和 EvalRunner 依赖 `WorkflowRuntime` 端口，由组合根 `create_default_runtime()` 默认装配 LangGraph Runtime，不直接实例化具体图节点。
+| 场景 | 默认工具 | 规则 |
+|---|---|---|
+| 可替换行为契约 | `typing.Protocol` | 描述对象能做什么，不提供共享状态 |
+| 只读装配对象 | frozen `dataclass` | `frozen=True, slots=True, kw_only=True, eq=False` |
+| 跨边界结构化数据 | Pydantic v2 Schema | `frozen=True, extra="forbid", strict=True` |
+| 运行时失败传播 | `KernelError` | 在明确模块边界捕获和映射 |
+| 公开失败证据 | `ErrorInfo` | 可 JSON 序列化、脱敏、Provider Neutral |
+| 稳定状态和原因 | `str Enum` | 不依赖 Provider 私有枚举 |
+| 共享实现骨架 | ABC | 不是默认公共契约，仅在真实共享实现出现后内部使用 |
 
-## Runtime 迁移规则
+不得使用 `Any`、`object` 或无类型 `dict` 绕过公共契约。开放 JSON 只用于真正开放的 metadata、details 或业务 payload，并在 Schema 边界执行防御性复制和规范化。
 
-- `LangGraphWorkflowRuntime` 通过 `WorkflowRuntime.invoke()` 提供默认运行时；`RuntimeSettings(runtime="native")` 仅用于显式回归，不得新增旧 orchestrator 兼容入口。
-- Native Runtime 阶段服务必须以 `WorkflowState` 为输入、以 `StatePatch` 为输出，并经纯 Python reducer 合并。
-- 状态转换和 reducer 使用普通 Python 纯函数，可脱离 LangGraph 测试。
-- 目标节点返回 `StatePatch`，不得原地修改共享状态。
-- 不允许把完整 Native Runtime 包在单个 LangGraph 节点中。
-- 首个 LangGraph 实现保持串行，不提前启用复杂并行、interrupt 或 checkpoint。
-- Native 与 LangGraph Runtime 必须执行同一 contract tests。
+## 异步与执行边界
 
-## Agent 规则
+- Model、Tool Backend、Memory Store 和未来远程 Runtime 等 I/O 能力使用异步契约。
+- 同步 CPU 工作不得长期阻塞事件循环；具体执行策略由对应模块任务确认。
+- `RunContext` 传递 deadline、取消和运行元数据，不替代 Memory 或 WorkflowState。
+- 取消必须从 Runtime 向下游传播；取消或失败后不得再产生 completed 终态。
+- Retry 只用于满足错误可重试、操作幂等、策略允许、次数未耗尽、deadline 未到且尚未取消的调用。
 
-- Agent 无状态，只读取项目输入并返回项目结构化输出。
-- Agent 不直接写 session/case/run state。
-- Agent 不直接调用工具、模型 SDK、向量库或 LangGraph API。
-- Agent 不拼接完整 Prompt。
-- 新 Agent 必须有独立目标、上下文、权限或专项评测理由。
+## 数据与状态
 
-## Capability 规则
+- Definition、Input、State、Event 和 Result 互不替代。
+- Input 创建后不可回填运行数据。
+- State 每次推进创建新实例，并通过 JSON 往返保持语义等价。
+- Event 只追加，同一 run 内按 sequence 排序，每个 run 只能有一个 Terminal Event。
+- Result 使用模块专属状态和校验器约束 output、error、state 的合法组合。
+- Memory 只负责按 scope 存储和检索；WorkflowState 不进入 Memory。
+- `resume_token` 属于 Runtime 恢复授权，不进入 WorkflowState。
 
-- 所有能力通过 `CapabilityGateway` 端口；当前由 `DefaultCapabilityGateway` 直接执行显式注册能力。
-- 能力声明输入输出 schema、版本、风险、权限、超时、重试和幂等等级。
-- 结果使用结构化 `CapabilityResult`，关键字段不得只存在于自然语言文本。
-- 框架 tool adapter 只能转发到执行网关，不能绕过治理。
+## 错误与敏感数据
 
-## Model 规则
+- Provider 或 Backend Exception 在 Adapter 边界映射为 `KernelError`，并用异常链保留内部 cause。
+- 合法运行前的 Definition 或 Input 无效，直接抛出 `ValueError` 或 Pydantic ValidationError。
+- 合法运行中的失败才转换为 failed Result、failure Event 和 `ErrorInfo`。
+- Provider 原始错误码不能直接成为 Kernel 公共错误码。
+- 凭证、traceback、SDK 对象、完整敏感 Prompt、原始响应和未脱敏用户数据不得进入 Result、Event、State 或 ErrorInfo。
+- 完整诊断只进入受控日志或内部异常链。
 
-- Agent 只依赖 async `ModelGateway`，不得导入 provider SDK 或直接创建 HTTP 客户端。
-- Fake 与 OpenAI-compatible adapter 实现同一 `ModelRequest/ModelResult` contract。
-- profile 只包含非敏感路由参数；API key 使用 `SecretStr` 配置并与 trace 隔离。
-- 模型错误归一为项目错误码；模型调用与 usage 写入项目 trace 和 RunReport。
+## 注释与可读性
 
-## Prompt 与 Context 规则
-
-- Prompt 模板独立存储并包含 ID、版本、模型 profile、输出 schema 和 failure policy。
-- ContextManager 负责 section 顺序、token 预算、Evidence/Memory 选择和构建报告。
-- 当前请求、已确认事实和关键证据不得静默裁剪。
-- Prompt、Context、Memory 公共协议不导入 LangGraph message 类型。
-
-## 异步规则
-
-- 模型、检索、存储和能力执行优先定义 async 接口。
-- 不在 domain 中创建 task、event loop 或网络客户端。
-- 同步 CLI 可在组合根适配 async 用例。
-- 并行执行前必须验证分支无前置依赖、共享同一事实版本且 reducer 可确定合并。
-
-## 注释和类型
-
-- 关键模块使用中文注释说明职责、边界和非显而易见规则。
-- 不给简单赋值和字段写机械注释。
-- 端口、状态和运行证据使用明确类型，避免跨层传递无约束 `dict`。
-- 所有持久化协议包含 `schema_version`。
+- 关键协议、所有权转换、错误映射和不明显的不变量使用中文注释说明职责与边界。
+- 注释解释“为什么”和“不能做什么”，不复述代码。
+- 公共名称保持 Provider Neutral，不把第一阶段 Adapter 名称写入 Core API。
 
 ## 测试与验证
 
-- 纯领域规则和 reducer 使用单元测试。
-- Agent、Capability、Repository 和 Runtime 使用 contract tests。
-- Native/LangGraph 使用相同 fixture 验证结果、StopReason、能力调用和 trace。
-- 双运行时差分只规范化 runtime 身份、事件 ID、时间、毫秒延迟和内部事件顺序；不得忽略业务 ID、能力参数或证据字段。
-- Fake Model 用于确定性回归；真实 provider smoke 显式 opt-in，结果单独报告。
-- 文档变更至少运行 Markdown 链接/过期口径扫描和现有全量测试，确认文档没有把未实现能力写成已完成。
+变更的测试范围随边界扩大：
+
+| 测试 | 证明内容 |
+|---|---|
+| Unit Test | 单个规则、校验器和确定性行为 |
+| Contract Test | 不同实现遵守同一个 Protocol |
+| Integration Test | 多模块数据流、失败和取消传播 |
+| Architecture Test | 导入方向、Provider 类型隔离和公开 API |
+| RD 真实对话验收 | 真实 Provider 下的用户可观察能力 |
+
+提交前必须：
+
+1. 运行与变更匹配的格式、静态检查和测试。
+2. 模块出口任务累计运行当前 RD 和此前全部 RD。
+3. 检查文档、任务状态和测试证据一致。
+4. 未运行的验证明确标记，不能声称通过。
+
+Architecture Test 基座使用 AST 检查 Kernel 源码导入边界，并由 pytest 统一执行。
+
+真实对话测试使用 `tests/real_dialogue` 场景注册表和 `tests/support` 证据
+支持层。证据默认写入 `artifacts/real-dialogue/`，也可以通过
+`ANANHU_REAL_DIALOGUE_EVIDENCE_DIR` 指定目录；该目录不进入 Git。
+
+真实对话证据必须使用独立的 `run_id` 和 `scope`，并通过结构化字段保存
+状态、事件、usage、latency 和失败信息。没有真实 Provider、凭证或必要能力
+时只能记录 `BLOCKED` 或 `NOT RUN`，不能写入模拟的 `PASS` 证据。
+
+Provider Endpoint 属于 Adapter 运行配置。由 YAML Model Catalog 管理，并允许
+通过 `ANANHU_MODEL_CATALOG` 切换配置文件；不能把官方 Endpoint 固化为无法调整
+的 Kernel 常量。

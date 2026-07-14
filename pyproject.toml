@@ -1,42 +1,35 @@
+[build-system]
+requires = ["hatchling>=1.27"]
+build-backend = "hatchling.build"
+
 [project]
-name = "ananhu-agent"
-version = "0.1.0"
-description = "Ananhu work injury consultation CLI multi-agent MVP"
+name = "ananhu-agent-kernel"
+version = "0.1.0.dev0"
+description = "A learning-oriented Agent Kernel built from first principles."
+readme = "README.md"
 requires-python = ">=3.11,<3.12"
 dependencies = [
-  "pydantic>=2.7",
-  "pydantic-settings>=2.2",
-  "python-dotenv>=1.0",
-  "typer>=0.12",
-  "PyYAML>=6.0",
-  "langgraph>=1.2.9",
-  "httpx>=0.28",
-  "jsonschema>=4.0",
-  "textual>=1.0",
+    "httpx>=0.28,<1",
+    "jsonschema>=4.23,<5",
+    "pydantic>=2.10,<3",
+    "pyyaml>=6.0,<7",
+    "typing-extensions>=4.12,<5",
 ]
 
-[project.optional-dependencies]
+[dependency-groups]
 dev = [
-  "pytest>=8.0",
-  "pytest-asyncio>=0.24",
+    "pytest>=8.3,<9",
 ]
 
-[project.scripts]
-ananhu-agent = "ananhu_agent.cli.main:app"
-
-[build-system]
-requires = ["setuptools>=69"]
-build-backend = "setuptools.build_meta"
+[tool.hatch.build.targets.wheel]
+packages = ["src/agent_kernel", "src/adapters"]
 
 [tool.pytest.ini_options]
 testpaths = ["tests"]
-pythonpath = ["."]
+addopts = ["-ra", "--strict-config", "--strict-markers"]
+markers = [
+    "real_dialogue: tests that require a real Provider and produce evidence artifacts",
+]
 
 [tool.uv]
-package = true
-
-[tool.setuptools.packages.find]
-include = ["ananhu_agent*"]
-
-[tool.setuptools.package-data]
-ananhu_agent = ["prompts/templates/*.yaml", "cli/tui/*.tcss"]
+default-groups = ["dev"]

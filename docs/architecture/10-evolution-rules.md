@@ -1,57 +1,58 @@
-# 10. 架构演进与变更监控
+# 架构演进规则
 
-## 变更同步规则
+本分册用于在 Agent 辅助开发中持续检查文档、代码和测试是否偏离已确认架构。
 
-- 修改运行时所有权、阶段、State、StatePatch、reducer、StopReason 或 checkpoint 时，更新 `02-agent-runtime.md`。
-- 修改 Prompt、Context、Memory、CaseFact 或裁剪规则时，更新 `03-prompt-context.md`。
-- 修改 Capability、Model、Knowledge、Evidence、幂等或重试时，更新 `04-tools-models.md`。
-- 修改 Trace、Usage、Badcase、Eval 或隐私字段时，更新 `05-data-observability.md`。
-- 架构级事实变化必须更新 `99-changelog.md`。
-- 外部接口变化必须先更新 `docs/api-contracts.md`。
+## 变更分类
 
-## 框架隔离监控
+| 变更 | 必须更新 |
+|---|---|
+| 新增功能或改变公共行为 | `DEV_SPEC.md`，并追加开发规格版本记录 |
+| 完成模块设计确认 | `docs/superpowers/specs/` 对应记录 |
+| 改变原语、模块边界、依赖、数据所有权、外部接口或部署 | 新的完整架构版本正文 |
+| 只调整架构文档组织或导航 | `docs/architecture/99-changelog.md` |
+| 新增外部 Interface | `docs/api-contracts.md`，确认后增加领域契约 |
+| 改变工程约定或测试基线 | `docs/backend-conventions.md` 和相关规格 |
 
-以下情况视为架构违规，必须在同一变更中修正：
+计划文档只能拆解已确认设计，不能作为架构事实源。
 
-- domain/application/Agent/Tool/Eval 公共协议导入 LangGraph、LangChain、Agno 或模型供应商类型。
-- LangGraph state 被当作案件事实或数据库 schema。
-- Graph node 内包含本应属于 application/domain 的业务规则。
-- Native Runtime 被完整包装进一个图节点，形成双状态机。
-- LangGraph/LangSmith trace 替代项目 TraceEvent。
-- 框架 checkpointer 被当作唯一业务状态库。
+## 每次任务的架构检查
 
-可以通过静态导入测试或 `rg` 检查这些边界。
+开始前：
 
-## Agent 与工作流监控
+- 当前任务是否已经在 `DEV_SPEC.md` 确认。
+- 是否需要先建立独立任务分支。
+- 是否触及尚未确认的物理目录、类型字段或 Interface。
+- 是否需要阅读现有模块确认记录或架构版本。
 
-- 新增 Agent 前记录拆分依据和单 Agent baseline。
-- Agent 数量变化不应自动导致图节点数量变化。
-- 新增并行分支前证明无前置依赖、共享事实版本和确定性合并规则。
-- 新增循环前定义步骤上限、重试上限、停止原因和成本预算。
-- 新增人工中断/恢复前定义 checkpoint 兼容和幂等策略。
+实现中：
 
-## 状态与数据监控
+- 是否新增了六个核心原语之外的“核心”概念。
+- Kernel 是否导入了 Application、Interface、Provider SDK 或具体存储。
+- Adapter 类型是否泄漏进公共 Schema。
+- Definition、Input、State、Event、Result 的所有权是否混合。
+- Agent、Workflow、Runtime 是否越权接管彼此的语义。
+- 错误、取消、重试、事件和敏感数据规则是否被保持。
 
-- Case、Session、Run、Checkpoint、Trace 的职责和生命周期不能合并。
-- 新持久化字段必须有 schema version、来源、隐私等级和保留策略。
-- jurisdiction、政策版本、关键事实或公式变化必须触发依赖数据失效。
-- trace/badcase 不得默认保存不必要的完整敏感原文。
+完成前：
 
-## 文档一致性监控
+- `DEV_SPEC.md`、分册、代码、测试和任务状态是否一致。
+- Contract、Integration、Architecture 和 RD 验证是否覆盖此次风险。
+- 是否存在未声明的兼容层、旧入口或旧协议。
+- 是否需要更新开发规格版本或创建架构版本。
 
-每次架构或计划变更扫描：
+## 漂移信号
 
-- “尚未初始化”“尚未实现”等阶段描述是否仍真实。
-- Agno、LangGraph、Native Runtime 的当前与目标边界是否一致。
-- 当前四 Agent 是否被误写成永久强制架构。
-- fake/fixture 测试是否被误写成真实业务验收。
-- 当前无 API 是否被误写成永久不支持外部接口。
-- 已作废计划项是否仍被列为待执行路线。
+出现以下情况必须暂停实现并回到设计确认：
 
-## 禁止项
+- 新代码需要绕过 Protocol 才能工作。
+- Core 必须认识具体 Provider 或 Backend 类型。
+- 同一数据在多个模块都有可变所有权。
+- 为方便调用而创建 UniversalInput、KernelResult、KernelState 或万能 metadata。
+- WorkflowState 被放入 Memory，或通过回放 Event 猜测恢复。
+- Model 获得 Python callable，或 Tool 决定是否继续 Model 循环。
+- Interface 开始承载 Agent、Workflow 或业务执行语义。
+- 新目录或公开导入路径在 A3 确认前被创建。
 
-- 不为了目录或名词现代化进行无行为收益的大规模重写。
-- 不在没有真实需求和测试前建设通用 DAG、复杂工作流平台或多套 checkpoint。
-- 不提前虚构 API、流式事件或多模态实现。
-- 不让实施计划覆盖当前架构事实源。
-- 不删除已发布的审计历史和版本快照；实现代码中未使用的旧架构、兼容入口和废弃逻辑应在对应变更中删除，并在 changelog 标注迁移影响。
+## 版本判定
+
+不是每次文档更新都发布架构版本。只有改变系统边界时，才按照 [`README.md`](README.md) 创建 `docs/architecture/versions/` 下的完整正文。已发布版本只读，修正通过新版本完成。
