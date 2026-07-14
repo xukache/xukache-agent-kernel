@@ -324,12 +324,150 @@ def test_adapter_implements_model_protocol_and_declares_capabilities() -> None:
     model = VolcengineArkModel(_config())
 
     assert isinstance(model, Model)
-    assert model.capabilities == frozenset({"generate"})
+    assert model.capabilities == frozenset({"generate", "stream"})
+    assert hasattr(model.stream(ModelRequest(input="hello")), "__aiter__")
 
-    with pytest.raises(ModelError) as error_info:
-        model.stream(ModelRequest(input="hello"))
 
-    assert error_info.value.code is ModelErrorCode.PROVIDER
+def test_stream_converts_sse_text_deltas_and_terminal_usage() -> None:
+    captured_body: dict[str, object] = {}
+
+    def handler(request: httpx.Request) -> httpx.Response:
+        captured_body.update(json.loads(request.content))
+        events = "\n".join(
+            [
+                'data: {"id":"stream-1","model":"test-model","choices":[{"delta":{"content":"Hel"}}]}',
+                'data: {"id":"stream-1","model":"test-model","choices":[{"delta":{"content":"lo"}}]}',
+                'data: {"id":"stream-1","model":"test-model","choices":[{"delta":{},"finish_reason":"stop"}],"usage":{"prompt_tokens":3,"completion_tokens":2,"total_tokens":5}}',
+                "data: [DONE]",
+                "",
+            ]
+        )
+        return httpx.Response(
+            200,
+            headers={"content-type": "text/event-stream"},
+            content=events.encode(),
+        )
+
+    client = httpx.AsyncClient(transport=httpx.MockTransport(handler))
+    model = VolcengineArkModel(_config(), client=client)
+
+    async def consume() -> list[object]:
+        return [chunk async for chunk in model.stream(ModelRequest(input="hello"))]
+
+    try:
+        chunks = asyncio.run(consume())
+    finally:
+        asyncio.run(client.aclose())
+
+    assert captured_body["stream"] is True
+    assert [chunk.text_delta for chunk in chunks[:2]] == ["Hel", "lo"]
+    assert chunks[-1].finish_reason is FinishReason.STOP
+    assert chunks[-1].usage is not None
+    assert chunks[-1].usage.total_tokens == 5
+
+
+def test_stream_converts_tool_call_deltas() -> None:
+    def handler(request: httpx.Request) -> httpx.Response:
+        events = "\n".join(
+            [
+                'data: {"id":"stream-tool","model":"test-model","choices":[{"delta":{"tool_calls":[{"index":0,"id":"call-1","function":{"name":"add","arguments":"{\\"a\\":"}}]}}]}',
+                'data: {"id":"stream-tool","model":"test-model","choices":[{"delta":{"tool_calls":[{"index":0,"function":{"arguments":"18}"}}]}}]}',
+                'data: {"id":"stream-tool","model":"test-model","choices":[{"delta":{},"finish_reason":"tool_calls"}]}',
+                "data: [DONE]",
+                "",
+            ]
+        )
+        return httpx.Response(
+            200,
+            headers={"content-type": "text/event-stream"},
+            content=events.encode(),
+        )
+
+    client = httpx.AsyncClient(transport=httpx.MockTransport(handler))
+    model = VolcengineArkModel(_config(), client=client)
+
+    async def consume() -> list[object]:
+        return [
+            chunk async for chunk in model.stream(ModelRequest(input="use add"))
+        ]
+
+    try:
+        chunks = asyncio.run(consume())
+    finally:
+        asyncio.run(client.aclose())
+
+    assert chunks[0].tool_call_delta.call_id == "call-1"
+    assert chunks[0].tool_call_delta.name == "add"
+    assert chunks[0].tool_call_delta.arguments_delta == '{"a":'
+    assert chunks[1].tool_call_delta.arguments_delta == "18}"
+    assert chunks[-1].finish_reason is FinishReason.TOOL_CALL
+
+
+def test_stream_buffers_and_validates_structured_output() -> None:
+    def handler(request: httpx.Request) -> httpx.Response:
+        events = "\n".join(
+            [
+                'data: {"id":"stream-structured","model":"test-model","choices":[{"delta":{"content":"{\\"result\\":"}}]}',
+                'data: {"id":"stream-structured","model":"test-model","choices":[{"delta":{"content":"42}"}}]}',
+                'data: {"id":"stream-structured","model":"test-model","choices":[{"delta":{},"finish_reason":"stop"}]}',
+                "data: [DONE]",
+                "",
+            ]
+        )
+        return httpx.Response(
+            200,
+            headers={"content-type": "text/event-stream"},
+            content=events.encode(),
+        )
+
+    output_schema = {
+        "type": "object",
+        "properties": {"result": {"type": "integer"}},
+        "required": ["result"],
+    }
+    client = httpx.AsyncClient(transport=httpx.MockTransport(handler))
+    model = VolcengineArkModel(_config(), client=client)
+
+    async def consume() -> list[object]:
+        return [
+            chunk
+            async for chunk in model.stream(
+                ModelRequest(input="18 + 24", output_schema=output_schema)
+            )
+        ]
+
+    try:
+        chunks = asyncio.run(consume())
+    finally:
+        asyncio.run(client.aclose())
+
+    assert chunks[-2].structured_delta == {"result": 42}
+    assert chunks[-1].finish_reason is FinishReason.STOP
+
+
+def test_stream_rejects_done_without_finish_reason() -> None:
+    def handler(request: httpx.Request) -> httpx.Response:
+        return httpx.Response(
+            200,
+            headers={"content-type": "text/event-stream"},
+            content=b'data: {"id":"stream-incomplete","model":"test-model","choices":[{"delta":{"content":"x"}}]}\n'
+            b"data: [DONE]\n",
+        )
+
+    client = httpx.AsyncClient(transport=httpx.MockTransport(handler))
+    model = VolcengineArkModel(_config(), client=client)
+
+    async def consume() -> None:
+        async for _ in model.stream(ModelRequest(input="hello")):
+            pass
+
+    try:
+        with pytest.raises(ModelError) as error_info:
+            asyncio.run(consume())
+    finally:
+        asyncio.run(client.aclose())
+
+    assert error_info.value.code is ModelErrorCode.FORMAT
 
 
 def test_generate_maps_rate_limit_and_timeout_errors() -> None:
