@@ -9,7 +9,9 @@ description = "A learning-oriented Agent Kernel built from first principles."
 readme = "README.md"
 requires-python = ">=3.11,<3.12"
 dependencies = [
+    "httpx>=0.28,<1",
     "pydantic>=2.10,<3",
+    "pyyaml>=6.0,<7",
     "typing-extensions>=4.12,<5",
 ]
 
@@ -19,7 +21,7 @@ dev = [
 ]
 
 [tool.hatch.build.targets.wheel]
-packages = ["src/agent_kernel"]
+packages = ["src/agent_kernel", "src/adapters"]
 
 [tool.pytest.ini_options]
 testpaths = ["tests"]

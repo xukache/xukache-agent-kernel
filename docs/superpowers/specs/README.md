@@ -22,6 +22,7 @@
 | A5 真实对话证据基座 | 已完成 | [`2026-07-14-agent-kernel-real-dialogue-evidence-foundation-a5.md`](2026-07-14-agent-kernel-real-dialogue-evidence-foundation-a5.md) |
 | B1 ModelRequest 与 ModelResponse | 已完成 | [`2026-07-14-agent-kernel-model-request-response-b1.md`](2026-07-14-agent-kernel-model-request-response-b1.md) |
 | B2 Model Contract 与错误语义 | 已完成 | [`2026-07-14-agent-kernel-model-contract-errors-b2.md`](2026-07-14-agent-kernel-model-contract-errors-b2.md) |
+| B3 Volcengine Ark Model Adapter | 已实现，待用户确认 | [`2026-07-14-agent-kernel-volcengine-adapter-b3.md`](2026-07-14-agent-kernel-volcengine-adapter-b3.md) |
 
 ## 模块确认记录模板
 
