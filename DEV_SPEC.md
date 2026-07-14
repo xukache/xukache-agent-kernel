@@ -1796,7 +1796,7 @@ RuntimeResult != AgentResult != WorkflowResult != ToolResult
 |---|---|---|---|
 | B1 | 定义 ModelRequest 与 ModelResponse | [x] | Provider Neutral 数据协议 |
 | B2 | 定义 Model Contract 与错误语义 | [x] | generate / stream 契约 |
-| B3 | 实现首个真实 Model Provider Adapter | [~] | 真实 Provider 可调用 |
+| B3 | 实现首个真实 Model Provider Adapter | [x] | 真实 Provider 可调用 |
 | B4 | 实现结构化输出转换 | [ ] | 统一结构化结果 |
 | B5 | 实现 Provider Streaming 转换 | [ ] | 有序真实增量 |
 | B6 | 完成 RD-001 真实模型验收 | [ ] | Model MVP 完成证据 |
@@ -1872,7 +1872,7 @@ RuntimeResult != AgentResult != WorkflowResult != ToolResult
 | 阶段 | 总任务 | 已完成 | 进行中 | 进度 |
 |---|---:|---:|---:|---:|
 | A | 5 | 5 | 0 | 100% |
-| B | 6 | 2 | 1 | 33% |
+| B | 6 | 3 | 0 | 50% |
 | C | 5 | 0 | 0 | 0% |
 | D | 6 | 0 | 0 | 0% |
 | E | 6 | 0 | 0 | 0% |
@@ -1976,7 +1976,7 @@ RuntimeResult != AgentResult != WorkflowResult != ToolResult
 - 当前实现：建立 `adapters.model.VolcengineArkModel`、YAML Model Catalog
   配置读取、请求/响应转换、错误映射和能力声明。
 - 当前验证：MockTransport 集成测试覆盖配置校验、请求鉴权、响应归一化、限流、超时、Protocol 兼容和安装打包。
-- 当前限制：`ANANHU_REAL_MODEL_SMOKE=0`，尚未运行真实网络 Smoke；Streaming 能力明确留到 B5，不伪造支持；B3 仍待用户确认后标记为 `[x]`。
+- 当前限制：`ANANHU_REAL_MODEL_SMOKE=0`，尚未运行真实网络 Smoke；Streaming 能力明确留到 B5，不伪造支持。
 - 证据：[`B3 Volcengine Ark Model Adapter 记录`](docs/superpowers/specs/2026-07-14-agent-kernel-volcengine-adapter-b3.md)。
 - 关联：K-001、K-007。
 

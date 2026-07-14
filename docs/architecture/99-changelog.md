@@ -17,6 +17,7 @@
 | 2026-07-14 | 确认 | 建立 Model Protocol、异步 generate / stream 合同和 Provider Neutral 错误分类；不接入真实 Provider | `src/agent_kernel/model/`、`tests/contract/model/`、`docs/superpowers/specs/2026-07-14-agent-kernel-model-contract-errors-b2.md` | 否 |
 | 2026-07-14 | 新增 | 建立 Volcengine Ark HTTP Model Adapter、配置校验、响应归一化和错误映射；真实 Smoke 尚未运行，Streaming 留给 B5 | `src/adapters/model/volcengine.py`、`tests/integration/model/`、`docs/superpowers/specs/2026-07-14-agent-kernel-volcengine-adapter-b3.md` | 否 |
 | 2026-07-14 | 更新 | 将 Provider、模型、Endpoint、超时和能力配置统一收敛到 YAML Model Catalog；环境变量仅定位 Catalog 和注入密钥 | `config/models.yaml`、`src/adapters/model/volcengine.py`、`README.md`、`DEV_SPEC.md` | 否 |
+| 2026-07-14 | 确认 | 用户确认 B3 Volcengine Ark Model Adapter 完成；真实 Provider Smoke 仍保持 `NOT RUN`，不等同于 RD-001 通过 | `DEV_SPEC.md`、`docs/superpowers/specs/2026-07-14-agent-kernel-volcengine-adapter-b3.md` | 否 |
 
 ## 本次变更结论
 
@@ -32,4 +33,4 @@
 | A5 真实对话证据基座 | 已完成 |
 | B1 ModelRequest / ModelResponse | 已完成 |
 | B2 Model Contract 与错误语义 | 已完成 |
-| B3 Volcengine Ark Model Adapter | 已实现，待用户确认 |
+| B3 Volcengine Ark Model Adapter | 已完成 |
