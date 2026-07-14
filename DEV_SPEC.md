@@ -1770,7 +1770,7 @@ RuntimeResult != AgentResult != WorkflowResult != ToolResult
 | 阶段 | 名称 | 任务数 | 出口验收 | 状态 |
 |---|---|---:|---|---|
 | A | 规格与实现准入 | 5 | 目录、类型、工程和证据基座确认 | 进行中 |
-| B | Model MVP | 6 | RD-001 | 进行中 |
+| B | Model MVP | 6 | RD-001 | 已完成 |
 | C | Agent MVP | 5 | RD-002 + RD-001 回归 | 待开始 |
 | D | Tool Call 闭环 | 6 | RD-003 + 历史 RD 回归 | 待开始 |
 | E | Memory 跨运行上下文 | 6 | RD-004 + 历史 RD 回归 | 待开始 |
@@ -1799,7 +1799,7 @@ RuntimeResult != AgentResult != WorkflowResult != ToolResult
 | B3 | 实现首个真实 Model Provider Adapter | [x] | 真实 Provider 可调用 |
 | B4 | 实现结构化输出转换 | [x] | 统一结构化结果 |
 | B5 | 实现 Provider Streaming 转换 | [x] | 有序真实增量 |
-| B6 | 完成 RD-001 真实模型验收 | [ ] | Model MVP 完成证据 |
+| B6 | 完成 RD-001 真实模型验收 | [x] | Model MVP 完成证据 |
 
 #### 6.4.3 阶段 C：Agent MVP
 
@@ -1872,7 +1872,7 @@ RuntimeResult != AgentResult != WorkflowResult != ToolResult
 | 阶段 | 总任务 | 已完成 | 进行中 | 进度 |
 |---|---:|---:|---:|---:|
 | A | 5 | 5 | 0 | 100% |
-| B | 6 | 5 | 0 | 83% |
+| B | 6 | 6 | 0 | 100% |
 | C | 5 | 0 | 0 | 0% |
 | D | 6 | 0 | 0 | 0% |
 | E | 6 | 0 | 0 | 0% |
@@ -2019,6 +2019,15 @@ RuntimeResult != AgentResult != WorkflowResult != ToolResult
 - 前置依赖：B4、A5。
 - 交付：固定输入 `18 + 24` 的真实结构化运行证据。
 - 验收：`result == 42`，并记录 model_id、provider、usage、finish_reason 和 latency。
+- 当前实现：新增真实 RD-001 测试，使用 `ANANHU_REAL_MODEL_SMOKE=1` 门禁调用
+  YAML Model Catalog 配置的 Volcengine Ark，并通过 A5 EvidenceRecorder 写入
+  独立 `run_id`、`scope` 和脱敏证据。
+- 当前验证：真实 Provider 执行通过，`result == 42`、`finish_reason == stop`，
+  记录了 model_id、provider、usage 和 latency；确定性测试覆盖 Smoke 门禁和
+  usage 脱敏规则。
+- 当前限制：真实执行依赖受控网络环境；本次通过清除本机 SOCKS 代理环境变量后
+  访问 Provider。B6 不执行 Agent、Tool、Runtime 或历史 RD 回归。
+- 证据：[`B6 RD-001 真实模型验收记录`](docs/superpowers/specs/2026-07-14-agent-kernel-real-model-acceptance-b6.md)。
 - 关联：RD-001；阶段 B 出口。
 
 #### 6.6.3 阶段 C：Agent MVP
