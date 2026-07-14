@@ -467,7 +467,7 @@ Schema 校验与序列化工具当前状态为：
 能力要求：已确认
 Schema Model：Pydantic v2 风格 BaseModel
 公共配置：frozen=True、extra="forbid"、strict=True
-具体依赖版本：阶段 A4 建立 uv 工程时确认
+具体依赖版本：由 uv.lock 锁定，当前解析为 Pydantic 2.13.4
 ```
 
 ### 3.5 第一阶段 Adapter 选择
@@ -1783,7 +1783,7 @@ RuntimeResult != AgentResult != WorkflowResult != ToolResult
 | A1 | 完成开发规格逐章确认 | [x] | 第 1-7 章一致 |
 | A2 | 确认公共类型表达策略 | [x] | Python 类型与序列化规则 |
 | A3 | 确认物理目录与公开导入路径 | [x] | 可实施目录设计 |
-| A4 | 建立 uv、pytest 与 Architecture Test 基座 | [ ] | 可运行工程 |
+| A4 | 建立 uv、pytest 与 Architecture Test 基座 | [x] | 可运行工程 |
 | A5 | 建立真实对话证据基座 | [ ] | RD 执行和证据入口 |
 
 #### 6.4.2 阶段 B：Model MVP
@@ -1867,7 +1867,7 @@ RuntimeResult != AgentResult != WorkflowResult != ToolResult
 
 | 阶段 | 总任务 | 已完成 | 进行中 | 进度 |
 |---|---:|---:|---:|---:|
-| A | 5 | 3 | 0 | 60% |
+| A | 5 | 4 | 0 | 80% |
 | B | 6 | 0 | 0 | 0% |
 | C | 5 | 0 | 0 | 0% |
 | D | 6 | 0 | 0 | 0% |
@@ -1917,6 +1917,10 @@ RuntimeResult != AgentResult != WorkflowResult != ToolResult
 - 前置依赖：A3。
 - 交付：Python 3.11 工程、uv 依赖入口、pytest 和导入边界检查。
 - 验收：空白 Kernel 工程可安装、可导入、可运行确定性测试。
+- 当前实现：`pyproject.toml`、`uv.lock`、`src/agent_kernel/__init__.py`、Unit Smoke Test 和 AST Architecture Test 已建立。
+- 当前验证：`uv sync`、`uv run pytest -q`、`uv run pytest -q tests/architecture` 和安装后导入检查均通过。
+- 当前限制：未创建六个 Core 实现目录，不声明任何 Core 完成。
+- 证据：[`A4 uv、pytest 与 Architecture Test 基座记录`](docs/superpowers/specs/2026-07-14-agent-kernel-engineering-test-foundation-a4.md)。
 - 关联：K-009；不声明任何 Core 完成。
 
 ##### A5：建立真实对话证据基座

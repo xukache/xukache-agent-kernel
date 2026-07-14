@@ -11,6 +11,7 @@
 | 2026-07-13 | 更新 | 补充 Coding Agent 修改前阅读路径、文档事实源和纯文档治理分支规则 | `AGENTS.md` | 否 |
 | 2026-07-13 | 更新 | 补充项目文档索引、架构分册索引和文档使用规则 | `README.md`、`docs/architecture/README.md` | 否 |
 | 2026-07-13 | 确认 | 确认 `src/agent_kernel` Kernel 包、Adapter / Application / Interface 顶层命名空间、公开导入边界和测试分层 | `docs/superpowers/specs/2026-07-13-agent-kernel-physical-layout-import-paths-a3.md` | 否 |
+| 2026-07-14 | 新增 | 建立 Python 3.11、uv、pytest 和 AST Architecture Test 工程基座；仅创建空包入口，不声明 Core 实现 | `pyproject.toml`、`uv.lock`、`src/agent_kernel/__init__.py`、`tests/`、`docs/superpowers/specs/2026-07-14-agent-kernel-engineering-test-foundation-a4.md` | 否 |
 
 ## 本次变更结论
 
@@ -22,3 +23,4 @@
 | A3 实施状态 | 已完成 |
 | Kernel 代码目录 | 不创建 |
 | 物理目录和公开导入路径 | 已由 A3 确认 |
+| A4 工程与测试基座 | 已完成 |
