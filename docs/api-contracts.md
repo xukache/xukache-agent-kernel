@@ -24,7 +24,8 @@
 | 六个 Core 的语义级输入、输出和非职责 | `DEV_SPEC.md` 第 5.3 节 |
 | Agent、Tool、Memory、Workflow 数据流 | `DEV_SPEC.md` 第 5.4 节 |
 | Protocol、Definition、Schema、Error、State 规则 | `DEV_SPEC.md` 第 5.7 节和 A2 确认记录 |
-| 具体模块字段、状态枚举和错误捕获层级 | 后续 B-G 对应任务，当前不得自行补全 |
+| ModelRequest、ModelResponse 及其嵌套 Schema | B1 确认记录和 `agent_kernel.model` |
+| 其他模块字段、状态枚举和错误捕获层级 | 后续 B-G 对应任务，当前不得自行补全 |
 
 摘要见 [`docs/architecture/03-public-contracts.md`](architecture/03-public-contracts.md)。
 
@@ -34,6 +35,7 @@
 - Definition 是只读装配对象，不是调用输入，也不承诺整体 JSON 序列化。
 - Input、Result、Event、State 和跨 Adapter 数据必须使用严格 Schema，并能按所属边界稳定序列化。
 - Provider SDK、Backend 对象、凭证、callable 和内部 Exception 不得进入公共 Schema。
+- `ModelRequest` 只携带 Tool Schema，不携带可执行 Tool；`ModelResponse` 的 Tool Call 只表达结构化意图。
 - `KernelError` 负责 Python 运行时传播，`ErrorInfo` 负责公开、脱敏、可序列化的失败证据。
 
 ## 新增外部接口的门禁

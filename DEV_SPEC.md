@@ -1766,7 +1766,7 @@ RuntimeResult != AgentResult != WorkflowResult != ToolResult
 | 阶段 | 名称 | 任务数 | 出口验收 | 状态 |
 |---|---|---:|---|---|
 | A | 规格与实现准入 | 5 | 目录、类型、工程和证据基座确认 | 进行中 |
-| B | Model MVP | 6 | RD-001 | 待开始 |
+| B | Model MVP | 6 | RD-001 | 进行中 |
 | C | Agent MVP | 5 | RD-002 + RD-001 回归 | 待开始 |
 | D | Tool Call 闭环 | 6 | RD-003 + 历史 RD 回归 | 待开始 |
 | E | Memory 跨运行上下文 | 6 | RD-004 + 历史 RD 回归 | 待开始 |
@@ -1790,7 +1790,7 @@ RuntimeResult != AgentResult != WorkflowResult != ToolResult
 
 | ID | 任务 | 状态 | 主要出口 |
 |---|---|---|---|
-| B1 | 定义 ModelRequest 与 ModelResponse | [ ] | Provider Neutral 数据协议 |
+| B1 | 定义 ModelRequest 与 ModelResponse | [x] | Provider Neutral 数据协议 |
 | B2 | 定义 Model Contract 与错误语义 | [ ] | generate / stream 契约 |
 | B3 | 实现首个真实 Model Provider Adapter | [ ] | 真实 Provider 可调用 |
 | B4 | 实现结构化输出转换 | [ ] | 统一结构化结果 |
@@ -1868,7 +1868,7 @@ RuntimeResult != AgentResult != WorkflowResult != ToolResult
 | 阶段 | 总任务 | 已完成 | 进行中 | 进度 |
 |---|---:|---:|---:|---:|
 | A | 5 | 5 | 0 | 100% |
-| B | 6 | 0 | 0 | 0% |
+| B | 6 | 1 | 0 | 17% |
 | C | 5 | 0 | 0 | 0% |
 | D | 6 | 0 | 0 | 0% |
 | E | 6 | 0 | 0 | 0% |
@@ -1945,6 +1945,10 @@ RuntimeResult != AgentResult != WorkflowResult != ToolResult
 - 前置依赖：A2、A4。
 - 交付：请求、响应、Tool Call、usage 和 finish_reason 数据语义。
 - 验收：可序列化；不包含具体 Provider SDK 类型。
+- 当前实现：建立 `agent_kernel.model` 公开子包，定义严格不可变的 `ModelRequest`、`ModelResponse` 及其消息、Memory 投影、Tool Schema、Tool Call、usage 和 finish_reason 类型。
+- 当前验证：B1 Model Schema 契约测试通过，覆盖严格类型、不可变配置、JSON 序列化、结构化输出、Tool Call 和结束原因一致性。
+- 当前限制：尚未定义 `Model` Protocol、Provider 错误或 `generate / stream` 行为。
+- 证据：[`B1 ModelRequest 与 ModelResponse 契约记录`](docs/superpowers/specs/2026-07-14-agent-kernel-model-request-response-b1.md)。
 - 关联：K-001、K-007。
 
 ##### B2：定义 Model Contract 与错误语义

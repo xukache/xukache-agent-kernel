@@ -60,6 +60,23 @@ class KernelSchema(BaseModel):
 - Event 只能追加，按 sequence 排序，并且每个 Run 只有一个 Terminal Event。
 - Streaming 结束后只创建一次最终 Result，最终内容必须与已消费增量一致。
 
+## Model 数据协议
+
+B1 已确认 `agent_kernel.model` 的第一组 Provider Neutral Schema：
+
+| 类型 | 职责 |
+|---|---|
+| `ModelRequest` | 携带 instructions、input、上下文、Memory 投影、Tool Schema、输出 Schema 和运行元数据 |
+| `ModelResponse` | 携带文本、结构化输出、Tool Call、usage、finish_reason 和受控 Provider metadata |
+| `ToolSchema` | 描述 Model 可见的工具，不包含可执行对象 |
+| `ToolCall` | 表达 Model 生成的调用意图，不包含 Python callable |
+| `Usage` | 归一化 input、output、total token 数 |
+
+这些对象使用 `frozen=True`、`extra="forbid"` 和 `strict=True`，可以稳定
+JSON 序列化。`ModelResponse` 约束 `tool_call` 结束原因必须有 Tool Call，
+`stop` 结束原因不得包含 Tool Call。B1 只定义数据，不定义 Model Protocol、
+Provider 错误或 `generate / stream` 行为。
+
 ## Error
 
 ```text
@@ -80,4 +97,4 @@ Provider / Backend Exception
 - `definition_ref.revision` 与 `state_schema_version` 分别管理定义和状态结构版本。
 - `checkpoint_id` 可以进入 State；一次性 `resume_token` 不能进入 State。
 
-完整规则和示例以 A2 确认记录为准；A3 已确认 `agent_kernel` 及其稳定子包为公开导入边界；具体字段、枚举和错误捕获层级由 B-G 对应任务确认。
+完整规则和示例以 A2 确认记录为准；A3 已确认 `agent_kernel` 及其稳定子包为公开导入边界；B1 已确认 Model 数据协议；其他字段、枚举和错误捕获层级由 B-G 对应任务确认。

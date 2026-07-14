@@ -20,6 +20,7 @@
 | A3 物理目录与公开导入路径 | 已完成 | [`2026-07-13-agent-kernel-physical-layout-import-paths-a3.md`](2026-07-13-agent-kernel-physical-layout-import-paths-a3.md) |
 | A4 uv、pytest 与 Architecture Test 基座 | 已完成 | [`2026-07-14-agent-kernel-engineering-test-foundation-a4.md`](2026-07-14-agent-kernel-engineering-test-foundation-a4.md) |
 | A5 真实对话证据基座 | 已完成 | [`2026-07-14-agent-kernel-real-dialogue-evidence-foundation-a5.md`](2026-07-14-agent-kernel-real-dialogue-evidence-foundation-a5.md) |
+| B1 ModelRequest 与 ModelResponse | 已完成 | [`2026-07-14-agent-kernel-model-request-response-b1.md`](2026-07-14-agent-kernel-model-request-response-b1.md) |
 
 ## 模块确认记录模板
 
