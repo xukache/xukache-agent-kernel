@@ -6,7 +6,7 @@
 |---|---|
 | 任务 | B3：实现首个真实 Model Provider Adapter |
 | 日期 | 2026-07-14 |
-| 状态 | 已实现，待用户确认 |
+| 状态 | 已完成 |
 | 任务分支 | `task/b3-real-model-provider-adapter` |
 | 基线分支 | `architecture` |
 | 当前规格 | `DEV_SPEC v0.25` |
@@ -121,8 +121,9 @@ B5 负责真实 Provider Streaming 增量转换，完成后再扩展能力声明
 集成测试使用 `httpx.MockTransport`，只验证请求转换和错误映射，不把 Mock
 结果记录为真实对话证据。
 
-当前 `ANANHU_REAL_MODEL_SMOKE=0`，尚未执行真实网络请求，因此 B3 的真实
-Provider Smoke 状态为 `NOT RUN`，不能视为 RD-001 或 B3 真实能力已经通过。
+当前 `ANANHU_REAL_MODEL_SMOKE=0`，尚未执行真实网络请求，因此真实
+Provider Smoke 状态为 `NOT RUN`；这不影响 B3 的确定性 Adapter 实现已完成，
+也不能将其视为 RD-001 真实对话验收通过。
 
 ## 7. 后续边界
 
