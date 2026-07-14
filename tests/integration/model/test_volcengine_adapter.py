@@ -193,6 +193,133 @@ def test_generate_uses_configured_base_url() -> None:
     assert captured_url == ["https://proxy.example.test/api/v3/chat/completions"]
 
 
+def test_generate_converts_json_content_to_structured_output() -> None:
+    captured_body: dict[str, object] = {}
+
+    def handler(request: httpx.Request) -> httpx.Response:
+        captured_body.update(json.loads(request.content))
+        return httpx.Response(
+            200,
+            json={
+                "id": "request-structured",
+                "model": "test-model",
+                "choices": [
+                    {
+                        "message": {"role": "assistant", "content": '{"result": 42}'},
+                        "finish_reason": "stop",
+                    }
+                ],
+            },
+        )
+
+    output_schema = {
+        "type": "object",
+        "properties": {"result": {"type": "integer"}},
+        "required": ["result"],
+        "additionalProperties": False,
+    }
+    client = httpx.AsyncClient(transport=httpx.MockTransport(handler))
+    model = VolcengineArkModel(_config(), client=client)
+
+    try:
+        response = asyncio.run(
+            model.generate(
+                ModelRequest(input="18 + 24", output_schema=output_schema)
+            )
+        )
+    finally:
+        asyncio.run(client.aclose())
+
+    assert response.text is None
+    assert response.structured_output == {"result": 42}
+    assert captured_body["response_format"] == {
+        "type": "json_schema",
+        "json_schema": {
+            "name": "model_output",
+            "schema": output_schema,
+            "strict": True,
+        },
+    }
+
+
+def test_generate_rejects_invalid_structured_json() -> None:
+    def handler(request: httpx.Request) -> httpx.Response:
+        return httpx.Response(
+            200,
+            json={
+                "id": "request-invalid-json",
+                "model": "test-model",
+                "choices": [
+                    {
+                        "message": {"role": "assistant", "content": "{not-json"},
+                        "finish_reason": "stop",
+                    }
+                ],
+            },
+        )
+
+    client = httpx.AsyncClient(transport=httpx.MockTransport(handler))
+    model = VolcengineArkModel(_config(), client=client)
+
+    try:
+        with pytest.raises(ModelError) as error_info:
+            asyncio.run(
+                model.generate(
+                    ModelRequest(
+                        input="18 + 24",
+                        output_schema={
+                            "type": "object",
+                            "properties": {"result": {"type": "integer"}},
+                            "required": ["result"],
+                        },
+                    )
+                )
+            )
+    finally:
+        asyncio.run(client.aclose())
+
+    assert error_info.value.code is ModelErrorCode.FORMAT
+
+
+def test_generate_rejects_structured_output_that_does_not_match_schema() -> None:
+    def handler(request: httpx.Request) -> httpx.Response:
+        return httpx.Response(
+            200,
+            json={
+                "id": "request-schema-mismatch",
+                "model": "test-model",
+                "choices": [
+                    {
+                        "message": {"role": "assistant", "content": '{"result": "42"}'},
+                        "finish_reason": "stop",
+                    }
+                ],
+            },
+        )
+
+    client = httpx.AsyncClient(transport=httpx.MockTransport(handler))
+    model = VolcengineArkModel(_config(), client=client)
+
+    try:
+        with pytest.raises(ModelError) as error_info:
+            asyncio.run(
+                model.generate(
+                    ModelRequest(
+                        input="18 + 24",
+                        output_schema={
+                            "type": "object",
+                            "properties": {"result": {"type": "integer"}},
+                            "required": ["result"],
+                        },
+                    )
+                )
+            )
+    finally:
+        asyncio.run(client.aclose())
+
+    assert error_info.value.code is ModelErrorCode.FORMAT
+
+
 def test_adapter_implements_model_protocol_and_declares_capabilities() -> None:
     model = VolcengineArkModel(_config())
 
