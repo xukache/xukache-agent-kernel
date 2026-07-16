@@ -103,6 +103,27 @@ Model 运行时错误统一使用 `ModelErrorCode`：
 `ModelError` 继承公共 `KernelError`，其 `retryable` 只描述错误属性，不自动触发重试；重试策略由后续
 Runtime / Execution 任务治理。B2 不实现 Provider 转换、RunContext 或取消令牌。
 
+## Agent 公共调用边界
+
+C1 已确认渐进式最小 Agent 契约：
+
+| 类型 | 当前字段 |
+|---|---|
+| `AgentDefinition` | definition_id、revision、instructions、model、max_model_rounds |
+| `AgentInput` | input、output_schema、application_metadata |
+| `AgentResult` | status、output、tool_calls、usage、model_id、stop_reason、error |
+
+AgentDefinition 使用 frozen dataclass，并只检查本地装配不变量。AgentInput 和
+AgentResult 使用严格、不可变 Schema。AgentStatus 包含 succeeded、failed 和
+cancelled；AgentStopReason 包含 completed、max_model_rounds、error 和 cancelled。
+
+达到最大模型轮次属于确定性策略停止：AgentResult 使用 failed +
+max_model_rounds，并通过 `agent.limit` 提供错误证据。Model 失败继续保留
+`model.*` 错误码，不转换成模糊的 agent.model。
+
+C1 不定义 Tool 和 Memory 占位类型；D、E 阶段在各自确认后扩展 AgentDefinition
+和 AgentInput。C1 也不实现 ModelRequest 组装或 Agent 推理循环。
+
 ## Error
 
 ```text

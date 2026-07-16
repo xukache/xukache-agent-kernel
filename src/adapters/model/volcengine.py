@@ -31,7 +31,7 @@ from agent_kernel.model import (
     ToolCallDelta,
     Usage,
 )
-from agent_kernel.model.schemas import JsonObject, JsonValue
+from agent_kernel.contracts import JsonObject, JsonValue
 
 
 @dataclass(frozen=True, slots=True, kw_only=True)

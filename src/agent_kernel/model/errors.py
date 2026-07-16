@@ -4,9 +4,7 @@ from __future__ import annotations
 
 from enum import Enum
 
-from agent_kernel.contracts import KernelError
-
-from .schemas import JsonObject
+from agent_kernel.contracts import JsonObject, KernelError
 
 
 class ModelErrorCode(str, Enum):

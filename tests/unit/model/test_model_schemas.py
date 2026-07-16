@@ -121,3 +121,28 @@ def test_model_response_rejects_inconsistent_finish_reason() -> None:
             finish_reason=FinishReason.TOOL_CALL,
             model_id="provider-model",
         )
+
+
+def test_model_request_json_values_are_detached_and_deeply_immutable() -> None:
+    source = {
+        "type": "object",
+        "required": ["result"],
+    }
+    request = ModelRequest(
+        input={"task": "calculate"},
+        output_schema=source,
+        runtime_metadata={"labels": ["rd-001"]},
+    )
+
+    source["required"].append("unexpected")
+
+    assert request.output_schema == {
+        "type": "object",
+        "required": ["result"],
+    }
+
+    with pytest.raises(TypeError, match="frozen JSON"):
+        request.output_schema["required"].append("mutated")  # type: ignore[index,union-attr]
+
+    with pytest.raises(TypeError, match="frozen JSON"):
+        request.runtime_metadata["labels"] = ["changed"]
