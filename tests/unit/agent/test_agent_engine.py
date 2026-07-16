@@ -205,3 +205,42 @@ def test_run_agent_rejects_unhandled_tool_call_in_c3() -> None:
     assert result.tool_calls == (tool_call,)
     assert result.error is not None
     assert result.error.code == "agent.internal"
+
+
+def test_run_agent_stops_at_max_model_rounds_before_unhandled_tool_call() -> None:
+    tool_call = ToolCall(
+        call_id="call-1",
+        name="add",
+        arguments={"a": 9, "b": 6},
+    )
+    model = StubModel(
+        lambda request: _response(
+            finish_reason=FinishReason.TOOL_CALL,
+            tool_calls=(tool_call,),
+        )
+    )
+    definition = AgentDefinition(
+        definition_id="calculator",
+        revision="1",
+        instructions="Return a structured calculation result.",
+        model=model,
+        max_model_rounds=1,
+    )
+
+    result = asyncio.run(
+        run_agent(definition, AgentInput(input="Calculate."))
+    )
+
+    assert result.status is AgentStatus.FAILED
+    assert result.stop_reason is AgentStopReason.MAX_MODEL_ROUNDS
+    assert result.tool_calls == (tool_call,)
+    assert result.model_id == "test-model"
+    assert result.usage.total_tokens == 5
+    assert result.error is not None
+    assert result.error.code == "agent.limit"
+    assert result.error.source is ErrorSource.AGENT
+    assert result.error.retryable is False
+    assert result.error.details == {
+        "max_model_rounds": 1,
+        "rounds": 1,
+    }

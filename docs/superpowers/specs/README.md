@@ -32,6 +32,7 @@
 | C1 Agent 公共调用边界 | 已完成 | [`2026-07-16-agent-kernel-agent-contract-c1.md`](2026-07-16-agent-kernel-agent-contract-c1.md) |
 | C2 Instructions 与 ModelRequest 组装 | 已完成 | [`2026-07-16-agent-kernel-model-request-builder-c2.md`](2026-07-16-agent-kernel-model-request-builder-c2.md) |
 | C3 最小 Agent 推理循环 | 已完成 | [`2026-07-16-agent-kernel-agent-loop-c3.md`](2026-07-16-agent-kernel-agent-loop-c3.md) |
+| C4 运行上限与停止原因 | 已完成 | [`2026-07-16-agent-kernel-agent-round-limit-c4.md`](2026-07-16-agent-kernel-agent-round-limit-c4.md) |
 
 ## 模块确认记录模板
 

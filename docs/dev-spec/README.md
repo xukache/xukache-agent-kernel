@@ -134,7 +134,7 @@ A5 已建立 RD-001 至 RD-012 的场景注册、结构化证据和脱敏写入�
 真实 Volcengine Provider 完成 RD-001。Model MVP 已完成；C1 已确认并完成
 AgentDefinition、AgentInput、AgentResult、状态、停止原因和错误边界；
 C2 已完成基础 ModelRequest 组装；C3 已完成最小 Agent 闭环；
-C4-G 仍按后续任务逐项确认和实现。
+C4 已完成运行上限和停止原因；C5-G 仍按后续任务逐项确认和实现。
 
 ## 版本索引
 
