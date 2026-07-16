@@ -2,7 +2,7 @@
 
 > 版本：0.26 — Memory scope、会话隔离与跨会话共享基线
 >
-> 状态：第一至七章已确认；第一阶段仍止于通用 Kernel，Agent Harness、业务 Application 和 Multi-Agent 属于后续证据驱动的演进路线
+> 状态：第一至七章已确认；C1 Agent 公共调用边界设计已确认、待实现；第一阶段仍止于通用 Kernel，Agent Harness、业务 Application 和 Multi-Agent 属于后续证据驱动的演进路线
 >
 > 当前架构主分支：`architecture`
 >
@@ -1173,14 +1173,87 @@ Runtime 只能通过公共契约调用目标。第三方运行框架可以实现
 
 | 项目 | 语义 |
 |---|---|
-| 定义 | `AgentDefinition`：agent_id、Instructions、Model、允许的 Tools、Memory 使用配置、执行上限 |
-| 输入 | `AgentInput`：本次任务输入、Memory Policy 所需的 scope 上下文和调用元数据 |
+| 定义 | `AgentDefinition`：definition_id、revision、Instructions、Model 和最大模型轮次；Tools 与 Memory Policy 由 D、E 阶段追加已确认类型 |
+| 输入 | `AgentInput`：本次任务输入、可选输出 Schema 和 application metadata；Memory scope 上下文由 E 阶段追加 |
 | 核心处理 | 读取 Memory、组装 ModelRequest、处理 Tool Call 循环、生成最终输出、决定 Memory 写入 |
-| 输出 | `AgentResult`：output、tool_calls、usage、stop_reason 和错误 |
+| 输出 | `AgentResult`：status、output、tool_calls、usage、model_id、stop_reason 和 ErrorInfo |
 | 主要错误 | model、tool、memory、policy、limit、cancelled、internal |
 | 非职责 | Workflow 调度、Run 生命周期、Provider SDK、Tool 后端、Memory 存储 |
 
 `AgentDefinition != AgentInput`。Model、Tools 和 Instructions 不应在每次调用时重复作为 AgentInput 传入。
+
+C1 采用渐进式最小契约，不使用 `Any`、通用 capability 容器或未确认的 Tool /
+Memory 占位类型提前冻结 D、E 阶段设计。
+
+`AgentDefinition` 使用 A2 已确认的 frozen dataclass 规则：
+
+```text
+definition_id
+revision
+instructions
+model
+max_model_rounds
+```
+
+- `definition_id`、`revision` 和 `instructions` 必须是非空、非纯空白字符串。
+- `model` 必须满足已确认的 `Model` Protocol。
+- `max_model_rounds` 必须显式提供并为正整数；`bool` 不视为合法整数。
+- Definition 构造只检查本地装配不变量，不执行 Provider 网络、凭证或能力检查。
+- 输出 Schema 属于单次调用，不进入 Definition。
+
+`AgentInput` 使用严格、不可变且可 JSON 序列化的 Schema：
+
+```text
+input
+output_schema
+application_metadata
+```
+
+- `input` 接受非空文本或结构化 JsonObject；结构化空对象允许作为合法输入。
+- `output_schema` 是本次调用期望的可选 JSON Schema，由 C2 映射到 ModelRequest。
+- `application_metadata` 由调用方写入，不自动整体进入 Model，也不与
+  runtime_metadata 或 provider_metadata 混用。
+- JsonObject 必须防御性复制，调用方后续修改原对象不能改变 AgentInput。
+- run_id、deadline 和 cancellation 属于未来 RunContext，不进入 AgentInput。
+
+`AgentResult` 使用以下稳定终态：
+
+```text
+AgentStatus
+  -> succeeded
+  -> failed
+  -> cancelled
+
+AgentStopReason
+  -> completed
+  -> max_model_rounds
+  -> error
+  -> cancelled
+```
+
+结果字段固定为：
+
+```text
+status
+output
+tool_calls
+usage
+model_id
+stop_reason
+error
+```
+
+- succeeded 必须包含 output 和 model_id，error 为空，stop_reason 为 completed。
+- failed 不包含 output，必须包含 ErrorInfo，stop_reason 为 error 或
+  max_model_rounds。
+- cancelled 不包含 output，必须包含 ErrorInfo，stop_reason 为 cancelled。
+- tool_calls 使用 B1 已确认的 Provider Neutral ToolCall；C1 只表达结果，不执行 Tool。
+- usage 使用已确认的 Usage，并在后续多轮执行中表达累计模型用量。
+- ErrorInfo 保存稳定错误码字符串、公开 message、source、retryable 和脱敏 details。
+- C1 新增的 Agent 错误码只有 agent.limit、agent.cancelled 和 agent.internal；
+  Model 失败保留 model.* 错误码，不压缩成模糊的 agent.model。
+- 无效 Definition 或 Input 在合法运行开始前直接抛出 ValueError 或
+  Pydantic ValidationError，不构造 failed AgentResult。
 
 验收：K-001、K-002、K-007；RD-002 至 RD-004。
 
@@ -1820,7 +1893,7 @@ RuntimeResult != AgentResult != WorkflowResult != ToolResult
 |---|---|---:|---|---|
 | A | 规格与实现准入 | 5 | 目录、类型、工程和证据基座确认 | 进行中 |
 | B | Model MVP | 6 | RD-001 | 已完成 |
-| C | Agent MVP | 5 | RD-002 + RD-001 回归 | 待开始 |
+| C | Agent MVP | 5 | RD-002 + RD-001 回归 | 进行中 |
 | D | Tool Call 闭环 | 6 | RD-003 + 历史 RD 回归 | 待开始 |
 | E | Memory 跨运行上下文 | 6 | RD-004 + 历史 RD 回归 | 待开始 |
 | F | Runtime 与 Execution | 8 | RD-005、RD-008 至 RD-010、RD-012 + 历史 RD | 待开始 |
@@ -1854,7 +1927,7 @@ RuntimeResult != AgentResult != WorkflowResult != ToolResult
 
 | ID | 任务 | 状态 | 主要出口 |
 |---|---|---|---|
-| C1 | 定义 AgentDefinition、AgentInput 与 AgentResult | [ ] | Agent 调用边界 |
+| C1 | 定义 AgentDefinition、AgentInput 与 AgentResult | [~] | Agent 调用边界 |
 | C2 | 实现 Instructions 与 ModelRequest 组装 | [ ] | Prompt 所有权落地 |
 | C3 | 实现最小 Agent 推理循环 | [ ] | Input -> Model -> Result |
 | C4 | 实现运行上限与停止原因 | [ ] | 明确循环终止 |
@@ -1922,13 +1995,13 @@ RuntimeResult != AgentResult != WorkflowResult != ToolResult
 |---|---:|---:|---:|---:|
 | A | 5 | 5 | 0 | 100% |
 | B | 6 | 6 | 0 | 100% |
-| C | 5 | 0 | 0 | 0% |
+| C | 5 | 0 | 1 | 0% |
 | D | 6 | 0 | 0 | 0% |
 | E | 6 | 0 | 0 | 0% |
 | F | 8 | 0 | 0 | 0% |
 | G | 6 | 0 | 0 | 0% |
 | H | 5 | 0 | 0 | 0% |
-| **总计** | **47** | **11** | **0** | **23%** |
+| **总计** | **47** | **11** | **1** | **23%** |
 
 只有 `[x]` 计入完成进度；`[~]`、`[!]` 和测试状态 `BLOCKED`、`NOT RUN` 均不计入。
 
@@ -2093,6 +2166,10 @@ RuntimeResult != AgentResult != WorkflowResult != ToolResult
 - 前置依赖：B6。
 - 交付：Definition、Input、Result 和错误边界。
 - 验收：Model、Instructions 和执行上限属于 Definition，不进入每次 Input。
+- 当前设计：采用渐进式最小契约；已确认 AgentDefinition、AgentInput、
+  AgentResult、AgentStatus、AgentStopReason、ErrorInfo 使用方式和 Agent 错误码。
+- 当前状态：设计已确认，尚未创建 `agent_kernel.agent` 实现目录。
+- 证据：[`C1 Agent 公共调用边界设计确认记录`](docs/superpowers/specs/2026-07-16-agent-kernel-agent-contract-c1.md)。
 - 关联：K-001、K-007。
 
 ##### C2：实现 Instructions 与 ModelRequest 组装

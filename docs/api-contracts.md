@@ -26,7 +26,8 @@
 | Protocol、Definition、Schema、Error、State 规则 | `DEV_SPEC.md` 第 5.7 节和 A2 确认记录 |
 | ModelRequest、ModelResponse 及其嵌套 Schema | B1 确认记录和 `agent_kernel.model` |
 | Model Protocol、stream 增量和 Model 错误 | B2 确认记录和 `agent_kernel.model` |
-| 其他模块字段、状态枚举和错误捕获层级 | 后续 B-G 对应任务，当前不得自行补全 |
+| AgentDefinition、AgentInput、AgentResult、Agent 状态和错误边界 | C1 确认记录；实现后由 `agent_kernel.agent` 提供 |
+| Tool、Memory、Runtime、Workflow 字段和错误捕获层级 | 后续 D-G 对应任务，当前不得自行补全 |
 
 摘要见 [`docs/architecture/03-public-contracts.md`](architecture/03-public-contracts.md)。
 
