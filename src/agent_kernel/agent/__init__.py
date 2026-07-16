@@ -2,6 +2,7 @@
 
 from .definition import AgentDefinition
 from .errors import AgentErrorCode
+from .request_builder import build_model_request
 from .schemas import AgentInput, AgentResult, AgentStatus, AgentStopReason
 
 __all__ = [
@@ -11,4 +12,5 @@ __all__ = [
     "AgentResult",
     "AgentStatus",
     "AgentStopReason",
+    "build_model_request",
 ]
