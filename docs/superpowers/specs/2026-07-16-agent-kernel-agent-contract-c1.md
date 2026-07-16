@@ -6,7 +6,7 @@
 |---|---|
 | 任务 | C1：定义 AgentDefinition、AgentInput 与 AgentResult |
 | 日期 | 2026-07-16 |
-| 状态 | 设计已确认，待实现 |
+| 状态 | 已完成 |
 | 任务分支 | `task/c1-agent-contract` |
 | 基线分支 | `architecture` |
 | 当前规格 | `DEV_SPEC v0.26` |

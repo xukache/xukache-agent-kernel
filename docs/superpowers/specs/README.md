@@ -29,7 +29,7 @@
 | B4 结构化输出转换 | 已完成 | [`2026-07-14-agent-kernel-structured-output-b4.md`](2026-07-14-agent-kernel-structured-output-b4.md) |
 | B5 Provider Streaming 转换 | 已完成 | [`2026-07-14-agent-kernel-provider-streaming-b5.md`](2026-07-14-agent-kernel-provider-streaming-b5.md) |
 | B6 RD-001 真实模型验收 | 已完成 | [`2026-07-14-agent-kernel-real-model-acceptance-b6.md`](2026-07-14-agent-kernel-real-model-acceptance-b6.md) |
-| C1 Agent 公共调用边界 | 设计已确认，待实现 | [`2026-07-16-agent-kernel-agent-contract-c1.md`](2026-07-16-agent-kernel-agent-contract-c1.md) |
+| C1 Agent 公共调用边界 | 已完成 | [`2026-07-16-agent-kernel-agent-contract-c1.md`](2026-07-16-agent-kernel-agent-contract-c1.md) |
 
 ## 模块确认记录模板
 
@@ -63,5 +63,5 @@
 Python 类型表达已在 A2 完成确认；物理目录和公开导入路径已在 A3 完成确认；
 A4 已建立并确认工程和测试基座；A5 已建立真实对话场景注册和证据写入基座；
 B6 已通过真实 Volcengine Provider 完成 RD-001，Model MVP 已完成。
-C1 已确认 AgentDefinition、AgentInput、AgentResult、状态、停止原因和错误边界，
-但尚未创建 Agent 实现目录，也未运行 RD-002。
+C1 已确认并完成 AgentDefinition、AgentInput、AgentResult、状态、停止原因和错误
+边界；RD-002 仍由 C5 负责。

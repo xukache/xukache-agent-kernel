@@ -26,7 +26,7 @@
 | 2026-07-14 | 确认 | 用户确认 B6 完成；RD-001 已通过真实 Volcengine Provider，阶段 B Model MVP 完成 | `DEV_SPEC.md`、`docs/superpowers/specs/2026-07-14-agent-kernel-real-model-acceptance-b6.md` | 否 |
 | 2026-07-14 | 更新 | 同步 B6 后活动架构、开发规格和项目入口文档；修正 Model MVP、真实 RD-001、实现边界及已删除 `mvp` 分支描述 | `README.md`、`DEV_SPEC.md`、`docs/architecture.md`、`docs/architecture/00-overview.md`、`docs/dev-spec/README.md` | 否 |
 | 2026-07-15 | 架构基线 | 确认 Memory 会话级、用户级和项目 / 共享级 scope，冻结默认隔离、显式跨会话共享、跨 scope 提升和来源追踪；发布首个完整架构版本 v0.1 | `DEV_SPEC.md`、`docs/architecture/*.md`、`docs/architecture/versions/v0.1-memory-scope-sharing.md`、`docs/dev-spec/versions/v0.26-memory-scope-sharing.md` | 是 |
-| 2026-07-16 | 确认 | 确认 C1 AgentDefinition、AgentInput、AgentResult、终态、停止原因和错误证据边界；实现与 RD-002 尚未开始 | `DEV_SPEC.md`、`docs/architecture/03-public-contracts.md`、`docs/superpowers/specs/2026-07-16-agent-kernel-agent-contract-c1.md` | 否 |
+| 2026-07-16 | 确认 | 确认并完成 C1 AgentDefinition、AgentInput、AgentResult、终态、停止原因和错误证据边界；RD-002 尚未开始 | `DEV_SPEC.md`、`docs/architecture/03-public-contracts.md`、`docs/superpowers/specs/2026-07-16-agent-kernel-agent-contract-c1.md` | 否 |
 
 ## 2026-07-14 变更结论
 
@@ -69,6 +69,6 @@
 | Tool 和 Memory 字段 | 不在 C1 提前冻结 |
 | 架构版本正文 | 不新增 |
 | 开发规格版本 | 不新增 |
-| C1 实施状态 | 进行中，设计已确认、待实现 |
-| Agent 代码目录 | 尚未创建 |
+| C1 实施状态 | 已完成，确定性契约和测试已落地 |
+| Agent 代码目录 | 已创建，未实现 Agent Engine |
 | RD-002 | 尚未运行 |

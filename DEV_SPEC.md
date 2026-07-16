@@ -2,7 +2,7 @@
 
 > 版本：0.26 — Memory scope、会话隔离与跨会话共享基线
 >
-> 状态：第一至七章已确认；C1 Agent 公共调用边界设计已确认、待实现；第一阶段仍止于通用 Kernel，Agent Harness、业务 Application 和 Multi-Agent 属于后续证据驱动的演进路线
+> 状态：第一至七章已确认；C1 Agent 公共调用边界已完成；第一阶段仍止于通用 Kernel，Agent Harness、业务 Application 和 Multi-Agent 属于后续证据驱动的演进路线
 >
 > 当前架构主分支：`architecture`
 >
@@ -1927,7 +1927,7 @@ RuntimeResult != AgentResult != WorkflowResult != ToolResult
 
 | ID | 任务 | 状态 | 主要出口 |
 |---|---|---|---|
-| C1 | 定义 AgentDefinition、AgentInput 与 AgentResult | [~] | Agent 调用边界 |
+| C1 | 定义 AgentDefinition、AgentInput 与 AgentResult | [x] | Agent 调用边界 |
 | C2 | 实现 Instructions 与 ModelRequest 组装 | [ ] | Prompt 所有权落地 |
 | C3 | 实现最小 Agent 推理循环 | [ ] | Input -> Model -> Result |
 | C4 | 实现运行上限与停止原因 | [ ] | 明确循环终止 |
@@ -1995,13 +1995,13 @@ RuntimeResult != AgentResult != WorkflowResult != ToolResult
 |---|---:|---:|---:|---:|
 | A | 5 | 5 | 0 | 100% |
 | B | 6 | 6 | 0 | 100% |
-| C | 5 | 0 | 1 | 0% |
+| C | 5 | 1 | 0 | 20% |
 | D | 6 | 0 | 0 | 0% |
 | E | 6 | 0 | 0 | 0% |
 | F | 8 | 0 | 0 | 0% |
 | G | 6 | 0 | 0 | 0% |
 | H | 5 | 0 | 0 | 0% |
-| **总计** | **47** | **11** | **1** | **23%** |
+| **总计** | **47** | **12** | **0** | **26%** |
 
 只有 `[x]` 计入完成进度；`[~]`、`[!]` 和测试状态 `BLOCKED`、`NOT RUN` 均不计入。
 
@@ -2168,7 +2168,7 @@ RuntimeResult != AgentResult != WorkflowResult != ToolResult
 - 验收：Model、Instructions 和执行上限属于 Definition，不进入每次 Input。
 - 当前设计：采用渐进式最小契约；已确认 AgentDefinition、AgentInput、
   AgentResult、AgentStatus、AgentStopReason、ErrorInfo 使用方式和 Agent 错误码。
-- 当前状态：设计已确认，尚未创建 `agent_kernel.agent` 实现目录。
+- 当前状态：公共类型和确定性测试已实现，C1 已完成；RD-002 仍由 C5 负责。
 - 证据：[`C1 Agent 公共调用边界设计确认记录`](docs/superpowers/specs/2026-07-16-agent-kernel-agent-contract-c1.md)。
 - 关联：K-001、K-007。
 

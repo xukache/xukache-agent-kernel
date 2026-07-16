@@ -6,27 +6,19 @@
 from __future__ import annotations
 
 from enum import Enum
-from typing import TypeAlias
 
-from pydantic import BaseModel, ConfigDict, Field, model_validator
-from typing_extensions import TypeAliasType
+from pydantic import Field, model_validator
 
-JsonPrimitive: TypeAlias = str | int | float | bool | None
-JsonValue = TypeAliasType(
-    "JsonValue",
-    JsonPrimitive | list["JsonValue"] | dict[str, "JsonValue"],
+from agent_kernel.contracts import (
+    JsonObject,
+    JsonPrimitive,
+    JsonValue,
+    KernelSchema,
 )
-JsonObject = TypeAliasType("JsonObject", dict[str, JsonValue])
 
 
-class ModelSchema(BaseModel):
+class ModelSchema(KernelSchema):
     """Model 数据跨越 Core 与 Adapter 时使用的严格不可变基类。"""
-
-    model_config = ConfigDict(
-        frozen=True,
-        extra="forbid",
-        strict=True,
-    )
 
 
 class MessageRole(str, Enum):
@@ -133,7 +125,7 @@ class ModelRequest(ModelSchema):
     memory_items: tuple[ModelMemoryItem, ...] = ()
     tool_schemas: tuple[ToolSchema, ...] = ()
     output_schema: JsonObject | None = None
-    runtime_metadata: JsonObject = {}
+    runtime_metadata: JsonObject = Field(default_factory=dict)
 
 
 class ModelResponse(ModelSchema):
@@ -145,7 +137,7 @@ class ModelResponse(ModelSchema):
     usage: Usage
     finish_reason: FinishReason
     model_id: str
-    provider_metadata: JsonObject = {}
+    provider_metadata: JsonObject = Field(default_factory=dict)
 
     @model_validator(mode="after")
     def validate_output_and_finish_reason(self) -> ModelResponse:

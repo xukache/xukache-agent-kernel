@@ -7,8 +7,8 @@
 - 六个核心原语、Execution 支撑能力、逻辑分层、公共类型策略和 A3 物理目录已经确认。
 - 当前已落地 Model Core 公共协议、Volcengine Model Adapter、结构化输出、
   Streaming 和 RD-001 真实验收。
-- C1 已确认 AgentDefinition、AgentInput、AgentResult、终态、停止原因和错误边界；
-  Agent 实现尚未开始，C2-C5 仍待后续逐项确认和实现。
+- C1 已确认并实现 AgentDefinition、AgentInput、AgentResult、终态、停止原因和
+  错误边界；C2-C5 仍待后续逐项确认和实现。
 - Tool、Memory、Runtime 和 Workflow 实现尚未开始。
 - Memory 的会话级、用户级、项目 / 共享级 scope，以及显式跨会话共享规则已在
   `DEV_SPEC v0.26` 确认；具体 Python 字段仍由 E1 冻结。
