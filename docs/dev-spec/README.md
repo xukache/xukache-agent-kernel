@@ -133,7 +133,8 @@ A4 已锁定 Pydantic 2.13.4、pytest 8.4.2，并建立 uv 与 Architecture Test
 A5 已建立 RD-001 至 RD-012 的场景注册、结构化证据和脱敏写入基座；B6 已使用
 真实 Volcengine Provider 完成 RD-001。Model MVP 已完成；C1 已确认并完成
 AgentDefinition、AgentInput、AgentResult、状态、停止原因和错误边界；
-C2 已完成基础 ModelRequest 组装；C3-G 仍按后续任务逐项确认和实现。
+C2 已完成基础 ModelRequest 组装；C3 已完成最小 Agent 闭环；
+C4-G 仍按后续任务逐项确认和实现。
 
 ## 版本索引
 
