@@ -25,8 +25,9 @@
 | 2026-07-14 | 新增 | 开始 B6 RD-001 真实模型验收；新增真实 Provider 门禁测试、结构化结果证据和 usage 脱敏修复 | `tests/real_dialogue/test_rd001_model.py`、`tests/support/real_dialogue_evidence.py`、`docs/superpowers/specs/2026-07-14-agent-kernel-real-model-acceptance-b6.md` | 否 |
 | 2026-07-14 | 确认 | 用户确认 B6 完成；RD-001 已通过真实 Volcengine Provider，阶段 B Model MVP 完成 | `DEV_SPEC.md`、`docs/superpowers/specs/2026-07-14-agent-kernel-real-model-acceptance-b6.md` | 否 |
 | 2026-07-14 | 更新 | 同步 B6 后活动架构、开发规格和项目入口文档；修正 Model MVP、真实 RD-001、实现边界及已删除 `mvp` 分支描述 | `README.md`、`DEV_SPEC.md`、`docs/architecture.md`、`docs/architecture/00-overview.md`、`docs/dev-spec/README.md` | 否 |
+| 2026-07-15 | 架构基线 | 确认 Memory 会话级、用户级和项目 / 共享级 scope，冻结默认隔离、显式跨会话共享、跨 scope 提升和来源追踪；发布首个完整架构版本 v0.1 | `DEV_SPEC.md`、`docs/architecture/*.md`、`docs/architecture/versions/v0.1-memory-scope-sharing.md`、`docs/dev-spec/versions/v0.26-memory-scope-sharing.md` | 是 |
 
-## 本次变更结论
+## 2026-07-14 变更结论
 
 | 检查项 | 结论 |
 |---|---|
@@ -44,3 +45,16 @@
 | B4 结构化输出转换 | 已完成 |
 | B5 Provider Streaming 转换 | 已完成 |
 | B6 RD-001 真实模型验收 | 已完成 |
+
+## 2026-07-15 变更结论
+
+| 检查项 | 结论 |
+|---|---|
+| 六个核心原语数量和总体依赖方向 | 未改变 |
+| Memory 数据所有权和运行链路 | 补充多层 scope、显式读写目标和提升语义 |
+| 架构版本正文 | 新增 `v0.1-memory-scope-sharing.md` |
+| 开发规格版本 | 新增 `v0.26-memory-scope-sharing.md` |
+| E1-E6 实施状态 | 保持待开始 |
+| Kernel Memory 代码目录 | 不创建 |
+| 第一阶段 Memory Adapter | 仍为 In-memory Adapter |
+| 持久化、向量库和语义检索 | 不引入 |

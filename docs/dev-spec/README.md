@@ -31,6 +31,7 @@ docs/dev-spec/versions/
   v0.23-system-architecture-presentation.md
   v0.24-learning-implementation-roadmap.md
   v0.25-agent-system-evolution-roadmap.md
+  v0.26-memory-scope-sharing.md
 ```
 
 ## 什么时候新增版本文档
@@ -122,7 +123,9 @@ docs/superpowers/plans/
 
 ## 当前版本
 
-当前开发规格版本为 `v0.25`。第一至七章已确认：前六章定义学习定位、核心特点、技术决策、双轨测试验收、系统架构，以及从实现准入到 Kernel 发布的 8 个阶段、47 个任务；第七章定义 Kernel 完成后向 Agent Harness、垂直业务 Application 和有证据支撑的 Multi-Agent 演进的路线。
+当前开发规格版本为 `v0.26`。第一至七章保持已确认结构；本版本在现有 Kernel
+架构内补充 Memory 的会话级、用户级和项目 / 共享级 scope、默认隔离、显式跨会话
+共享、来源追踪和验收口径。E1-E6 仍待实现。
 
 六个 Core 的语义级公共契约和第一阶段范围保持不变。A2 已完成 Protocol、Definition、
 Schema Model、Error、State 和 JSON 边界确认；A3 已确认物理目录和公开导入路径；
@@ -147,6 +150,7 @@ A5 已建立 RD-001 至 RD-012 的场景注册、结构化证据和脱敏写入�
 | `v0.23` | 整体架构图、核心运行结构、模块说明和四条数据流 | 架构表达已确认 |
 | `v0.24` | 8 个学习实施阶段、47 个原子任务、里程碑和证据门禁 | 项目排期已确认 |
 | `v0.25` | Agent Harness、业务 Application、Multi-Agent 基线和证据闭环演进路线 | 完整路线已确认 |
+| `v0.26` | Memory scope、会话隔离、授权共享和跨 scope 提升 | 设计已确认，等待 E1-E6 |
 
 ## 版本变更记录
 
@@ -163,3 +167,4 @@ A5 已建立 RD-001 至 RD-012 的场景注册、结构化证据和脱敏写入�
 | 2026-07-12 | v0.23 | DEV_SPEC v0.22 | 重构整体架构图、模块说明和四条数据流 | 架构表达已确认 |
 | 2026-07-12 | v0.24 | DEV_SPEC v0.23 | 展开 8 个实施阶段、47 个原子任务、里程碑和证据门禁 | 项目排期已确认 |
 | 2026-07-13 | v0.25 | DEV_SPEC v0.24 | 建立从 Kernel 到 Harness、业务 Application、Multi-Agent 和证据闭环的演进路线；将治理型章节迁回所属文档 | 完整路线已确认 |
+| 2026-07-15 | v0.26 | DEV_SPEC v0.25 | 冻结 Memory 多层 scope、会话隔离、显式跨会话共享和来源可追溯提升；发布架构 v0.1 | 设计已确认，等待 E1-E6 |

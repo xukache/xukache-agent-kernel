@@ -1,6 +1,8 @@
 # 设计确认记录
 
-本目录保存 Agent Kernel 的模块、章节和阶段设计确认记录。当前完整规格版本为 `DEV_SPEC v0.25`。`DEV_SPEC.md` 维护当前完整规格，本目录负责保留确认过程、设计理由和实现准入证据，不与完整规格形成平行事实源。
+本目录保存 Agent Kernel 的模块、章节和阶段设计确认记录。当前完整规格版本为
+`DEV_SPEC v0.26`。`DEV_SPEC.md` 维护当前完整规格，本目录负责保留确认过程、设计理由
+和实现准入证据，不与完整规格形成平行事实源。
 
 ## 当前确认状态
 
@@ -15,6 +17,7 @@
 | 系统架构表达与第五章 | 已确认 | [`2026-07-12-agent-kernel-system-architecture-presentation-design.md`](2026-07-12-agent-kernel-system-architecture-presentation-design.md) |
 | 学习实施路线与第六章 | 已确认 | [`2026-07-12-agent-kernel-learning-roadmap-design.md`](2026-07-12-agent-kernel-learning-roadmap-design.md) |
 | 完整 Agent 系统演进路线与第七章 | 已确认 | [`2026-07-13-agent-system-evolution-roadmap-design.md`](2026-07-13-agent-system-evolution-roadmap-design.md) |
+| Memory scope、会话隔离与跨会话共享 | 已确认，待 E1-E6 实现 | [`2026-07-15-agent-kernel-memory-scope-sharing-design.md`](2026-07-15-agent-kernel-memory-scope-sharing-design.md) |
 | A1 开发规格确认与实现准入 | 已完成 | [`2026-07-13-agent-kernel-implementation-admission-a1.md`](2026-07-13-agent-kernel-implementation-admission-a1.md) |
 | A2 公共类型表达策略 | 已完成 | [`2026-07-13-agent-kernel-public-type-strategy-design.md`](2026-07-13-agent-kernel-public-type-strategy-design.md) |
 | A3 物理目录与公开导入路径 | 已完成 | [`2026-07-13-agent-kernel-physical-layout-import-paths-a3.md`](2026-07-13-agent-kernel-physical-layout-import-paths-a3.md) |

@@ -1,6 +1,8 @@
-# 新架构版本目录
+# 架构版本目录
 
-当前分支是全新 Agent Kernel 重构起点，尚未发布第一个架构版本。
+当前完整架构版本为
+[`v0.1-memory-scope-sharing`](versions/v0.1-memory-scope-sharing.md)，冻结六个核心原语、
+单向依赖和 Memory scope、隔离与跨会话共享语义。
 
 技术架构总入口是 [`docs/architecture.md`](../architecture.md)。本文件只负责架构版本的创建、命名和只读规则，不能替代当前完整规格或架构分册。
 
@@ -54,8 +56,13 @@ docs/architecture/versions/
 
 ## 当前事实源
 
-在第一个架构版本发布前：
+1. 当前完整规格以 `DEV_SPEC.md` 为准。
+2. 当前架构事实由架构分册和最新完整架构版本共同表达。
+3. 模块确认理由以 `docs/superpowers/specs/` 为准。
+4. 未确认内容不得进入实现。
 
-1. 设计边界以 `DEV_SPEC.md` 为准。
-2. 模块确认以 `docs/superpowers/specs/` 为准。
-3. 未确认内容不得进入实现。
+## 版本索引
+
+| 版本 | 主题 | 状态 |
+|---|---|---|
+| [`v0.1`](versions/v0.1-memory-scope-sharing.md) | Memory scope、会话隔离与跨会话共享 | 当前完整架构基线 |

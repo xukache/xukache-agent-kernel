@@ -10,7 +10,8 @@
 - 核心原语：`Agent`、`Workflow`、`Tool`、`Memory`、`Model`、`Runtime`。
 - 已确认 Execution 执行层：`Context`、`Hooks`、`Guardrails`、`Retry`、`Cancellation`、`Streaming`。
 - Core、Execution、支撑协议、Applications 和 Interfaces 已完成设计确认。
-- 当前完整开发规格：`DEV_SPEC v0.25`。第一至七章已确认学习目标、核心特点、技术决策、双轨验收、整体架构、8 个阶段 47 个任务的学习实施路线，以及从 Kernel 到完整 Agent 系统的演进路线。
+- 当前完整开发规格：`DEV_SPEC v0.26`。在 v0.25 完整路线基础上，已确认 Memory
+  的会话级、用户级、项目 / 共享级 scope、默认隔离和显式跨会话共享语义。
 - 阶段 A 的 A1、A2、A3、A4、A5 已完成；阶段 B 的 B1 至 B6 已完成，RD-001 已通过真实 Provider 验收。
 - 六个 Core 的语义级公共契约、Python 类型表达策略、`src/agent_kernel` 物理目录和公开导入路径已经确认。
 - 第一条纵向切片将直接接入真实 Model Provider，不使用模拟模型。
@@ -20,7 +21,9 @@
 - 已完成 Model Core 的协议、错误语义、Volcengine Adapter、结构化输出、
   Streaming 和 RD-001 真实 Provider 验收；Agent、Tool、Memory、Runtime、
   Workflow 尚未开始实现。
-- 尚未发布架构版本；首个完整架构版本将在 Kernel 累计验收通过后创建。
+- 已发布首个完整架构版本
+  [`v0.1-memory-scope-sharing`](docs/architecture/versions/v0.1-memory-scope-sharing.md)；
+  该版本冻结当前 Kernel 边界和 Memory scope 语义，不代表 Memory 已实现。
 
 ## 文档索引
 

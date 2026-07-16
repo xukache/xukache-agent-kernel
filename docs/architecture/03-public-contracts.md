@@ -123,4 +123,22 @@ Provider / Backend Exception
 - `definition_ref.revision` 与 `state_schema_version` 分别管理定义和状态结构版本。
 - `checkpoint_id` 可以进入 State；一次性 `resume_token` 不能进入 State。
 
+## Memory 概念契约
+
+E1 尚未开始，因此本分册不冻结最终 Python 字段，但以下公共语义已经确认：
+
+- Memory 是按 scope 分区的统一 Protocol，不是每个 Session 一个独立 Core 实例。
+- scope 至少能够稳定表达会话级、用户级和项目 / 共享级边界。
+- Agent Memory Policy 明确允许读取的 scope 集合、默认写入目标、排序、去重、预算
+  和授权规则。
+- `MemoryItem` 保存提炼后的可复用内容、来源、创建时间和可选元数据，默认不保存
+  完整聊天历史。
+- MemoryItem 的来源可以指向 run、session 或前序 MemoryItem；跨 scope 提升必须创建
+  新条目并保留来源链。
+- read、search 和 write 不允许隐式跨 scope；Adapter 不自行合并 scope。
+- WorkflowState、Checkpoint、Trace、UI 历史、完整 Tool Call 历史和业务数据库事实
+  不进入 MemoryItem。
+- 当前 `ModelMemoryItem` 只是 ModelRequest 的只读投影，不替代 E1 的完整
+  `MemoryItem` 和 scope 契约。
+
 完整规则和示例以 A2 确认记录为准；A3 已确认 `agent_kernel` 及其稳定子包为公开导入边界；B1 已确认 Model 数据协议，B2 已确认 Model 行为和错误语义；其他字段、枚举和错误捕获层级由 B-G 对应任务确认。

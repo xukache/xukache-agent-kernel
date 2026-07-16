@@ -31,6 +31,7 @@
 - Adapter 类型是否泄漏进公共 Schema。
 - Definition、Input、State、Event、Result 的所有权是否混合。
 - Agent、Workflow、Runtime 是否越权接管彼此的语义。
+- Memory Policy 是否明确读取 scope、写入目标、授权、预算和提升规则。
 - 错误、取消、重试、事件和敏感数据规则是否被保持。
 
 完成前：
@@ -49,6 +50,8 @@
 - 同一数据在多个模块都有可变所有权。
 - 为方便调用而创建 UniversalInput、KernelResult、KernelState 或万能 metadata。
 - WorkflowState 被放入 Memory，或通过回放 Event 猜测恢复。
+- 通过共享 Memory Adapter、内容相似度或模糊 scope 隐式读取其他会话、用户或项目。
+- 通过修改原 MemoryItem 的 scope 静默扩大可见范围，或丢失跨 scope 提升来源。
 - Model 获得 Python callable，或 Tool 决定是否继续 Model 循环。
 - Interface 开始承载 Agent、Workflow 或业务执行语义。
 - 新目录或公开导入路径在 A3 确认前被创建。

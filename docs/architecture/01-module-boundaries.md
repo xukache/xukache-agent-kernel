@@ -7,11 +7,11 @@
 | 原语 | 拥有 | 不负责 |
 |---|---|---|
 | Runtime | run_id、生命周期、取消、暂停恢复验证、唯一终态 | Agent 推理、Workflow 流程语义、Provider 调用 |
-| Agent | Instructions、ModelRequest 组装、Tool Call 循环、Memory 读写决策 | Workflow 调度、Run 生命周期、Tool Backend |
+| Agent | Instructions、ModelRequest 组装、Tool Call 循环、Memory 读取 scope 和写入目标决策 | Workflow 调度、Run 生命周期、Tool Backend |
 | Workflow | 步骤拓扑、调度、分支、并行、流程位置、WorkflowState | 模型生成、恢复令牌校验、业务数据库 |
 | Model | Provider Neutral 的 generate/stream 能力 | Prompt 所有权、Tool 执行、Memory 和业务规则 |
 | Tool | 输入输出契约、一次 Backend 调用 | 自然语言推理、Workflow 路由、是否继续调用 Model |
-| Memory | scope 隔离、存储、读取和搜索 | 决定记忆内容、WorkflowState、Trace 和业务事实 |
+| Memory | scope 分区隔离、存储、读取、搜索和序列化 | 决定记忆内容、自动共享、WorkflowState、Checkpoint、Trace 和业务事实 |
 
 ## Execution 支撑协议
 
@@ -37,6 +37,29 @@ Kernel    -X-> 具体存储或 Tool Backend
 
 Application 可以持有具体 Adapter 并完成依赖注入；Core 只能依赖公共契约。Adapter 不能把 SDK 类型、配置对象或私有状态泄漏到 Core。
 
+## Memory 所有权
+
+```text
+Application -> Memory Policy、主体身份、可授权 scope 上下文
+Agent       -> 读取哪些 scope、写入哪个 scope、MemoryItem 内容与来源
+Memory      -> 按显式 scope 存储、搜索、序列化和隔离
+Runtime     -> run_id、生命周期和事件引用
+```
+
+同一个 Memory Adapter 可以服务多个会话、用户和项目，但共享 Adapter 实例不代表
+共享数据可见性。每次 read、search 和 write 都必须落在明确 scope 内。
+
+当前确认的 scope 语义为：
+
+| scope | 所属边界 | 默认共享规则 |
+|---|---|---|
+| 会话级 | 单个 Session | 不跨会话共享 |
+| 用户级 | 单个用户主体 | 只向该用户的授权会话共享 |
+| 项目 / 共享级 | 项目或授权成员集合 | 只向满足项目身份与权限的调用共享 |
+
+禁止隐式跨 scope 读取。把会话级 Memory 提升到用户级或项目级时，Agent 必须在目标
+scope 创建新的带来源 MemoryItem，不能移动原记录或由 Adapter 自动扩大可见范围。
+
 ## 数据所有权
 
 ```text
@@ -46,7 +69,7 @@ RunContext -> 本次 Run 的执行上下文
 State      -> 可恢复组件当前在哪里
 Event      -> 执行过程中已经发生什么
 Result     -> 本次调用最终得到什么
-Memory     -> 跨 Run 可召回的上下文
+Memory     -> 按 scope 隔离、可跨 Run 召回的上下文
 ```
 
 这些对象不能通过万能基类或无类型 payload 合并。具体字段由对应 B-G 任务确认。
