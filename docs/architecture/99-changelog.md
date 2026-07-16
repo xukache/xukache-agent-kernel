@@ -30,6 +30,7 @@
 | 2026-07-16 | 确认 | 用户确认 C2 完成；基础 Instructions 与 ModelRequest 组装已实现，不调用 Model，不引入 Tool、Memory 或 Runtime | `DEV_SPEC.md`、`src/agent_kernel/agent/request_builder.py`、`docs/superpowers/specs/2026-07-16-agent-kernel-model-request-builder-c2.md` | 否 |
 | 2026-07-16 | 确认 | 用户确认 C3 完成；一次 Model 调用的最小 Agent 闭环已映射成功、Model 错误、取消和未支持 Tool Call | `DEV_SPEC.md`、`src/agent_kernel/agent/engine.py`、`docs/superpowers/specs/2026-07-16-agent-kernel-agent-loop-c3.md` | 否 |
 | 2026-07-16 | 确认 | 用户确认 C4 完成；达到上限时返回 `agent.limit` 与 `max_model_rounds` | `DEV_SPEC.md`、`src/agent_kernel/agent/engine.py`、`docs/superpowers/specs/2026-07-16-agent-kernel-agent-round-limit-c4.md` | 否 |
+| 2026-07-16 | 确认 | 用户确认 C5 完成；RD-002 使用真实 Volcengine Provider 通过，`AgentResult.output.result == 15`、`stop_reason=completed`，并回归 RD-001 | `DEV_SPEC.md`、`tests/real_dialogue/test_rd002_agent.py`、`artifacts/real-dialogue/RD-001/`、`artifacts/real-dialogue/RD-002/` | 否 |
 
 ## 2026-07-14 变更结论
 
