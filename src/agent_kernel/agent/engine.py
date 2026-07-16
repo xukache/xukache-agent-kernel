@@ -9,7 +9,7 @@ from __future__ import annotations
 import asyncio
 
 from agent_kernel.contracts import ErrorInfo, ErrorSource
-from agent_kernel.model import ModelError, ModelErrorCode, Usage
+from agent_kernel.model import ModelError, ModelErrorCode, ToolCall, Usage
 
 from .definition import AgentDefinition
 from .errors import AgentErrorCode
@@ -70,6 +70,15 @@ async def run_agent(
         else response.text
     )
     if output is None and response.tool_calls:
+        rounds = 1
+        if rounds >= definition.max_model_rounds:
+            return _limit_result(
+                definition=definition,
+                rounds=rounds,
+                tool_calls=response.tool_calls,
+                usage=response.usage,
+                model_id=response.model_id,
+            )
         return AgentResult(
             status=AgentStatus.FAILED,
             tool_calls=response.tool_calls,
@@ -91,6 +100,35 @@ async def run_agent(
         usage=response.usage,
         model_id=response.model_id,
         stop_reason=AgentStopReason.COMPLETED,
+    )
+
+
+def _limit_result(
+    *,
+    definition: AgentDefinition,
+    rounds: int,
+    tool_calls: tuple[ToolCall, ...],
+    usage: Usage,
+    model_id: str,
+) -> AgentResult:
+    """构造达到 Agent 模型轮次上限的公开失败结果。"""
+
+    return AgentResult(
+        status=AgentStatus.FAILED,
+        tool_calls=tool_calls,
+        usage=usage,
+        model_id=model_id,
+        stop_reason=AgentStopReason.MAX_MODEL_ROUNDS,
+        error=ErrorInfo(
+            code=AgentErrorCode.LIMIT.value,
+            message="Agent model round limit reached",
+            source=ErrorSource.AGENT,
+            retryable=False,
+            details={
+                "max_model_rounds": definition.max_model_rounds,
+                "rounds": rounds,
+            },
+        ),
     )
 
 

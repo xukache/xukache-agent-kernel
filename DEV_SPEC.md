@@ -2,7 +2,7 @@
 
 > 版本：0.26 — Memory scope、会话隔离与跨会话共享基线
 >
-> 状态：第一至七章已确认；C1、C2、C3 已完成；第一阶段仍止于通用 Kernel，Agent Harness、业务 Application 和 Multi-Agent 属于后续证据驱动的演进路线
+> 状态：第一至七章已确认；C1、C2、C3、C4 已完成；第一阶段仍止于通用 Kernel，Agent Harness、业务 Application 和 Multi-Agent 属于后续证据驱动的演进路线
 >
 > 当前架构主分支：`architecture`
 >
@@ -1930,7 +1930,7 @@ RuntimeResult != AgentResult != WorkflowResult != ToolResult
 | C1 | 定义 AgentDefinition、AgentInput 与 AgentResult | [x] | Agent 调用边界 |
 | C2 | 实现 Instructions 与 ModelRequest 组装 | [x] | Prompt 所有权落地 |
 | C3 | 实现最小 Agent 推理循环 | [x] | Input -> Model -> Result |
-| C4 | 实现运行上限与停止原因 | [ ] | 明确循环终止 |
+| C4 | 实现运行上限与停止原因 | [x] | 明确循环终止 |
 | C5 | 完成 RD-002 Agent 真实任务验收 | [ ] | Agent MVP 完成证据 |
 
 #### 6.4.4 阶段 D：Tool Call 闭环
@@ -1995,13 +1995,13 @@ RuntimeResult != AgentResult != WorkflowResult != ToolResult
 |---|---:|---:|---:|---:|
 | A | 5 | 5 | 0 | 100% |
 | B | 6 | 6 | 0 | 100% |
-| C | 5 | 3 | 0 | 60% |
+| C | 5 | 4 | 0 | 80% |
 | D | 6 | 0 | 0 | 0% |
 | E | 6 | 0 | 0 | 0% |
 | F | 8 | 0 | 0 | 0% |
 | G | 6 | 0 | 0 | 0% |
 | H | 5 | 0 | 0 | 0% |
-| **总计** | **47** | **14** | **0** | **30%** |
+| **总计** | **47** | **15** | **0** | **32%** |
 
 只有 `[x]` 计入完成进度；`[~]`、`[!]` 和测试状态 `BLOCKED`、`NOT RUN` 均不计入。
 
@@ -2198,6 +2198,8 @@ RuntimeResult != AgentResult != WorkflowResult != ToolResult
 - 前置依赖：C3。
 - 交付：最大模型轮次、stop_reason 和 limit 错误。
 - 验收：正常完成、格式失败、取消和达到上限可区分。
+- 当前状态：已实现轮次守卫、`agent.limit` 错误和 `max_model_rounds` 停止原因，C4 已完成。
+- 证据：[`C4 运行上限与停止原因设计记录`](docs/superpowers/specs/2026-07-16-agent-kernel-agent-round-limit-c4.md)。
 - 关联：K-001。
 
 ##### C5：完成 RD-002 Agent 真实任务验收
