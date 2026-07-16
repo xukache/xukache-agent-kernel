@@ -28,6 +28,7 @@
 | 2026-07-15 | 架构基线 | 确认 Memory 会话级、用户级和项目 / 共享级 scope，冻结默认隔离、显式跨会话共享、跨 scope 提升和来源追踪；发布首个完整架构版本 v0.1 | `DEV_SPEC.md`、`docs/architecture/*.md`、`docs/architecture/versions/v0.1-memory-scope-sharing.md`、`docs/dev-spec/versions/v0.26-memory-scope-sharing.md` | 是 |
 | 2026-07-16 | 确认 | 确认并完成 C1 AgentDefinition、AgentInput、AgentResult、终态、停止原因和错误证据边界；RD-002 尚未开始 | `DEV_SPEC.md`、`docs/architecture/03-public-contracts.md`、`docs/superpowers/specs/2026-07-16-agent-kernel-agent-contract-c1.md` | 否 |
 | 2026-07-16 | 确认 | 用户确认 C2 完成；基础 Instructions 与 ModelRequest 组装已实现，不调用 Model，不引入 Tool、Memory 或 Runtime | `DEV_SPEC.md`、`src/agent_kernel/agent/request_builder.py`、`docs/superpowers/specs/2026-07-16-agent-kernel-model-request-builder-c2.md` | 否 |
+| 2026-07-16 | 确认 | 用户确认 C3 完成；一次 Model 调用的最小 Agent 闭环已映射成功、Model 错误、取消和未支持 Tool Call | `DEV_SPEC.md`、`src/agent_kernel/agent/engine.py`、`docs/superpowers/specs/2026-07-16-agent-kernel-agent-loop-c3.md` | 否 |
 
 ## 2026-07-14 变更结论
 

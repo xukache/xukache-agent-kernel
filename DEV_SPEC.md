@@ -2,7 +2,7 @@
 
 > 版本：0.26 — Memory scope、会话隔离与跨会话共享基线
 >
-> 状态：第一至七章已确认；C1、C2 已完成；第一阶段仍止于通用 Kernel，Agent Harness、业务 Application 和 Multi-Agent 属于后续证据驱动的演进路线
+> 状态：第一至七章已确认；C1、C2、C3 已完成；第一阶段仍止于通用 Kernel，Agent Harness、业务 Application 和 Multi-Agent 属于后续证据驱动的演进路线
 >
 > 当前架构主分支：`architecture`
 >
@@ -1929,7 +1929,7 @@ RuntimeResult != AgentResult != WorkflowResult != ToolResult
 |---|---|---|---|
 | C1 | 定义 AgentDefinition、AgentInput 与 AgentResult | [x] | Agent 调用边界 |
 | C2 | 实现 Instructions 与 ModelRequest 组装 | [x] | Prompt 所有权落地 |
-| C3 | 实现最小 Agent 推理循环 | [ ] | Input -> Model -> Result |
+| C3 | 实现最小 Agent 推理循环 | [x] | Input -> Model -> Result |
 | C4 | 实现运行上限与停止原因 | [ ] | 明确循环终止 |
 | C5 | 完成 RD-002 Agent 真实任务验收 | [ ] | Agent MVP 完成证据 |
 
@@ -1995,13 +1995,13 @@ RuntimeResult != AgentResult != WorkflowResult != ToolResult
 |---|---:|---:|---:|---:|
 | A | 5 | 5 | 0 | 100% |
 | B | 6 | 6 | 0 | 100% |
-| C | 5 | 2 | 0 | 40% |
+| C | 5 | 3 | 0 | 60% |
 | D | 6 | 0 | 0 | 0% |
 | E | 6 | 0 | 0 | 0% |
 | F | 8 | 0 | 0 | 0% |
 | G | 6 | 0 | 0 | 0% |
 | H | 5 | 0 | 0 | 0% |
-| **总计** | **47** | **13** | **0** | **28%** |
+| **总计** | **47** | **14** | **0** | **30%** |
 
 只有 `[x]` 计入完成进度；`[~]`、`[!]` 和测试状态 `BLOCKED`、`NOT RUN` 均不计入。
 
@@ -2180,7 +2180,9 @@ RuntimeResult != AgentResult != WorkflowResult != ToolResult
 - 验收：请求内容和来源可检查，Provider 配置不进入 Agent。
 - 当前状态：已实现 `build_model_request` 和确定性单元测试，C2 已完成。
 - 证据：[`C2 Instructions 与 ModelRequest 组装设计记录`](docs/superpowers/specs/2026-07-16-agent-kernel-model-request-builder-c2.md)。
-- 关联：K-001。
+- 当前状态：已实现 `run_agent` 和确定性单元测试，C3 已完成；C4 负责多轮上限和停止原因。
+- 证据：[`C3 最小 Agent 推理循环设计记录`](docs/superpowers/specs/2026-07-16-agent-kernel-agent-loop-c3.md)。
+- 关联：K-001、K-007。
 
 ##### C3：实现最小 Agent 推理循环
 
