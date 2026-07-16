@@ -30,6 +30,7 @@
 | B5 Provider Streaming 转换 | 已完成 | [`2026-07-14-agent-kernel-provider-streaming-b5.md`](2026-07-14-agent-kernel-provider-streaming-b5.md) |
 | B6 RD-001 真实模型验收 | 已完成 | [`2026-07-14-agent-kernel-real-model-acceptance-b6.md`](2026-07-14-agent-kernel-real-model-acceptance-b6.md) |
 | C1 Agent 公共调用边界 | 已完成 | [`2026-07-16-agent-kernel-agent-contract-c1.md`](2026-07-16-agent-kernel-agent-contract-c1.md) |
+| C2 Instructions 与 ModelRequest 组装 | 已完成 | [`2026-07-16-agent-kernel-model-request-builder-c2.md`](2026-07-16-agent-kernel-model-request-builder-c2.md) |
 
 ## 模块确认记录模板
 
