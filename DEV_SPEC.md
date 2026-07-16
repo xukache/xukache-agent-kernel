@@ -2,7 +2,7 @@
 
 > 版本：0.26 — Memory scope、会话隔离与跨会话共享基线
 >
-> 状态：第一至七章已确认；C1、C2、C3、C4 已完成；第一阶段仍止于通用 Kernel，Agent Harness、业务 Application 和 Multi-Agent 属于后续证据驱动的演进路线
+> 状态：第一至七章已确认；C1、C2、C3、C4、C5 已完成；第一阶段仍止于通用 Kernel，Agent Harness、业务 Application 和 Multi-Agent 属于后续证据驱动的演进路线
 >
 > 当前架构主分支：`architecture`
 >
@@ -1931,7 +1931,7 @@ RuntimeResult != AgentResult != WorkflowResult != ToolResult
 | C2 | 实现 Instructions 与 ModelRequest 组装 | [x] | Prompt 所有权落地 |
 | C3 | 实现最小 Agent 推理循环 | [x] | Input -> Model -> Result |
 | C4 | 实现运行上限与停止原因 | [x] | 明确循环终止 |
-| C5 | 完成 RD-002 Agent 真实任务验收 | [ ] | Agent MVP 完成证据 |
+| C5 | 完成 RD-002 Agent 真实任务验收 | [x] | Agent MVP 完成证据 |
 
 #### 6.4.4 阶段 D：Tool Call 闭环
 
@@ -1995,13 +1995,13 @@ RuntimeResult != AgentResult != WorkflowResult != ToolResult
 |---|---:|---:|---:|---:|
 | A | 5 | 5 | 0 | 100% |
 | B | 6 | 6 | 0 | 100% |
-| C | 5 | 4 | 0 | 80% |
+| C | 5 | 5 | 0 | 100% |
 | D | 6 | 0 | 0 | 0% |
 | E | 6 | 0 | 0 | 0% |
 | F | 8 | 0 | 0 | 0% |
 | G | 6 | 0 | 0 | 0% |
 | H | 5 | 0 | 0 | 0% |
-| **总计** | **47** | **15** | **0** | **32%** |
+| **总计** | **47** | **16** | **0** | **34%** |
 
 只有 `[x]` 计入完成进度；`[~]`、`[!]` 和测试状态 `BLOCKED`、`NOT RUN` 均不计入。
 
@@ -2208,6 +2208,8 @@ RuntimeResult != AgentResult != WorkflowResult != ToolResult
 - 前置依赖：C4、A5。
 - 交付：固定输入 `9 + 6` 的 Agent 运行证据。
 - 验收：`AgentResult.output.result == 15`，并检查 ModelRequest 摘要和 stop_reason。
+- 当前状态：RD-001 与 RD-002 已使用真实 Volcengine Provider 通过，C5 已完成。
+- 证据：[`C5 RD-002 Agent 真实验收设计记录`](docs/superpowers/specs/2026-07-16-agent-kernel-rd002-agent-acceptance-c5.md)。
 - 关联：RD-002 + RD-001 回归；阶段 C 出口。
 
 #### 6.6.4 阶段 D：Tool Call 闭环

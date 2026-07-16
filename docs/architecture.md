@@ -9,7 +9,7 @@
   Streaming 和 RD-001 真实验收。
 - C1 已确认并实现 AgentDefinition、AgentInput、AgentResult、终态、停止原因和
   错误边界；C2 已完成基础 ModelRequest 组装，C3 已实现一次 Model 调用闭环，
-  C4 已完成轮次上限和停止原因，C5 仍按后续门禁逐项确认和实现。
+  C4 已完成轮次上限和停止原因，C5 已完成 RD-002 真实 Agent 验收，阶段 C 已完成。
 - Tool、Memory、Runtime 和 Workflow 实现尚未开始。
 - Memory 的会话级、用户级、项目 / 共享级 scope，以及显式跨会话共享规则已在
   `DEV_SPEC v0.26` 确认；具体 Python 字段仍由 E1 冻结。
