@@ -8,6 +8,8 @@
 - 当前已落地 Model Core 公共协议、Volcengine Model Adapter、结构化输出、
   Streaming 和 RD-001 真实验收；Agent、Tool、Memory、Runtime 和 Workflow
   实现尚未开始。
+- Memory 的会话级、用户级、项目 / 共享级 scope，以及显式跨会话共享规则已在
+  `DEV_SPEC v0.26` 确认；具体 Python 字段仍由 E1 冻结。
 - A3 已确认 `src/agent_kernel` 为 Kernel 包和公开导入路径基线。
 - 当前没有对外 HTTP、REST、WebSocket 或 MCP 接口。
 - 第一阶段通过 Python Programmatic Interface 和测试组合根调用 Kernel。
@@ -33,6 +35,7 @@
 | [`03-public-contracts.md`](architecture/03-public-contracts.md) | 行为、装配、数据、错误和状态用什么类型表达 |
 | [`10-evolution-rules.md`](architecture/10-evolution-rules.md) | 变更时如何同步规格、文档、测试和版本 |
 | [`99-changelog.md`](architecture/99-changelog.md) | 架构文档入口的变更记录 |
+| [`versions/v0.1-memory-scope-sharing.md`](architecture/versions/v0.1-memory-scope-sharing.md) | 当前完整架构版本：Memory scope、隔离与共享 |
 
 ## 相关入口
 

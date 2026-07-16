@@ -1,11 +1,8 @@
 # 架构版本正文目录
 
-当前尚未发布架构版本。
+当前完整架构版本：
 
-第一个 Kernel 版本确认并准备进入实现前，创建：
-
-```text
-v<版本号>-<主题>.md
-```
+- [`v0.1-memory-scope-sharing.md`](v0.1-memory-scope-sharing.md)：六个核心原语、
+  单向依赖，以及 Memory scope、隔离与跨会话共享基线。
 
 已发布正文只读，不原地覆盖。

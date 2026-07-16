@@ -1,6 +1,6 @@
 # Agent Kernel Developer Specification
 
-> 版本：0.25 — 从 Agent Kernel 到完整 Agent 系统的演进基线
+> 版本：0.26 — Memory scope、会话隔离与跨会话共享基线
 >
 > 状态：第一至七章已确认；第一阶段仍止于通用 Kernel，Agent Harness、业务 Application 和 Multi-Agent 属于后续证据驱动的演进路线
 >
@@ -37,7 +37,7 @@
 - Agent 如何组织模型、工具、记忆和指令。
 - Workflow 如何描述多步骤执行、分支和暂停恢复。
 - Tool 如何被声明、调用、治理并返回结果。
-- Memory 如何写入、检索并参与后续执行。
+- Memory 如何按 scope 写入、隔离、检索并参与后续执行。
 - Model 如何通过统一协议接入不同 Provider。
 - Runtime 如何驱动执行、流式输出、取消和事件传播。
 
@@ -737,7 +737,7 @@ Unit、Contract 或 Architecture Tests 通过，不能单独证明模块完成�
 | Agent | 请求组装、结果解析、循环终止 | 缺少输入、非法响应、达到运行上限 |
 | Workflow | 状态推进、顺序、分支和恢复 | 分支选择、重复恢复、错误终止 |
 | Tool | Schema 和确定性校验 | 缺少字段、非法类型、输出格式错误 |
-| Memory | scope 和序列化 | 同 scope 可读、跨 scope 隔离 |
+| Memory | scope、授权和序列化 | 同 scope 可读、未授权跨 scope 不可见、显式提升可追溯 |
 | Model | Request / Response 数据结构 | Tool Call 解析、usage 归一化 |
 | Runtime | 生命周期和唯一终态 | completed、failed、cancelled、paused |
 
@@ -750,7 +750,7 @@ Core Unit Tests 不依赖具体 Provider SDK、数据库、业务 Application �
 | Adapter | 必须证明 |
 |---|---|
 | Model Adapter | 请求转换、结构化输出、Tool Call、usage、Streaming 和错误语义稳定 |
-| Memory Adapter | read、write、search、scope 隔离和序列化稳定 |
+| Memory Adapter | read、write、search、scope 分区隔离和序列化稳定 |
 | Tool Adapter | 输入校验、输出 Schema、超时、取消和幂等语义稳定 |
 | Runtime Adapter | 生命周期、事件顺序、暂停恢复、取消和唯一终态稳定 |
 
@@ -782,7 +782,7 @@ Kernel Integration 验证多个已实现模块之间的确定性数据流和失�
 | Model Adapter | 统一请求、响应、usage 和错误映射 |
 | Model + Agent | Agent 组装请求并返回结构化 AgentResult |
 | Agent + Tool | Tool Call、Tool Result 回传和循环终止 |
-| Agent + Memory | 同 scope 写入、读取和来源追踪 |
+| Agent + Memory | 按 Policy 选择 scope、同 scope 写入读取、跨会话共享和来源追踪 |
 | Runtime + Agent | run_id、Events、Result 和唯一终态 |
 | Runtime + Execution | Streaming、Cancellation、Hooks、Guardrails 和 Retry |
 | Runtime + Workflow | 顺序、分支、并行、暂停、恢复和幂等 |
@@ -825,7 +825,7 @@ test_id
 | RD-001 | Model | `请计算 18 + 24，并按指定 JSON Schema 返回 result 整数。` | `result == 42`、model_id、usage、finish_reason、latency |
 | RD-002 | Agent | `请完成任务：计算 9 + 6，并返回结构化结果。` | ModelRequest 摘要、`AgentResult.output.result == 15`、stop_reason |
 | RD-003 | Tool | `请使用加法工具计算 37 + 58，并告诉我最终结果。` | 真实 Tool Call、参数、ToolResult `95`、事件顺序、最终结果 |
-| RD-004 | Memory | 第一轮：`请记住我的项目代号是青岚。`；第二轮：`我的项目代号是什么？` | MemoryItem 来源、同 scope 召回、跨 scope 隔离 |
+| RD-004 | Memory | 会话 A 第一轮：`请记住我的项目代号是青岚。`；会话 A 第二轮：`我的项目代号是什么？`；会话 B 在授权用户级 Memory 后再次询问 | MemoryItem 来源、会话级隔离、显式用户级共享、其他用户不可见 |
 | RD-005 | Runtime | `请使用加法工具计算 37 + 58，并告诉我最终结果。` | run_id、started 到 completed、Result 与 Events 一致 |
 | RD-006 | Workflow | `判断 12 是否为偶数，并执行对应分支。` | 结构化判断、只执行偶数分支、正确终态 |
 | RD-007 | Pause / Resume | 第一轮：`生成一条摘要，执行后续动作前等待我确认。`；恢复：`确认继续。` | paused、resume、已完成副作用不重复 |
@@ -838,6 +838,7 @@ test_id
 补充断言：
 
 - RD-004 第一轮结果必须生成可追溯 MemoryItem，不能直接把答案写入第二轮上下文。
+- RD-004 的会话 B 不能读取会话 A 的会话级 Memory；只有显式写入或提升到同一用户级 scope 后才可召回，其他用户仍不可见。
 - RD-007 保存可序列化 WorkflowState，恢复后不能重复已完成步骤。
 - RD-008 不要求 Provider 固定产生多个 chunk；多 chunk 边界由 Contract Test 补充。
 - RD-009 必须在至少收到一个真实增量后取消，并证明 Provider 任务或流已经结束。
@@ -925,7 +926,7 @@ reproducible_command
 | K-003 | Tool 错误、超时和取消 | 返回稳定错误，不执行非法动作 |
 | K-004 | Workflow 顺序和条件分支 | 步骤、分支和结束原因正确 |
 | K-005 | Workflow 暂停和恢复 | 从暂停位置继续，不重复副作用 |
-| K-006 | Memory 写入和再次读取 | 同 scope 召回，其他 scope 隔离 |
+| K-006 | Memory 写入、隔离和授权共享 | 同 scope 召回，未授权 scope 隔离，显式跨会话共享可追溯 |
 | K-007 | 真实 Model Adapter 契约 | 请求、结果、usage 和错误语义稳定 |
 | K-008 | Runtime 取消和 Streaming | 事件顺序正确，取消传播且只结束一次 |
 | K-009 | 架构依赖 | Core 不依赖 Application、Interface 或具体实现 |
@@ -1173,7 +1174,7 @@ Runtime 只能通过公共契约调用目标。第三方运行框架可以实现
 | 项目 | 语义 |
 |---|---|
 | 定义 | `AgentDefinition`：agent_id、Instructions、Model、允许的 Tools、Memory 使用配置、执行上限 |
-| 输入 | `AgentInput`：本次任务输入、Memory scope 和调用元数据 |
+| 输入 | `AgentInput`：本次任务输入、Memory Policy 所需的 scope 上下文和调用元数据 |
 | 核心处理 | 读取 Memory、组装 ModelRequest、处理 Tool Call 循环、生成最终输出、决定 Memory 写入 |
 | 输出 | `AgentResult`：output、tool_calls、usage、stop_reason 和错误 |
 | 主要错误 | model、tool、memory、policy、limit、cancelled、internal |
@@ -1287,7 +1288,7 @@ Model 看见 Schema != Model 获得 Python callable
 
 #### 5.3.6 Memory
 
-目标：按 scope 保存和读取 Agent 可跨运行使用的上下文。
+目标：在一个按 scope 分区的 Memory 能力中，保存和读取 Agent 可跨运行复用的上下文。
 
 ```text
 read(scope, query)
@@ -1298,11 +1299,48 @@ search(scope, query, limit)
 | 项目 | 语义 |
 |---|---|
 | 数据 | `MemoryItem`：内容、来源引用、创建时间和可选元数据 |
-| 核心处理 | scope 隔离、存储、读取、搜索和序列化 |
-| 主要错误 | scope、storage、serialization、cancelled |
-| 非职责 | 判断什么值得记忆、WorkflowState、Trace、UI 历史、业务数据库 |
+| 核心处理 | scope 分区隔离、存储、读取、搜索和序列化 |
+| 主要错误 | scope、permission、storage、serialization、cancelled |
+| 非职责 | 判断什么值得记忆、自动跨 scope 共享、WorkflowState、Checkpoint、Trace、UI 历史、业务数据库 |
 
-Agent 决定读取和写入时机，并创建带来源的 MemoryItem；Memory 只执行存储语义。
+Memory 不是“每个会话创建一个独立 Memory 实例”。Application 可以为多个 Agent
+或会话注入同一个 Memory Adapter，但每次操作必须携带明确 scope。Application 和
+Agent Policy 先确定授权范围，Adapter 再以显式 scope 作为分区边界，禁止通过共享
+Adapter 实例获得隐式数据可见性。
+
+第一阶段冻结三类 scope 语义，具体 Python 字段由 E1 确认：
+
+| scope 语义 | 用途 | 默认可见范围 |
+|---|---|---|
+| 会话级 | 当前会话的局部上下文、临时偏好和连续交流需要复用的信息 | 仅当前会话 |
+| 用户级 | 同一用户跨会话仍然有效的偏好、稳定事实和经确认画像 | 同一用户的授权会话 |
+| 项目 / 共享级 | 团队或项目成员共同使用、且已经授权共享的上下文 | 被授权的项目或成员集合 |
+
+会话之间默认隔离，原因是同一用户可能并行处理不同任务，不同会话的临时结论可能
+冲突、过期或包含敏感信息。隔离同时提供最小权限、可预测召回、并发任务互不污染和
+删除边界。跨会话共享不是关闭隔离，而是由 Memory Policy 显式读取用户级或项目级
+scope。
+
+Application 配置 Agent 的 Memory Policy；Agent 按 Policy 决定何时读取、读取哪些
+scope、写入什么以及写入哪个目标 scope，并创建带来源的 MemoryItem；Memory Adapter
+只执行存储、搜索、序列化和 scope 隔离，不判断内容是否值得记忆。
+
+Memory Policy 至少表达以下语义，具体类型由 E1、E4 和 E5 确认：
+
+- 本次允许读取的 scope 集合，不能通过一个模糊 scope 隐式扩大可见范围。
+- 默认写入目标 scope，以及哪些内容允许进入用户级或项目级长期记忆。
+- 多 scope 结果的相关性排序、去重、数量或 token 预算。
+- 用户、项目、租户或其他主体的授权边界。
+- 敏感内容、过期内容、删除请求和冲突记忆的处理规则。
+
+会话级 Memory 提升为用户级或项目级时，必须在目标 scope 创建新的 MemoryItem，
+保留原始来源和提升动作的引用；不得静默移动原记录、修改原 scope 或自动向更大范围
+共享。这样可以分别审计原始会话事实和跨会话可复用事实，并支持独立删除和权限撤销。
+
+MemoryItem 默认保存提炼后的可复用信息，不保存完整聊天历史。其语义至少包括内容、
+来源、创建时间和可选元数据；来源必须能够追溯到产生该记忆的 run、会话或前序
+MemoryItem。Memory 不保存 WorkflowState、Checkpoint、Trace、UI 历史、完整 Tool
+Call 历史或业务数据库事实。
 
 验收：K-006、K-010；RD-004。
 
@@ -1326,7 +1364,7 @@ Execution 不是第七个核心原语，而是一组由 Runtime 协调、被执�
 ```text
 AgentInput
   -> Runtime 创建 RunContext
-  -> Agent 读取同 scope Memory
+  -> Agent 按 Memory Policy 读取明确授权的 scopes
   -> Agent 组合 Instructions、Input、MemoryItems 和 Tool Schemas
   -> Model.generate / stream
   -> 无 Tool Call：构建 AgentResult
@@ -1363,22 +1401,31 @@ Application 创建包含可执行 Tools 的 AgentDefinition
 
 ```text
 Application 配置 Agent Memory Policy
-  -> Agent 根据 AgentInput.scope 发起 read / search
-  -> Memory Adapter 保证 scope 隔离
-  -> MemoryItems 回到 Agent
-  -> Agent 将相关 MemoryItems 放入 ModelRequest
+  -> Application 为本次调用提供会话、用户和可选项目的 scope 上下文
+  -> Agent 根据 Policy 解析允许读取的 scope 集合
+  -> Agent 分别发起 read / search
+  -> Application / Agent Policy 完成授权检查
+  -> Memory Adapter 对每个显式 scope 执行分区隔离
+  -> Agent 对 MemoryItems 排序、去重并应用上下文预算
+  -> Agent 将选中的 MemoryItems 放入 ModelRequest
   -> Agent 从本次执行结果创建新的 MemoryItem
+  -> Agent 根据 Policy 选择写入目标 scope
   -> Memory.write
-  -> Event 记录 run_id、scope 和来源引用
+  -> Event 记录 run_id、目标 scope 和来源引用
 ```
 
 Memory 所有权固定为：
 
 ```text
-Agent   -> 何时读取、写什么、MemoryItem 来源
-Memory  -> 如何存储、搜索和隔离
-Runtime -> run_id、生命周期和事件引用
+Application -> Memory Policy、主体身份和可授权 scope 上下文
+Agent       -> 何时读取、读取哪些 scope、写什么、写入目标和 MemoryItem 来源
+Memory      -> 如何存储、搜索、序列化和按 scope 隔离
+Runtime     -> run_id、生命周期和事件引用
 ```
+
+禁止隐式跨 scope 读取。需要跨会话共享时，必须读取用户级或项目级 scope；需要把
+会话内容升级为共享记忆时，必须在目标 scope 创建新的带来源 MemoryItem。Memory
+Adapter 不自行合并 scope，也不根据内容相似度绕过授权边界。
 
 #### 5.4.4 Workflow 执行与恢复流
 
@@ -1412,7 +1459,7 @@ Adapter 层把稳定能力协议连接到具体实现：
 |---|---|---|---|
 | Model | 一个真实 Provider Adapter | 其他云模型或本地模型 | ModelRequest、ModelResponse、Tool Call、usage、错误 |
 | Tool | 无副作用结构化 Tool | HTTP API、MCP、数据库或本地函数 | ToolInput、ToolResult、权限、幂等、错误 |
-| Memory | In-memory Adapter | 文件、数据库或语义检索存储 | read、write、search、scope |
+| Memory | In-memory Adapter | 文件、数据库或语义检索存储 | read、write、search 和 scope 分区隔离 |
 | Runtime | 单进程 Local Runtime | 第三方框架或远程 Runtime | 生命周期、Events、取消、暂停恢复、Result |
 
 配置和依赖注入只在 Composition Root 执行：
@@ -1477,6 +1524,8 @@ Programmatic Test Entry
 | run_id、生命周期和终态 | `Runtime` | Runtime 创建并保证唯一终态 |
 | resume_token | `Runtime` | Runtime 创建、校验、消费和失效 |
 | MemoryItem 内容和来源 | `Agent` | Agent 根据 Memory Policy 创建 |
+| Memory 可读 scope 和写入目标 | `AgentDefinition` / `Agent` | Application 配置 Policy，Agent 在每次运行中执行 |
+| 会话、用户和项目 scope 上下文 | `Application` | 调用前解析主体身份与授权，不由 Memory 猜测 |
 | Memory scope 隔离和持久化 | `Memory` | Memory Adapter 执行 |
 | Provider 请求响应转换 | `Model Adapter` | 转换为统一 Model 协议 |
 | 业务 Prompt、规则和业务状态 | `Application` | 不进入 Kernel 通用状态 |
@@ -1760,7 +1809,7 @@ RuntimeResult != AgentResult != WorkflowResult != ToolResult
 | B | 如何隔离统一模型协议与 Provider | 真实模型返回统一结构化结果 |
 | C | Agent 如何把输入变成一次智能任务 | 最小 Agent 可完成真实任务 |
 | D | 模型意图如何变成受治理外部动作 | 真实 Tool Call 闭环可运行 |
-| E | 上一次运行的信息如何参与下一次运行 | 同 scope 两轮对话可以召回 |
+| E | 上一次运行的信息如何参与下一次运行 | 会话内召回、跨会话授权共享和其他主体隔离 |
 | F | 一次 Run 如何被治理、观察和终止 | 生命周期、事件和执行策略可验证 |
 | G | 多步骤任务如何确定性推进 | Workflow 可分支、并行、暂停和恢复 |
 | H | 如何证明 Kernel 整体成立 | 全部合同、架构边界和 RD 通过 |
@@ -1828,10 +1877,10 @@ RuntimeResult != AgentResult != WorkflowResult != ToolResult
 |---|---|---|---|
 | E1 | 定义 Memory Contract 与 MemoryItem | [ ] | Memory 调用边界 |
 | E2 | 实现 In-memory Memory Adapter | [ ] | 最小可运行存储 |
-| E3 | 实现 scope 隔离 | [ ] | 跨 scope 不可见 |
+| E3 | 实现 scope 隔离 | [ ] | 多层 scope 未授权不可见 |
 | E4 | 实现 Agent Memory 读取策略 | [ ] | Memory 参与 ModelRequest |
 | E5 | 实现 Agent Memory 写入策略 | [ ] | 可追溯 MemoryItem |
-| E6 | 完成 RD-004 两轮对话验收 | [ ] | Memory MVP 完成证据 |
+| E6 | 完成 RD-004 隔离与共享验收 | [ ] | Memory MVP 完成证据 |
 
 #### 6.4.6 阶段 F：Runtime 与 Execution
 
@@ -1864,7 +1913,7 @@ RuntimeResult != AgentResult != WorkflowResult != ToolResult
 | H1 | 六个 Core Contract 累计回归 | [ ] | 协议证据 |
 | H2 | Architecture Tests 与依赖扫描 | [ ] | 边界证据 |
 | H3 | RD-001 至 RD-012 累计回归 | [ ] | 真实链路证据 |
-| H4 | 发布首个完整架构版本 | [ ] | 架构快照与 changelog |
+| H4 | 发布 Kernel 累计验收架构版本 | [ ] | 已验证架构快照与 changelog |
 | H5 | 完善 Kernel README 与学习记录 | [ ] | 可复现学习成果 |
 
 ### 6.5 总体进度
@@ -2132,14 +2181,15 @@ RuntimeResult != AgentResult != WorkflowResult != ToolResult
 
 #### 6.6.5 阶段 E：Memory 跨运行上下文
 
-目标：实现由 Agent 决定读写、Memory 保证 scope 隔离的两轮上下文链路。
+目标：实现由 Agent 决定读写、Memory 保证 scope 隔离，并支持显式跨会话共享的上下文链路。
 
 ##### E1：定义 Memory Contract 与 MemoryItem
 
 - 学习问题：跨运行记忆与运行上下文、WorkflowState 有何区别。
 - 前置依赖：D6、A2。
-- 交付：read、write、search、scope 和 MemoryItem 来源协议。
-- 验收：MemoryItem 可序列化，不包含 Workflow 流程位置。
+- 交付：read、write、search、scope 语义、Memory Policy 边界和 MemoryItem 来源协议。
+- 验收：MemoryItem 可序列化，不包含 Workflow 流程位置；会话级、用户级和项目级
+  scope 能表达稳定分区，但不提前绑定具体存储。
 - 关联：K-006、K-010。
 
 ##### E2：实现 In-memory Memory Adapter
@@ -2154,32 +2204,33 @@ RuntimeResult != AgentResult != WorkflowResult != ToolResult
 
 - 学习问题：为什么跨会话和跨用户状态必须显式隔离。
 - 前置依赖：E2。
-- 交付：scope 读写和搜索边界。
-- 验收：同 scope 可读，跨 scope 不可见。
+- 交付：会话级、用户级和项目级 scope 的读写、搜索与分区隔离边界。
+- 验收：同 scope 可读；未授权跨 scope 不可见；共享同一 Adapter 实例不改变隔离结果。
 - 关联：K-006、RD-004。
 
 ##### E4：实现 Agent Memory 读取策略
 
 - 学习问题：MemoryItems 如何参与当前 ModelRequest。
 - 前置依赖：E3、C2。
-- 交付：Agent 按 Memory Policy 发起 read/search 并选择上下文。
-- 验收：ModelRequest 可追踪使用了哪些 MemoryItems。
+- 交付：Agent 按 Memory Policy 对明确允许的 scopes 发起 read/search，并执行排序、去重和预算。
+- 验收：ModelRequest 可追踪使用了哪些 MemoryItems 及其来源 scope；不存在隐式跨 scope 读取。
 - 关联：K-006。
 
 ##### E5：实现 Agent Memory 写入策略
 
 - 学习问题：谁决定什么值得记忆以及如何记录来源。
 - 前置依赖：E4。
-- 交付：Agent 创建 MemoryItem 并调用 Memory.write。
-- 验收：MemoryItem 包含当前运行来源，不由 Memory Adapter 自动推断。
+- 交付：Agent 创建 MemoryItem、选择目标 scope，并支持创建带来源的新条目完成显式提升。
+- 验收：MemoryItem 包含当前运行或原 MemoryItem 来源，不由 Memory Adapter 自动推断；
+  提升不移动原记录，也不自动扩大读取权限。
 - 关联：K-006、RD-004。
 
-##### E6：完成 RD-004 两轮对话验收
+##### E6：完成 RD-004 隔离与共享验收
 
 - 学习问题：跨运行上下文是否真正来自前序运行。
 - 前置依赖：E5、A5。
-- 交付：项目代号“青岚”的两轮真实对话证据。
-- 验收：同 scope 召回、来源可追溯、跨 scope 隔离。
+- 交付：项目代号“青岚”的同会话召回、跨会话授权共享和其他用户隔离证据。
+- 验收：会话级同 scope 召回、用户级显式共享、其他用户不可见、来源和提升链可追溯。
 - 关联：RD-004 + RD-001 至 RD-003 回归；阶段 E 出口。
 
 #### 6.6.6 阶段 F：Runtime 与 Execution
@@ -2330,11 +2381,11 @@ RuntimeResult != AgentResult != WorkflowResult != ToolResult
 - 验收：全部 `PASS`；任何 `FAIL`、`BLOCKED` 或 `NOT RUN` 都阻止发布。
 - 关联：K-010、RD-001 至 RD-012。
 
-##### H4：发布首个完整架构版本
+##### H4：发布 Kernel 累计验收架构版本
 
 - 学习问题：如何把已验证实现固化为可审计架构事实。
 - 前置依赖：H3。
-- 交付：完整架构正文、版本入口和 changelog。
+- 交付：基于当前 v0.1 的新完整架构正文、版本入口和 changelog。
 - 验收：架构文档与实现、Contracts、K/RD 证据一致，不重复调用 Provider。
 - 关联：架构版本规则。
 
@@ -2354,10 +2405,10 @@ RuntimeResult != AgentResult != WorkflowResult != ToolResult
 | M1：真实 Model | B | 固定请求通过统一协议调用真实 Provider |
 | M2：最小 Agent | C | Agent 使用 Instructions 和 Model 完成真实任务 |
 | M3：Tool Agent | D | 真实模型选择 Tool 并得到最终答案 |
-| M4：有记忆 Agent | E | 两轮对话通过同 scope 召回前序信息 |
+| M4：有记忆 Agent | E | 会话内召回、跨会话授权共享和其他主体隔离通过 |
 | M5：可治理 Run | F | 可观察、流式、取消、Guardrail 和 Retry |
 | M6：Workflow | G | 可分支、暂停恢复和并行的流程 |
-| M7：Kernel Baseline | H | 全部 K/RD 通过并发布首个架构版本 |
+| M7：Kernel Baseline | H | 全部 K/RD 通过并发布实现验收后的新架构版本 |
 
 ### 6.8 阶段门禁
 
@@ -2496,6 +2547,10 @@ Harness 不新增核心原语，而是在现有 Runtime、Memory、Events 和 Ad
 | WorkflowState | 保存流程位置和步骤结果 | Workflow |
 | Durable Memory | 保存跨运行仍然有效的上下文 | Memory |
 | Checkpoint | 保存可恢复的运行快照 | Runtime |
+
+Session 负责标识和组织一段交互，不等于一个独立 Memory 实例。Session 可以映射到
+会话级 scope；同一用户的多个 Session 默认只共享用户级 Memory，不共享彼此的会话级
+Memory。项目级共享还必须同时满足项目身份和授权策略。
 
 恢复不能只是重新读取旧聊天记录。Runtime 恢复前必须校验：
 
@@ -3093,7 +3148,7 @@ Trace 是评估输入之一，但 Trace 数量不代表系统质量。
 | 向量数据库 | 已证明语义检索优于简单检索或数据库查询 |
 | MCP | 需要通过标准协议连接外部工具或数据 |
 | 用户画像 | 业务需要跨会话个性化，且具有授权和更新规则 |
-| 长期语义 Memory | 已定义写入、召回、过期和删除策略 |
+| 长期语义 Memory | 已定义写入、召回、scope 授权、过期、删除和跨 scope 提升策略 |
 | LLM Judge | 确定性指标无法覆盖主观质量维度 |
 | Web Dashboard | Trace 和 Evaluation 已稳定，确有运营和排查需求 |
 | 多模型路由 | 已有成本、延迟或能力差异的对照数据 |
